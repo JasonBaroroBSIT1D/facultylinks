@@ -115,6 +115,10 @@ body.fl-modal-open {
   flex-shrink: 0;
   border-bottom: 1px solid var(--fl-border);
 }
+.fl-modal-dialog--no-body .fl-modal-dialog__header {
+  border-bottom: none;
+  padding-bottom: 0.5rem;
+}
 .fl-modal-dialog__header h2 {
   margin: 0;
   font-size: 1.25rem;

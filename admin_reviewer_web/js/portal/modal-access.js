@@ -79,18 +79,19 @@ export function openCenteredModal({
   if (!host) return null;
   const sizeClass = SIZE_CLASS[size] || SIZE_CLASS.md;
   const dialogId = `fl-modal-${Date.now()}`;
+  const hasBody = bodyHtml != null && String(bodyHtml).trim() !== '';
   host.innerHTML = `
     <div class="fl-modal-overlay" id="${dialogId}-overlay" role="presentation">
-      <div class="fl-modal-dialog ${sizeClass}" role="dialog" aria-modal="true" aria-labelledby="${dialogId}-title" id="${dialogId}-dialog">
-        <header class="fl-modal-dialog__header fl-modal-dialog__header--icon">
+      <div class="fl-modal-dialog ${sizeClass}${hasBody ? '' : ' fl-modal-dialog--no-body'}" role="dialog" aria-modal="true" aria-labelledby="${dialogId}-title" id="${dialogId}-dialog">
+        <header class="fl-modal-dialog__header${iconHtml ? ' fl-modal-dialog__header--icon' : ''}">
           ${iconHtml ? `<span class="fl-modal-dialog__icon" aria-hidden="true">${iconHtml}</span>` : ''}
           <div class="fl-modal-dialog__titles">
-            <h2 id="${dialogId}-title">${title}</h2>
+            <h2 id="${dialogId}-title">${title ?? ''}</h2>
             ${lede ? `<p class="fl-modal-dialog__lede">${lede}</p>` : ''}
           </div>
           <button type="button" class="fl-modal-close" data-fl-modal-dismiss aria-label="Close dialog">×</button>
         </header>
-        <div class="fl-modal-dialog__body">${bodyHtml}</div>
+        ${hasBody ? `<div class="fl-modal-dialog__body">${bodyHtml}</div>` : ''}
         ${footerHtml ? `<footer class="fl-modal-dialog__footer">${footerHtml}</footer>` : ''}
       </div>
     </div>

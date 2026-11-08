@@ -44,6 +44,17 @@ body {
   overflow-y: auto;
   margin: 0 -0.25rem;
   padding: 0 0.25rem;
+  -webkit-overflow-scrolling: touch;
+}
+.sidebar-footer {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding: 0.75rem 0.25rem 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+.sidebar-footer .nav-item-signout {
+  margin-top: 0;
+  width: 100%;
 }
 @media (prefers-reduced-motion: no-preference) {
   .sidebar { transition: width 0.22s ease; }
@@ -71,7 +82,6 @@ body {
   padding-right: 0.5rem;
 }
 .sidebar.collapsed .nav-label { display: none; }
-.sidebar.collapsed .nav-item-signout { margin-top: 2rem; }
 .sidebar .brand {
   flex-shrink: 0;
   display: flex;
@@ -107,7 +117,6 @@ body {
 }
 .nav-item:hover, .nav-item.active { background: rgba(81,200,239,0.12); color: var(--fl-cyan); }
 .nav-item:focus-visible { outline: 3px solid var(--fl-cyan); outline-offset: 2px; }
-.nav-item-signout { margin-top: 2rem; }
 .sidebar-toggle {
   min-width: 44px;
   min-height: 44px;
@@ -245,6 +254,53 @@ input[type="search"], input[type="text"], select, textarea {
   .fl-eval-period-fields .fl-field:last-child {
     grid-column: 1 / -1;
   }
+}
+@media (min-width: 768px) {
+  .fl-eval-period-fields {
+    grid-template-columns: repeat(3, 1fr);
+  }
+  .fl-eval-period-fields .fl-field:last-child {
+    grid-column: auto;
+  }
+}
+.fl-eval-settings {
+  max-width: 100%;
+  min-width: 0;
+}
+.fl-settings-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.5rem;
+  margin: 0 0 1rem;
+  border-bottom: 1px solid var(--fl-border);
+  padding-bottom: 0;
+}
+.fl-settings-tab {
+  margin: 0;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent;
+  font: inherit;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #5a7089;
+  cursor: pointer;
+  border-radius: 8px 8px 0 0;
+}
+.fl-settings-tab:hover { color: var(--fl-text-navy); }
+.fl-settings-tab.active,
+.fl-settings-tab[aria-selected="true"] {
+  color: var(--fl-text-navy);
+  border-bottom-color: var(--fl-cyan);
+}
+.fl-settings-tab:focus-visible {
+  outline: 3px solid var(--fl-cyan);
+  outline-offset: 2px;
+}
+.fl-settings-panel {
+  min-width: 0;
 }
 .fl-field {
   display: flex;

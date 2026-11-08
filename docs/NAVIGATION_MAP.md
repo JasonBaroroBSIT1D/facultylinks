@@ -11,8 +11,8 @@
 | dashboard | Counts, document status, activity |
 | faculty | Search, create/edit, activate/deactivate |
 | reviewers | List, assignment modal |
-| config | Full KRA hierarchy, draft/publish |
-| simulationCfg | Evaluation Period (start/end, reviewer availability, computed status) |
+| evalSettings | Tabs: **Scoring Rules** (KRA hierarchy, draft/publish) and **Evaluation Period** (dates, reviewer availability) |
+| config / simulationCfg | Legacy route IDs → redirect to `evalSettings` (rules / period tab) |
 | reports | Per-faculty KRA breakdown, print |
 | activity | Audit-style list |
 | profile | Session, reset demo data |
@@ -24,7 +24,8 @@
 | assigned | Faculty cards → workspace |
 | workspace | KRA → Criterion → Indicator → documents (SET/SEF) |
 | review | Document review panel (OCR + actions) |
-| rules | Read-only assessment catalog |
+| evalSettings | Tabs: read-only **Scoring Rules** (published) and **Evaluation Period** |
+| rules | Legacy → `evalSettings` (Scoring Rules tab) |
 | notifications | Demo alerts for assigned faculty |
 | profile | Same as admin profile |
 

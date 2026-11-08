@@ -21,6 +21,7 @@ const NAV_ICON_KEY = {
   reviewers: 'reviewers',
   config: 'config',
   simulationCfg: 'simulation',
+  evalSettings: 'config',
   reports: 'reports',
   activity: 'activity',
   profile: 'profile',

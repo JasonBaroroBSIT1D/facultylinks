@@ -1,6 +1,6 @@
 import { MockStore } from '../repositories/mock-store.js';
 import { ConfigRepository, findIndicatorInCatalog, validateCatalog, SOURCE_CIRCULAR } from '../repositories/config-repository.js';
-import { KRA_HELP } from '../core/copy.js';
+import { KRA_HELP, SCREEN_INTRO, pageIntro } from '../core/copy.js';
 import { computeKraSummaries } from '../core/scoring.js';
 import { modalHost, bindModalShell, teardownModal, openCenteredModal, openDrawerModal } from './modal-access.js';
 
@@ -164,8 +164,8 @@ function indicatorPointsLabel(ind) {
   return 'Reference points configured';
 }
 
-export function renderConfig(root, title) {
-  title.textContent = 'Scoring Rules';
+export function renderConfig(root, title, { embedded = false } = {}) {
+  if (!embedded) title.textContent = 'Scoring Rules';
   syncWeightsFromDom();
 
   const store = MockStore.load();
@@ -184,17 +184,25 @@ export function renderConfig(root, title) {
   const navigable = getNavigableKras(catalog);
   if (_ui.kraTab >= navigable.length) _ui.kraTab = 0;
 
-  const draftStatus = draft
-    ? '<span class="badge-status badge-submitted">Draft in progress</span>'
-    : '<span class="muted">No open draft</span>';
+  const draftStatus =
+    readOnly || !draft
+      ? readOnly
+        ? ''
+        : '<span class="muted">No open draft</span>'
+      : '<span class="badge-status badge-submitted">Draft in progress</span>';
   const hiddenPlaceholders = catalog.kras.filter((k) => isRemovablePlaceholder(k)).length;
 
   root.innerHTML = `
-    <section class="cfg-page" id="cfgPage" aria-labelledby="cfgHeading">
-      <header class="cfg-page-header cfg-page-header--compact">
+    <section class="cfg-page${embedded ? ' cfg-page--embedded' : ''}" id="cfgPage" aria-labelledby="${embedded ? 'tab-btn-rules' : 'cfgHeading'}">
+      ${
+        embedded
+          ? ''
+          : `<header class="cfg-page-header cfg-page-header--compact">
         <h2 id="cfgHeading">Scoring Rules</h2>
         <p class="cfg-page-sub">Manage how faculty assessment points are calculated.</p>
-      </header>
+      </header>`
+      }
+      ${embedded ? pageIntro(readOnly ? SCREEN_INTRO.rules : SCREEN_INTRO.config) : ''}
       <div class="cfg-sticky-stack" id="cfgStickyStack"></div>
       <div id="cfgKraPanel" role="tabpanel" class="cfg-kra-panel"></div>
       <div id="cfgToast" class="cfg-toast" role="status" aria-live="polite" hidden></div>
@@ -205,17 +213,23 @@ export function renderConfig(root, title) {
   const sticky = document.getElementById('cfgStickyStack');
   sticky.innerHTML = `
     <div class="cfg-summary-strip">
-      <span><strong>Published:</strong> ${esc(active.label || 'Active')} · ${esc(formatDate(active.effectiveDate))}</span>
-      <span class="cfg-summary-sep" aria-hidden="true">|</span>
-      <span><strong>Editing:</strong> ${draftStatus}</span>
-      <details class="cfg-details-inline">
+      <div class="cfg-summary-main">
+        <span><strong>Published:</strong> ${esc(active.label || 'Active')} · ${esc(formatDate(active.effectiveDate))}</span>
+        ${
+          readOnly
+            ? ''
+            : `<span class="cfg-summary-sep" aria-hidden="true">|</span><span><strong>Editing:</strong> ${draftStatus}</span>`
+        }
+        ${readOnly ? '<span class="badge-status badge-approved cfg-readonly-tag">Read-only</span>' : ''}
+      </div>
+      <details class="cfg-details-block">
         <summary>Details</summary>
         <div class="cfg-details-body">
-          <section><h4>How this works</h4>${HOW_IT_WORKS}</section>
+          ${readOnly ? '' : `<section><h4>How this works</h4>${HOW_IT_WORKS}</section>`}
           <section><h4>Version details</h4>
             <dl class="cfg-dl">
               <dt>Published ID</dt><dd>${esc(active.id)}</dd>
-              ${draft ? `<dt>Draft ID</dt><dd>${esc(draft.id)}</dd>` : ''}
+              ${draft && !readOnly ? `<dt>Draft ID</dt><dd>${esc(draft.id)}</dd>` : ''}
               <dt>Catalog</dt><dd>${esc(catalog.version || '—')}</dd>
             </dl>
           </section>
@@ -223,7 +237,7 @@ export function renderConfig(root, title) {
         </div>
       </details>
     </div>
-    ${readOnly ? '<span class="badge-status badge-approved cfg-readonly-tag">Read-only</span>' : `
+    ${readOnly ? '' : `
     <div class="cfg-toolbar" role="toolbar" aria-label="Scoring rules actions">
       <button type="button" class="cfg-btn-secondary" id="cfgSaveDraft">Save Draft</button>
       <button type="button" class="cfg-btn-primary" id="cfgReviewPublish">Review &amp; Publish</button>

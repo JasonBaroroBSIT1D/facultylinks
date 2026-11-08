@@ -24,6 +24,7 @@ import {
   countFacultyForReviewer,
 } from './account-modals.js';
 import { brandCompactHtml } from '../core/brand-markup.js';
+import { openCenteredModal } from './modal-access.js';
 
 const session = AuthRepository.requireRole(['admin', 'reviewer']);
 if (!session) throw new Error('No session');
@@ -32,8 +33,7 @@ const ADMIN_NAV = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'faculty', label: 'Faculty' },
   { id: 'reviewers', label: 'Reviewers' },
-  { id: 'config', label: 'Scoring Rules' },
-  { id: 'simulationCfg', label: 'Evaluation Period' },
+  { id: 'evalSettings', label: 'Evaluation Settings' },
   { id: 'reports', label: 'Reports' },
   { id: 'activity', label: 'Activity' },
   { id: 'profile', label: 'Profile' },
@@ -43,7 +43,7 @@ const REVIEWER_NAV = [
   { id: 'dashboard', label: 'Dashboard' },
   { id: 'assigned', label: 'Assigned Faculty' },
   { id: 'workspace', label: 'Check Documents' },
-  { id: 'rules', label: 'Scoring Rules' },
+  { id: 'evalSettings', label: 'Evaluation Settings' },
   { id: 'notifications', label: 'Notifications' },
   { id: 'profile', label: 'Profile' },
 ];
@@ -59,6 +59,24 @@ function navItems() {
   return session.role === 'admin' ? ADMIN_NAV : REVIEWER_NAV;
 }
 
+function openSignOutConfirm(opener) {
+  const modal = openCenteredModal({
+    title: 'Sign out?',
+    lede: 'Are you sure you want to sign out?',
+    opener,
+    footerHtml: `
+      <button type="button" class="cfg-btn-secondary" data-fl-modal-cancel>Cancel</button>
+      <button type="button" class="cfg-btn-primary" id="confirmSignOut">Sign Out</button>`,
+  });
+  if (!modal) return;
+  modal.dialog.querySelector('#confirmSignOut')?.addEventListener('click', () => {
+    if (isMobileViewport()) closeMobileDrawer(false);
+    AuthRepository.logout();
+    modal.close();
+    location.href = '/login.html';
+  });
+}
+
 function renderShell() {
   const sidebar = document.getElementById('sidebar');
   sidebar.innerHTML = `
@@ -66,12 +84,18 @@ function renderShell() {
     <nav class="sidebar-nav" aria-label="Portal sections">
       ${navItems()
         .map((n) => {
-          const active = state.route === n.id || (state.route === 'review' && n.id === 'workspace');
+          const active =
+            state.route === n.id ||
+            (state.route === 'review' && n.id === 'workspace') ||
+            (n.id === 'evalSettings' &&
+              (state.route === 'rules' || state.route === 'config' || state.route === 'simulationCfg'));
           return `<button type="button" class="nav-item ${active ? 'active' : ''}" data-route="${n.id}" title="${n.label}" aria-label="${n.label}"${active ? ' aria-current="page"' : ''}>${iconForNav(n.id)}<span class="nav-label">${n.label}</span></button>`;
         })
         .join('')}
-      <button type="button" class="nav-item nav-item-signout" id="signOut" title="Sign out" aria-label="Sign out">${navIcon.signOut}<span class="nav-label">Sign out</span></button>
     </nav>
+    <div class="sidebar-footer">
+      <button type="button" class="nav-item nav-item-signout" id="signOut" title="Sign out" aria-label="Sign out">${navIcon.signOut}<span class="nav-label">Sign out</span></button>
+    </div>
   `;
   sidebar.querySelectorAll('[data-route]').forEach((b) =>
     b.addEventListener('click', () => {
@@ -79,15 +103,21 @@ function renderShell() {
       navigate(b.dataset.route);
     })
   );
-  document.getElementById('signOut').onclick = () => {
-    if (isMobileViewport()) closeMobileDrawer(false);
-    AuthRepository.logout();
-    location.href = '/login.html';
-  };
+  document.getElementById('signOut').onclick = (e) => openSignOutConfirm(e.currentTarget);
   document.getElementById('topActions').innerHTML = `<span style="color:#5a7089">${session.name} · ${session.role}</span>`;
 }
 
 function navigate(route, params = {}) {
+  if (route === 'config') {
+    route = 'evalSettings';
+    params = { ...params, tab: params.tab || 'rules' };
+  } else if (route === 'simulationCfg') {
+    route = 'evalSettings';
+    params = { ...params, tab: 'period' };
+  } else if (route === 'rules') {
+    route = 'evalSettings';
+    params = { ...params, tab: params.tab || 'rules' };
+  }
   state.route = route;
   state.params = params;
   renderShell();
@@ -102,15 +132,25 @@ function renderView() {
     dashboard: () => renderDashboard(el, title),
     faculty: () => renderFacultyList(el, title),
     reviewers: () => renderReviewerList(el, title),
-    config: () => renderConfig(el, title),
-    simulationCfg: () => renderEvaluationPeriod(el, title),
+    evalSettings: () => renderEvaluationSettings(el, title),
+    config: () => {
+      state.params = { ...state.params, tab: 'rules' };
+      renderEvaluationSettings(el, title);
+    },
+    simulationCfg: () => {
+      state.params = { ...state.params, tab: 'period' };
+      renderEvaluationSettings(el, title);
+    },
     reports: () => renderReports(el, title),
     activity: () => renderActivity(el, title),
     profile: () => renderProfile(el, title),
     assigned: () => renderAssigned(el, title),
     workspace: () => renderWorkspace(el, title),
     review: () => renderDocumentReview(el, title),
-    rules: () => renderRules(el, title),
+    rules: () => {
+      state.params = { ...state.params, tab: 'rules' };
+      renderEvaluationSettings(el, title);
+    },
     notifications: () => renderNotifications(el, title),
   };
   (map[state.route] || map.dashboard)();
@@ -378,13 +418,83 @@ function evaluationPeriodReviewerDashboardHtml(period) {
     </div>`;
 }
 
-function renderEvaluationPeriod(root, title) {
-  title.textContent = 'Evaluation Period';
+function setEvalSettingsTab(root, tab) {
+  root.querySelectorAll('[data-eval-tab]').forEach((btn) => {
+    const on = btn.dataset.evalTab === tab;
+    btn.classList.toggle('active', on);
+    btn.setAttribute('aria-selected', String(on));
+  });
+  const rulesPanel = root.querySelector('#evalTabRules');
+  const periodPanel = root.querySelector('#evalTabPeriod');
+  if (rulesPanel) rulesPanel.hidden = tab !== 'rules';
+  if (periodPanel) periodPanel.hidden = tab !== 'period';
+}
+
+function renderEvaluationSettings(root, title) {
+  title.textContent = 'Evaluation Settings';
+  const tab = state.params.tab === 'period' ? 'period' : 'rules';
+  const periodReadOnly = session.role === 'reviewer';
+
+  root.innerHTML = `
+    <div class="fl-eval-settings">
+      <div class="fl-settings-tabs" role="tablist" aria-label="Evaluation settings sections">
+        <button type="button" class="fl-settings-tab ${tab === 'rules' ? 'active' : ''}" role="tab" id="tab-btn-rules"
+          aria-selected="${tab === 'rules'}" aria-controls="evalTabRules" data-eval-tab="rules">Scoring Rules</button>
+        <button type="button" class="fl-settings-tab ${tab === 'period' ? 'active' : ''}" role="tab" id="tab-btn-period"
+          aria-selected="${tab === 'period'}" aria-controls="evalTabPeriod" data-eval-tab="period">Evaluation Period</button>
+      </div>
+      <div id="evalTabRules" class="fl-settings-panel" role="tabpanel" aria-labelledby="tab-btn-rules" ${tab !== 'rules' ? 'hidden' : ''}></div>
+      <div id="evalTabPeriod" class="fl-settings-panel" role="tabpanel" aria-labelledby="tab-btn-period" ${tab !== 'period' ? 'hidden' : ''}></div>
+    </div>`;
+
+  root.querySelectorAll('[data-eval-tab]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const next = btn.dataset.evalTab;
+      if (state.params.tab === next) return;
+      state.params = { ...state.params, tab: next };
+      setEvalSettingsTab(root, next);
+    });
+  });
+
+  renderConfig(document.getElementById('evalTabRules'), title, { embedded: true });
+  renderEvaluationPeriod(document.getElementById('evalTabPeriod'), title, { embedded: true, readOnly: periodReadOnly });
+  setEvalSettingsTab(root, tab);
+}
+
+function renderEvaluationPeriod(root, title, { embedded = false, readOnly = false } = {}) {
+  if (!embedded) title.textContent = 'Evaluation Period';
   const store = MockStore.load();
   const ic = store.institutionConfig || DEFAULT_INSTITUTION_CONFIG();
   const period = ic.preparationPeriod;
   const status = computeEvaluationPeriodStatus(period);
   const rev = reviewerAvailabilityDetail(period);
+
+  if (readOnly) {
+    root.innerHTML = `
+      ${pageIntro(SCREEN_INTRO.simulationCfg)}
+      <p class="muted" style="margin:-0.5rem 0 1rem;font-size:0.92rem">These settings are managed by your administrator.</p>
+      <div class="card fl-eval-period-form">
+        <dl class="fl-eval-period-dl">
+          <div>
+            <dt>Start date</dt>
+            <dd>${formatEvaluationDate(period.start)}</dd>
+          </div>
+          <div>
+            <dt>End date</dt>
+            <dd>${formatEvaluationDate(period.end)}</dd>
+          </div>
+          <div>
+            <dt>Reviewer available from</dt>
+            <dd>${period.reviewerAvailableFrom ? formatEvaluationDate(period.reviewerAvailableFrom) : '—'}</dd>
+          </div>
+        </dl>
+        <div class="fl-eval-period-summary" style="margin-top:0.75rem">
+          <p><span class="muted">Current status</span> <span class="badge-status ${statusBadgeClass(status)}">${status}</span></p>
+          <p class="muted" style="font-size:0.9rem;margin:0.35rem 0 0">Reviewer availability: ${rev.shortLabel}</p>
+        </div>
+      </div>`;
+    return;
+  }
 
   root.innerHTML = `
     ${pageIntro(SCREEN_INTRO.simulationCfg)}
@@ -393,17 +503,14 @@ function renderEvaluationPeriod(root, title) {
         <label class="fl-field">
           <span class="fl-field__label">Start Date</span>
           <input type="date" id="ppStart" name="start" value="${period.start}" required aria-required="true" />
-          <span class="fl-field__hint" id="ppStartReadable">${formatEvaluationDate(period.start)}</span>
         </label>
         <label class="fl-field">
           <span class="fl-field__label">End Date</span>
           <input type="date" id="ppEnd" name="end" value="${period.end}" required aria-required="true" />
-          <span class="fl-field__hint" id="ppEndReadable">${formatEvaluationDate(period.end)}</span>
         </label>
         <label class="fl-field">
           <span class="fl-field__label">Reviewer Available From</span>
           <input type="date" id="ppRev" name="reviewerAvailableFrom" value="${period.reviewerAvailableFrom || ''}" />
-          <span class="fl-field__hint" id="ppRevReadable">${period.reviewerAvailableFrom ? formatEvaluationDate(period.reviewerAvailableFrom) : '—'}</span>
         </label>
       </form>
       <div class="fl-eval-period-summary" aria-live="polite">
@@ -429,11 +536,6 @@ function renderEvaluationPeriod(root, title) {
     const badge = document.getElementById('ppStatusBadge');
     badge.textContent = st;
     badge.className = `badge-status ${statusBadgeClass(st)}`;
-    document.getElementById('ppStartReadable').textContent = formatEvaluationDate(draft.start);
-    document.getElementById('ppEndReadable').textContent = formatEvaluationDate(draft.end);
-    document.getElementById('ppRevReadable').textContent = draft.reviewerAvailableFrom
-      ? formatEvaluationDate(draft.reviewerAvailableFrom)
-      : '—';
     document.getElementById('ppRevLine').textContent = `Reviewer availability: ${reviewerAvailabilityDetail(draft).shortLabel}`;
   };
 
@@ -715,16 +817,6 @@ function renderDocumentReview(root, title) {
       } else navigate('workspace');
     };
   });
-}
-
-function renderRules(root, title) {
-  title.textContent = 'Scoring rules';
-  const el = root;
-  el.innerHTML = `${pageIntro(SCREEN_INTRO.rules)}`;
-  const inner = document.createElement('div');
-  root.appendChild(inner);
-  const t = { textContent: '' };
-  renderConfig(inner, t);
 }
 
 function renderNotifications(root, title) {

@@ -35,51 +35,67 @@
 
 .cfg-summary-strip {
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.35rem;
+  width: 100%;
+  font-size: 0.9rem;
+  padding: 0.35rem 0 0;
+}
+.cfg-summary-main {
+  display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem 0.75rem;
-  font-size: 0.9rem;
-  padding: 0.35rem 0;
+  min-width: 0;
 }
 .cfg-summary-sep { color: #9bb0c7; }
-.cfg-details-inline {
-  margin-left: auto;
+.cfg-details-block {
+  width: 100%;
+  min-width: 0;
 }
-.cfg-details-inline summary {
+.cfg-details-block summary {
   cursor: pointer;
   font-weight: 600;
   color: var(--fl-navy-secondary);
   min-height: 44px;
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  list-style: none;
 }
+.cfg-details-block summary::-webkit-details-marker { display: none; }
 .cfg-details-body {
-  position: absolute;
-  right: 0;
-  left: 0;
-  max-width: 42rem;
-  margin: 0.35rem 0 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0.5rem 0 0;
   background: #fff;
   border: 1px solid var(--fl-border);
-  border-radius: 12px;
-  padding: 1rem;
-  box-shadow: 0 8px 24px rgba(7, 22, 41, 0.1);
-  z-index: 30;
+  border-radius: 16px;
+  padding: 1rem 1.25rem;
+  box-shadow: 0 4px 16px rgba(7, 22, 41, 0.06);
   font-size: 0.9rem;
+  line-height: 1.55;
 }
-.cfg-details-inline[open] {
-  position: relative;
+.cfg-details-body section {
+  margin-top: 0.85rem;
+}
+.cfg-details-body section:first-child {
+  margin-top: 0;
+}
+.cfg-details-body p,
+.cfg-details-body li {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 .cfg-details-body h4 {
-  margin: 0.75rem 0 0.35rem;
+  margin: 0 0 0.35rem;
   font-size: 0.8rem;
   text-transform: uppercase;
   color: #5a7089;
 }
-.cfg-details-body h4:first-child { margin-top: 0; }
 .cfg-dl { margin: 0; font-size: 0.88rem; }
 .cfg-dl dt { font-weight: 600; margin-top: 0.35rem; }
-.cfg-dl dd { margin: 0.15rem 0 0; color: #5a7089; }
+.cfg-dl dd { margin: 0.15rem 0 0; color: #5a7089; overflow-wrap: anywhere; }
 
 .cfg-toolbar {
   display: flex;
