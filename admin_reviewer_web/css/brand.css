@@ -1,0 +1,77 @@
+/** FacultyLink logo image (original artwork) — size + spacing only */
+
+:root {
+  --fl-brand-logo-height: 48px;
+  --fl-brand-logo-height-auth: 72px;
+  --fl-brand-gap: 10px;
+}
+
+.fl-brand-compact {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--fl-brand-gap);
+  max-width: 100%;
+  min-width: 0;
+}
+
+.fl-brand-wordmark {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+}
+
+.fl-brand-compact--on-dark .wm-title {
+  font-size: 1.5rem;
+  font-weight: 800;
+  line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fl-brand-compact--on-dark .wm-title .wm-faculty { color: #ffffff; }
+.fl-brand-compact--on-dark .wm-title .wm-link { color: var(--fl-cyan, #51c8ef); }
+
+.fl-brand-logo-img {
+  display: block;
+  height: var(--fl-brand-logo-height);
+  width: auto;
+  max-width: min(220px, 100%);
+  object-fit: contain;
+  object-position: left center;
+}
+
+.fl-brand-compact--auth .fl-brand-logo-img {
+  height: var(--fl-brand-logo-height-auth);
+  margin: 0 auto;
+  object-position: center;
+}
+
+.fl-brand-compact--auth {
+  justify-content: center;
+  margin: 0 auto 1rem;
+  width: 100%;
+}
+
+.about-logo-panel {
+  background: #ffffff;
+  border: 1px solid var(--fl-border, #d4e2f0);
+  border-radius: 20px;
+  padding: clamp(1.25rem, 3vw, 1.75rem);
+  max-width: min(340px, 100%);
+  box-shadow: 0 8px 28px rgba(7, 22, 41, 0.08);
+}
+
+.about-logo-panel img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+@media (max-width: 720px) {
+  .fl-brand--header .fl-tagline {
+    display: none;
+  }
+}

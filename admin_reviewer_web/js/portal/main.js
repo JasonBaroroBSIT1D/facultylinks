@@ -23,6 +23,7 @@ import {
   openReviewerAssignModal,
   countFacultyForReviewer,
 } from './account-modals.js';
+import { brandCompactHtml } from '../core/brand-markup.js';
 
 const session = AuthRepository.requireRole(['admin', 'reviewer']);
 if (!session) throw new Error('No session');
@@ -61,14 +62,16 @@ function navItems() {
 function renderShell() {
   const sidebar = document.getElementById('sidebar');
   sidebar.innerHTML = `
-    <div class="brand"><img src="assets/logo.svg" width="36" height="36" alt="FacultyLink"/><span class="brand-text">Faculty<span class="cyan">Link</span></span></div>
-    ${navItems()
-      .map((n) => {
-        const active = state.route === n.id || (state.route === 'review' && n.id === 'workspace');
-        return `<button type="button" class="nav-item ${active ? 'active' : ''}" data-route="${n.id}" title="${n.label}" aria-label="${n.label}"${active ? ' aria-current="page"' : ''}>${iconForNav(n.id)}<span class="nav-label">${n.label}</span></button>`;
-      })
-      .join('')}
-    <button type="button" class="nav-item nav-item-signout" id="signOut" title="Sign out" aria-label="Sign out">${navIcon.signOut}<span class="nav-label">Sign out</span></button>
+    <div class="brand">${brandCompactHtml({ onDark: true })}</div>
+    <nav class="sidebar-nav" aria-label="Portal sections">
+      ${navItems()
+        .map((n) => {
+          const active = state.route === n.id || (state.route === 'review' && n.id === 'workspace');
+          return `<button type="button" class="nav-item ${active ? 'active' : ''}" data-route="${n.id}" title="${n.label}" aria-label="${n.label}"${active ? ' aria-current="page"' : ''}>${iconForNav(n.id)}<span class="nav-label">${n.label}</span></button>`;
+        })
+        .join('')}
+      <button type="button" class="nav-item nav-item-signout" id="signOut" title="Sign out" aria-label="Sign out">${navIcon.signOut}<span class="nav-label">Sign out</span></button>
+    </nav>
   `;
   sidebar.querySelectorAll('[data-route]').forEach((b) =>
     b.addEventListener('click', () => {

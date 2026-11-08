@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../repositories/auth_repository.dart';
 import '../theme/app_theme.dart';
+import '../widgets/fl_logo.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -11,15 +12,20 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  static const _minDisplay = Duration(milliseconds: 900);
+
   @override
   void initState() {
     super.initState();
-    _go();
+    _bootstrap();
   }
 
-  Future<void> _go() async {
-    await Future.delayed(const Duration(milliseconds: 1200));
-    final email = await AuthRepository.currentEmail();
+  Future<void> _bootstrap() async {
+    String? email;
+    await Future.wait<void>([
+      AuthRepository.currentEmail().then((v) => email = v),
+      Future.delayed(_minDisplay),
+    ]);
     if (!mounted) return;
     Navigator.pushReplacementNamed(context, email != null ? '/home' : '/login');
   }
@@ -27,24 +33,24 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppColors.navyDeep,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text.rich(
-              TextSpan(
-                children: [
-                  const TextSpan(text: 'Faculty', style: TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold)),
-                  TextSpan(text: 'Link', style: TextStyle(color: AppColors.cyan, fontSize: 32, fontWeight: FontWeight.bold)),
-                ],
+      backgroundColor: AppColors.bgLight,
+      body: SafeArea(
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const FlLogoFull(width: 200),
+              const SizedBox(height: 40),
+              const SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2.5,
+                  color: AppColors.primaryBlue,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text('CONNECT · EVALUATE · ADVANCE.', style: TextStyle(color: AppColors.muted, letterSpacing: 2, fontSize: 11)),
-            const SizedBox(height: 32),
-            const CircularProgressIndicator(color: AppColors.cyan),
-          ],
+            ],
+          ),
         ),
       ),
     );

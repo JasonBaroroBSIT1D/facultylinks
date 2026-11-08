@@ -17,6 +17,7 @@ if (remembered) {
 document.getElementById('togglePw').addEventListener('click', () => {
   const isText = password.type === 'text';
   password.type = isText ? 'password' : 'text';
+  document.getElementById('togglePw').setAttribute('aria-label', isText ? 'Show password' : 'Hide password');
 });
 
 document.getElementById('contactBtn').addEventListener('click', () => {
@@ -55,6 +56,6 @@ form.addEventListener('submit', async (e) => {
   } catch (ex) {
     err.textContent = ex.message || 'Sign in failed.';
     btn.disabled = false;
-    btn.textContent = 'Sign in';
+    btn.textContent = 'Sign In';
   }
 });

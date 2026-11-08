@@ -8,16 +8,18 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="css/landing.css" />
+  <link rel="stylesheet" href="css/brand.css" />
+  <link rel="icon" type="image/jpeg" href="assets/FacultyLink-logo.jpg" />
 </head>
 <body>
   <header class="fl-header" id="top">
     <div class="fl-header-inner">
-      <a class="fl-brand" href="#top">
-        <img src="assets/logo.svg" width="48" height="48" alt="" />
-        <div>
-          <h1><span class="faculty">Faculty</span><span class="link">Link</span></h1>
+      <a class="fl-brand fl-brand--header" href="#top">
+        <img class="fl-brand-logo-img" src="assets/FacultyLink-logo.jpg" alt="" aria-hidden="true" />
+        <span class="fl-brand-wordmark">
+          <span class="wm-title"><span class="wm-faculty">Faculty</span><span class="wm-link">Link</span></span>
           <p class="fl-tagline">CONNECT · EVALUATE · ADVANCE.</p>
-        </div>
+        </span>
       </a>
       <nav class="fl-nav" aria-label="Primary">
         <a href="#home" class="nav-link active" data-section="home">Home</a>
@@ -62,10 +64,7 @@
       <div>
         <p class="section-label" style="color:#51c8ef">ABOUT FACULTYLINK</p>
         <h2 style="font-size:2.25rem;margin:0.5rem 0 1rem">Assessment support, with human review at the center.</h2>
-        <div class="about-panel">
-          <strong style="color:#fff">Faculty</strong><span style="color:#51c8ef">Link</span>
-          <p class="fl-tagline" style="margin-top:0.5rem">CONNECT · EVALUATE · ADVANCE.</p>
-        </div>
+        <div class="about-logo-panel"><img src="assets/FacultyLink-logo.jpg" alt="FacultyLink" /></div>
       </div>
       <div>
         <p class="about-quote">FacultyLink is a faculty self-assessment platform designed to support document organization, KRA-based scoring, reviewer verification, and rank upgrade simulation. It helps streamline preparation while maintaining human review and alignment with applicable evaluation guidelines.</p>

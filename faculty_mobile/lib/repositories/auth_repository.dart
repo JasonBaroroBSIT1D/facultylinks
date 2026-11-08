@@ -1,5 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'password_recovery_repository.dart';
+
 class AuthRepository {
   static const _sessionKey = 'fl_mobile_session';
 
@@ -10,7 +12,9 @@ class AuthRepository {
 
   static Future<bool> login(String email, String password) async {
     await Future.delayed(const Duration(milliseconds: 500));
-    final pw = demoUsers[email.trim().toLowerCase()];
+    final key = email.trim().toLowerCase();
+    final override = await PasswordRecoveryRepository.passwordForLogin(key);
+    final pw = override ?? demoUsers[key];
     if (pw == null || pw != password) return false;
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_sessionKey, email.trim().toLowerCase());

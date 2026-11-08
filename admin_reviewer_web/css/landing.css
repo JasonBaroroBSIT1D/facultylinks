@@ -31,10 +31,50 @@ body {
   justify-content: space-between;
   gap: 1.5rem;
 }
-.fl-brand { display: flex; align-items: center; gap: 1rem; text-decoration: none; color: inherit; }
-.fl-brand h1 { margin: 0; font-size: 1.35rem; font-weight: 700; }
-.fl-brand .faculty { color: var(--fl-white); }
-.fl-brand .link { color: var(--fl-cyan); }
+.fl-brand--header {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  color: inherit;
+  min-width: 0;
+  max-width: min(420px, 55vw);
+}
+.fl-brand--header .fl-brand-logo-img {
+  flex-shrink: 0;
+  height: 56px;
+  width: auto;
+  max-width: 72px;
+  object-fit: contain;
+  object-position: center;
+}
+.fl-brand--header .fl-brand-wordmark {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  line-height: 1.15;
+}
+.fl-brand--header .wm-title {
+  font-size: clamp(1.625rem, 2.5vw, 1.75rem);
+  font-weight: 800;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.fl-brand--header .wm-title .wm-faculty { color: var(--fl-white); }
+.fl-brand--header .wm-title .wm-link { color: var(--fl-cyan); }
+.fl-brand--header .fl-tagline {
+  margin: 0.2rem 0 0;
+  font-size: 0.62rem;
+  letter-spacing: 0.16em;
+  color: var(--fl-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 14rem;
+}
 .fl-tagline { font-size: 0.65rem; letter-spacing: 0.2em; color: var(--fl-muted); margin: 0.15rem 0 0; }
 .fl-nav { display: flex; align-items: center; gap: 1.75rem; }
 .fl-nav a {
@@ -61,7 +101,11 @@ body {
   background: var(--fl-navy-deep);
   color: var(--fl-white);
   min-height: calc(100vh - var(--fl-header-h));
-  padding: clamp(3rem, 8vw, 6rem) clamp(1.5rem, 5vw, 4rem);
+  /* ~52–60px less top padding than before; floor keeps clear space below sticky header */
+  padding-top: clamp(1.5rem, calc(8vw - 3.25rem), calc(6rem - 3.75rem));
+  padding-bottom: clamp(3rem, 8vw, 6rem);
+  padding-left: clamp(1.5rem, 5vw, 4rem);
+  padding-right: clamp(1.5rem, 5vw, 4rem);
 }
 .hero-inner { max-width: 1500px; margin: 0 auto; }
 .hero-eyebrow {

@@ -1,16 +1,39 @@
 const SESSION_KEY = 'facultylink_session';
+const PASSWORD_OVERRIDES_KEY = 'fl_password_overrides';
 
 const DEMO_USERS = [
   { email: 'admin@ustp.demo', password: 'Admin@2026', role: 'admin', name: 'System Administrator' },
   { email: 'reviewer@ustp.demo', password: 'Review@2026', role: 'reviewer', name: 'Elena Mendoza', reviewerId: 'rev-001' },
 ];
 
+export const DEMO_USER_EMAILS = DEMO_USERS.map((u) => u.email.toLowerCase());
+
+export function setPasswordOverride(email, password) {
+  const map = JSON.parse(localStorage.getItem(PASSWORD_OVERRIDES_KEY) || '{}');
+  map[email.trim().toLowerCase()] = password;
+  localStorage.setItem(PASSWORD_OVERRIDES_KEY, JSON.stringify(map));
+}
+
+export function getPasswordForUser(email) {
+  const key = email.trim().toLowerCase();
+  const overrides = JSON.parse(localStorage.getItem(PASSWORD_OVERRIDES_KEY) || '{}');
+  if (overrides[key]) return overrides[key];
+  const user = DEMO_USERS.find((u) => u.email.toLowerCase() === key);
+  return user?.password ?? null;
+}
+
 export class AuthRepository {
   static login(email, password) {
     return new Promise((resolve, reject) => {
       setTimeout(() => {
-        const user = DEMO_USERS.find((u) => u.email.toLowerCase() === email.trim().toLowerCase());
-        if (!user || user.password !== password) {
+        const key = email.trim().toLowerCase();
+        const user = DEMO_USERS.find((u) => u.email.toLowerCase() === key);
+        if (!user) {
+          reject(new Error('Invalid email or password.'));
+          return;
+        }
+        const expected = getPasswordForUser(email);
+        if (expected !== password) {
           reject(new Error('Invalid email or password.'));
           return;
         }
