@@ -1,0 +1,16 @@
+:root {
+  --fl-navy-deep: #071629;
+  --fl-navy-secondary: #0b213d;
+  --fl-cyan: #51c8ef;
+  --fl-white: #ffffff;
+  --fl-muted: #bdccdf;
+  --fl-bg-light: #f1f6fb;
+  --fl-text-navy: #102d50;
+  --fl-border: #d4e2f0;
+  --fl-gradient: linear-gradient(135deg, #123456 0%, #1d70d5 100%);
+  --fl-radius: 24px;
+  --fl-radius-sm: 12px;
+  --fl-shadow: 0 12px 40px rgba(7, 22, 41, 0.12);
+  --fl-header-h: 90px;
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}

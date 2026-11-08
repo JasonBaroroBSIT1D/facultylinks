@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <base href="/" />
+  <title>FacultyLink Portal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/app.css?v=5" />
+  <link rel="stylesheet" href="css/config-rules.css?v=3" />
+  <link rel="stylesheet" href="css/publish-modal.css?v=2" />
+  <link rel="stylesheet" href="css/account-modals.css?v=1" />
+</head>
+<body>
+  <div class="app-shell">
+    <div id="sidebarBackdrop" class="sidebar-backdrop" aria-hidden="true" tabindex="-1"></div>
+    <aside class="sidebar" id="sidebar" aria-label="Main navigation"></aside>
+    <div class="main">
+      <header class="topbar">
+        <div style="display:flex;align-items:center;gap:1rem">
+          <button type="button" id="toggleSidebar" class="btn-ghost btn-sm sidebar-toggle" aria-label="Open navigation menu" aria-expanded="true" aria-controls="sidebar">☰</button>
+          <strong id="pageTitle">Dashboard</strong>
+        </div>
+        <div id="topActions"></div>
+      </header>
+      <main class="content" id="appContent" tabindex="-1"></main>
+    </div>
+  </div>
+  <div id="modalRoot"></div>
+  <script type="module" src="js/portal/main.js?v=8"></script>
+</body>
+</html>

@@ -1,0 +1,371 @@
+FACULTYLINK: AN INTELLIGENT DOCUMENT-VALIDATED FACULTY SELF-ASSESSMENT SYSTEM FOR DBM-CHED JOINT CIRCULAR RANK UPGRADE AND RECLASSIFICATION
+A Capstone Project and Research Study
+Presented to the
+Department of Information Technology
+University of Science and Technology of Southern Philippines
+Oroquieta City
+In Partial Fulfillment of the Requirements for
+Capstone Project and Research Study Leading to the Degree in
+Bachelor of Science in Information Technology
+JASON S. BARORO
+MARK CYRIL SUMUROY
+AIME JEAN S. GUMATAYRISSA FLOR I. ARNAIZ
+APRIL 2026
+CHAPTER I
+INTRODUCTION
+Background of the Study
+State Universities and Colleges (SUCs) depend on their faculty members to deliver educational programs through their teaching work while they perform research and provide extension services to the community. The DBM–CHED Joint Circular (Department of Budget and Management [DBM] & Commission on Higher Education [CHED], 2022) provides the evaluation process used. The research demonstrates faculty members undergo evaluation to receive promotion and rank advancement and reclassification recognition for their professional development and academic accomplishments. Research shows that transparent promotion systems which award merit to faculty members their motivation levels increase and their productivity rises and their retention rates improve, which results in better institutional performance and student learning outcomes (Sharma & Jyoti, 2022; Nguyen et al., 2023).
+The Department of Budget and Management (DBM) and the Commission on Higher Education (CHED) of the Philippines have published a Joint Circular which establishes the procedures for faculty members to achieve promotion and reclassification. Faculty performance assessment according to this circular uses Key Result Areas (KRAs) which include Instruction Research and Innovation Extension or Community Services and Professional Development. Each KRA is assinged a specific number of points, which are determined by documented achievements and supporting materials, including teaching records, research publications, and relevant certifications. Consequently, this evidence-based approach ensures that promotion determinations are based on quantifiable performance metrics and uniform standards (DBM & CHED, 2022).
+Despite having a structured and standardized evaluation system in place, the preparation for faculty reclassification is a complex and demanding process. Many faculty members still use manual methods, spreadsheets, or general systems to organize their documents and calculate their accumulated points. Because official scoring happens during formal evaluations by institutional committees, faculty members often have limited ways to assess their readiness before submitting their materials.
+As a result, several difficulties emerge, encompassing the flawed calculation of Key Result Area (KRA) points, the submission of incomplete or non-adherent documentary prerequisites, and ambiguity in assessing promotion eligibility. Manual processes can also cause inefficiencies, delays, inconsistencies, and human errors within evaluation procedures. Research suggests that dependence on manual administrative systems can detrimentally impact accuracy and decision-making, especially in intricate and rule-based evaluations (Aljawarneh, 2022). Moreover, the absence of specialized digital instruments constrains transparency and impedes faculty members' capacity to effectively monitor their performance (Bond et al., 2022; Zawacki-Richter et al., 2023).
+This study introduces FacultyLink: An Intelligent Document-Validated Faculty Self-Assessment System for DBM-CHED Joint Circular Rank Upgrade and Reclassification. The system's primary function is to aid faculty members through automated scoring, document validation, and rank simulation, all of which are grounded in the Joint Circular's stipulations. By integrating technologies including Optical Character Recognition (OCR), rule-based validation protocols, and performance monitoring dashboards, the system endeavors to enhance document processing speed, reduce manual computation error in KRA scoring and provide clear monitoring of faculty compliance. Consequently, FacultyLink’s ultimate objective is to assist faculty in evaluating their preparedness, ensuring adherence to regulations, and streamlining the promotion and reclassification procedures. The system is considered intelligent because it applies rule-based decision logic aligned with DBM–CHED Joint Circular guidelines in evaluating and computing faculty performance.
+Statement of the Problem
+The process of applying for a faculty rank upgrade or reclassification, as outlined in the Joint Circular, often takes a long time and is quite complex. Faculty members must manually prepare, enter, and check many documents. This is done without a reliable system to accurately assess their qualifications before they submit their applications. This study specifically aims to address the following issues:
+Lack of a dedicated self-assessment platform – Faculty members do not have access to a dedicated platform aligned with the DBM–CHED Joint Circular that enables them to evaluate their readiness prior to document submission.
+Limitations in the computation on KRA points contribution allocation across different KRAs – Manual and spreadsheet-based systems often produce inaccurate computation of faculty points, including the distribution of contribution points in collaborative outputs and activities, resulting in delays, inconsistencies, and possible violations of DBM–CHED Joint Circular requirements.
+Difficulty in monitoring compliance requirements - Faculty members face difficulties when they try to observe their advisership activities and research outputs and various necessary documents which results in incomplete or disorganized submissions.
+Risk of submitting incomplete or non-compliant documentary evidence - The missing validation mechanisms result in higher chances of document loss or insufficient documentation which results in point disqualification during the evaluation process.
+Addressing these problems will create more efficient processes while improving accuracy and transparency in the faculty rank upgrade and reclassification system which will enhance faculty morale and provide equal career development opportunities while the organization maintains compliance with Joint Circular requirements.
+Statement of the Objectives
+The main objective of the study is to design, develop, and evaluate FacultyLink, an intelligent document-validated faculty self- assessment system which includes rank upgrade simulation and improves KRA point accuracy while meeting Joint Circular requirements and providing clear faculty reclassification procedures for State Universities and Colleges (SUCs).
+The following goals are thought to be carried out to reach this goal:
+To design and develop a web-based and mobile application platform that enables users to upload, manage, and validate faculty documentary evidence in accordance with the DBM–CHED Joint Circular guidelines, including reviewer validation and feedback mechanisms prior to the official evaluation process.
+To develop an automated scoring and assessment module that computes Key Result Area (KRA) points and automatically applies contribution allocation and scoring rules across different KRAs based on DBM–CHED Joint Circular guidelines, while providing a real-time self-assessment dashboard and rank upgrade simulation to identify missing competencies across all KRAs.
+To evaluate the system in terms of functionality, accuracy and usability based on predefined evaluation metrics and user feedback.
+Significance of the Study
+This study provides important benefits to stakeholders who work at State Universities and Colleges (SUCs) because it solves problems which occur during faculty promotion and reclassification processes that follow DBM-CHED Joint Circular. FACULTYLINK system provides automated scoring and document validation and real-time monitoring and rank upgrade simulation module which lets users determine their eligibility and find their assessment gaps before they take the official evaluation.
+The development of FacultyLink will benefit several stakeholders:
+Faculty Members – The system enables faculty members to assess their promotion readiness through its automated scoring system which evaluates documents and provides rank upgrade predictions.
+Institutional Evaluation Committees (IEC) – The system enhances evaluation efficiency by organizing document submissions while checking their completeness and compliance before the evaluation process starts.
+State Universities and Colleges (SUCs) – The system improves faculty evaluation processes through standardized assessment methods which operate under system-based assessment procedures.
+Administrators – The system provides administrators with structured reports and analytics which they can use to assess faculty readiness and track organizational performance patterns.
+Future Researchers – The system provides a reference point for research studies that investigate intelligent faculty evaluation systems and decision support systems and simulation-based assessment models.
+Scope and Limitation of the Study
+The study investigates FacultyLink development which serves as a self-assessment system for faculty members who need to prepare their rank upgrade and reclassification process according to Joint Circular regulations. The system operates as an online tool which enables users to handle documentary materials while tracking their progress in achieving Key Result Areas (KRA) throughout their work. FacultyLink will be implemented as a web and mobile application that allows registered faculty users to log in, and upload documentary evidence related to their academic achievements which includes research publications and advisership records and supporting certifications. The system enables users to monitor their KRA score breakdown and review document completeness and simulate their potential eligibility for rank upgrade.
+The system will be used by faculty members and designated evaluators within State Universities and Colleges (SUCs) as a preparatory and support tool for faculty evaluation.
+However, this study has several limitations. The system does not replace the official evaluation conducted by authorized Joint Circular committees, as it is intended only as a preparatory and self-assessment tool. It is limited to assisting faculty members in evaluating their readiness for rank upgrade and reclassification rather than serving as a final decision-making authority. Furthermore, the system operates strictly within the scope of the DBM–CHED Joint Circular guidelines and may require updates if there are changes or revisions to the policies. The system requires an internet connection and cannot be accessed offline. The system does not verify the authenticity of uploaded documents and relies on reviewer validation.
+Definition of Terms
+Term
+Definition
+Automated Scoring Engine
+A component in FacultyLink that automatically calculates accumulated faculty points based on the DBM–CHED Joint Circular guidelines and Key Result Areas (KRAs).
+DBM–CHED Joint Circular
+A set of guidelines issued by the Department of Budget and Management (DBM) and the Commission on Higher Education (CHED) used by State Universities and Colleges (SUCs) in evaluating faculty members for rank upgrade and reclassification.
+FacultyLink
+An intelligent faculty self-assessment platform designed to help SUC faculty members evaluate their readiness for rank upgrade and reclassification in accordance with DBM–CHED Joint Circular requirements.
+Key Result Areas (KRA)
+Categories used in FacultyLink to evaluate faculty performance, including Instruction, Research and Innovation, Extension or Community Services, and Professional Development.
+Optical Character Recognition (OCR)
+A technology integrated into FacultyLink that extracts and converts text from uploaded faculty documents into machine-readable data for validation and scoring.
+Rank Upgrade Simulation
+A feature in FacultyLink that estimates faculty eligibility for promotion or reclassification based on computed KRA scores and uploaded documentary evidence.
+Self-Assessment Platform
+A digital platform that allows faculty members to evaluate and monitor their readiness for rank upgrade and reclassification before formal evaluation.
+Tesseract OCR
+An open-source OCR engine integrated into FacultyLink to extract text from uploaded faculty documents for automated processing and validation.
+CHAPTER II
+REVIEW OF THE RELATED LITERATURE
+This chapter provides an extensive examination of existing research material which pertains to FacultyLink. FacultyLink operates as an intelligent document-validated faculty self-assessment system which enables faculty members to undergo rank upgrade and reclassification assessment according to the DBM–CHED Joint Circular in State Universities and Colleges (SUCs). The study investigates three essential elements: for faculty assessment and Optical Character Recognition (OCR) technology used for document verification and automated scoring systems which utilize Key Result Areas (KRAs) to evaluate performance and digital technologies applied in higher education administration.
+Review of Literature
+Faculty Evaluation Systems and DBM–CHED Joint Circular
+Faculty evaluation systems are necessary to create assessment methods which maintain fairness and transparency throughout the evaluation process of academic performance metrics. The Department of Budget and Management together with the Commission on Higher Education established DBM–CHED Joint Circular No. 3, s. 2022 (NBC 461 – 9th Cycle), as the governing document for faculty rank upgrade and reclassification processes in the Philippines. The framework assesses faculty performance through Key Result Areas which include Instruction Research and Innovation Extension and Professional Development (DBM & CHED, 2022).
+The multidimensional nature of KRAs introduces complexity in evaluation, particularly in weighted scoring systems and the assessment of co-authored research outputs. Manual computation processes are therefore prone to inaccuracies due to the need for precise calculations. Studies have shown that performance management systems in higher education play a critical role in improving faculty motivation, accountability, and overall work quality, while also supporting systematic evaluation and decision-making processes (Yawson & Paros, 2023).
+Recent studies on higher education systems emphasize the importance of structured and quality-assured instructional leadership frameworks in improving faculty performance and institutional effectiveness. According to Aquino (2025), high-performing higher education institutions implement standardized evaluation frameworks which maintain consistent evaluation procedures while providing transparent assessment methods and supporting their institutional objectives. The frameworks enable universities to assess their faculty members through systematic evaluation methods which enhance their assessment results according to the DBM–CHED Joint Circular requirements that this research follows.
+Despite these advancements, existing evaluation systems still rely heavily on manual processes and fragmented tools, which lead to inconsistencies, computational errors, and limited transparency. The evaluation process needs a system like FacultyLink because it matches DBM–CHED Joint Circular requirements while delivering better evaluation results through accurate and efficient evaluation processes.
+Digital Transformation in Academic Administration
+Digital transformation has brought about major enhancements to administrative operations throughout higher education institutions. Mergel et al. (2021) showed that digital governance systems bring organizations three benefits which include increased operational efficiency and better transparency and improved service delivery. The research by Strohmeier (2022) demonstrated that digital human resource systems help organizations decrease their administrative workload while achieving better data integrity.
+The evaluation systems used in higher education institutions achieve their intended purpose through quality assurance systems which assess their evaluation performance. Prado (2025) demonstrates that institutional quality assurance practiceslead to improved evaluation accuracy and evaluation consistency and evaluation accountability in academic programs. The study shows that automatic validation and compliance checking systems should be integrated through established validation and monitoring procedures because these systems require systematic validation and monitoring processes.
+Academic institutions use digital systems to manage faculty information, assess academic outcomes, and support institutional decision-making processes. The systems offer basic record-keeping functions, but they do not include the required advanced assessment tools needed to evaluate faculty performance and make promotion decisions. The public sector continues to face digital integration difficulties because administrative systems need complete automation to manage complex evaluation work (Mergel, Edelmann, & Haug, 2021).
+Many digital systems used in higher education institutions operate solely for administrative purposes, which include record-keeping and reporting, because they do not have advanced evaluation and decision-making functions.. This gap demonstrates the need for more advanced systems that integrate automation, validation, and analytics, which are addressed by the proposed FacultyLink system.
+Optical Character Recognition (OCR) for Document Validation
+The document processing procedure becomes more efficient because Optical Character Recognition (OCR) technology enables automatic text extraction from scanned documents, reducing the need for manual data entry. OCR systems, such as Tesseract, allow large volumes of document images to be converted into machine-readable text, thereby improving accessibility and processing efficiency (Hegghammer, 2022).
+According to recent studies, the accuracy and effectiveness of OCR systems depend on the quality of input documents, including factors such as noise, blur, and document degradation (Alaei et al., 2023). Poor-quality images can significantly reduce text recognition performance, whereas high-quality documents enable more accurate extraction of information.
+Furthermore, OCR-based systems improve document processing workflows through their ability to analyze extensive document collections at high speeds while delivering satisfactory accuracy rates (Hegghammer, 2022). Educational institutions use automated text recognition technologies to improve administrative operations through their ability to decrease manual tasks and enhance data management.
+Despite the effectiveness of OCR technologies their performance hinges on the quality of documents and they do not provide systems for validating data accuracy and compliance. The FacultyLink system demonstrates the need for OCR technology to function with rule-based validation systems.
+Rule-Based Validation Systems
+Rule-based validation systems uses predefined logical rules which verify that data meets established standards. These systems provide transparency which helps stakeholders understand the complete decision-making process including its validation methods. The essential role of transparency together with explainability in decision-making systems receives emphasis from both explainable artificial intelligence and knowledge-based systems which need traceable and accountable operations (Borrego-Díaz & Galán-Páez, 2022).
+Rule-based systems enable administrators to establish and control validation rules which create a standardized process for assessing data. The system provides users with better understanding of its results because they can understand how the system operates through its complete transparency which serves as a major benefit over its intricate models (Belle & Papantonis, 2021). Automated validation systems in document processing environments validate extracted information by verifying publication details and standardized identifiers which leads to operational efficiency gains and lower need for human work. Document quality and extracted data inconsistencies both impact the accuracy of validation tests.
+Furthermore, hybrid approaches which combine automated validation with human expertise provide better results for both reliability and accuracy. Research in information systems shows that expert input combined with structured system processes leads to better results because of increased quality and credibility of outputs (Hassmann & Westner, 2024).
+The combination of automated data extraction with human verification processes should be integrated with rule-based systems to solve intricate assessment challenges. Therefore, combining rule-based validation with OCR and expert review, as implemented in FacultyLink, enhances both accuracy and reliability in faculty evaluation.
+Document Processing and Verification Systems
+Different fields use document processing systems which demonstrate operational principles that apply to other fields. The systems reach their verification accuracy through two processes which work together to verify results between automated testing and manual evaluation of special cases. Ines Mergel (2021) examined digital transformation in public administration and emphasized that digital systems must handle large volumes of documents efficiently by incorporating clear submission processes, exception handling, and a combination of automated validation and human review for complex cases. The document processing workflow at FacultyLink relies on these principles for its operational design.
+Stefan Strohmeier (2020) examined document management and electronic human resource systems that validate records from diverse institutional sources. The systems use adaptable validation standards which create rules for document evaluation that permit different document types to be assessed while still needing to meet basic compliance standards. The approach works for FacultyLink because it manages publications and certificates and professional credentials from various institutions and publishers.
+Thanh Nam Nguyen et al. (2021) showed that OCR-based document processing systems achieve better operational performance because they automatically extract data while their output quality stays intact through their validation methods. This supports the integration of automated and rule-based validation systems such as FacultyLink. Most existing document processing systems fail to operate effectively because they need special adaptations, which remain absent for academic evaluation frameworks, including the DBM-CHED Joint Circular. Academic documents need systems that can implement structured scoring rules while maintaining compliance with established evaluation standards, which currently do not exist. The existing limitations show that FacultyLink needs to function as a dedicated solution because it meets specific operational needs.
+Automated Scoring Systems
+Automated point calculation systems resolve the computational challenges which arise when faculty evaluation follows DBM-CHED Joint Circular regulations. The 9th Cycle weighting system requires base points to be multiplied with KRA weights while specific activities have point limits which need to be distributed among co-authors according to Hernandez and Cruz (2021). The manual calculation process of these factors creates error and inconsistency possibilities which automated systems can eliminate.
+Poon, Lau, Yu, and Tang (2023) demonstrated that users create numerous mistakes with spreadsheet tools which use automated formulas because they depend on user behavior. Their research showed that data entry mistakes and computational parameter misuse and calculation logic misunderstandings lead to the most common inaccuracies. Users create unreliable results when they input values into wrong fields and use wrong multipliers and misunderstand evaluation rules. The research demonstrates how standalone spreadsheet systems have limitations which require integrated solutions for FacultyLink because it combines data entry with validation and automated computation in a single controlled workflow system.
+Ramos and Santos (2021) reported that Philippine State Universities and Colleges (SUCs) have limited access to automated scoring systems, as most institutions still rely on manual evaluation conducted by committees. These manual processes, combined with complex scoring rules, often create bottlenecks in the promotion cycle and result in inconsistent scoring implementations.
+Although automated tools exist, organizations continue to use manual spreadsheet calculations because they believe those methods provide better results. The existing system requires development because it needs a scoring system which centralizes assessment scores while maintaining proper evaluation standards. The FacultyLink system establishes an automated scoring system which complies with DBM–CHED Joint Circular requirements for faculty evaluation purposes.
+Simulation and Decision Support Systems
+Simulation tools which allow users to create multiple career paths through modeling have proven useful for professional development purposes. Research on digital career development systems demonstrates that simulation tools enable users to assess different work activities together with their corresponding decision-making methods. John L. Holland and Deirdre Hughes (2021) research showed that digital career planning tools assist users in tracking their professional development while determining which activities will help them reach their career objectives. Adrianna Kezar (2021) research on academic career development platforms shows that digital systems which enable users to create academic achievement projections will help instructors prepare for their promotion and tenure evaluations. The tools enable users to assess their present achievements which they need to fulfill institutional promotion requirements while determining their required accomplishments. The simulation features enable users to create their career paths while meeting promotional standards through active participation.
+Simulation tools generate institutional analytics that serve as valuable resources for university administrators. Digital planning systems produce organizational data that support strategic decision-making, including trend analysis, workforce planning, and professional development evaluation (Mergel, 2021). These capabilities enable institutions to utilize aggregated simulation data to predict faculty promotion trends and develop more effective academic staffing strategies.
+The current systems face a major restriction because they lack the ability to combine simulation capabilities with their real-time assessment functions. The existing systems require development of new systems which must integrate simulation capabilities and automatic scoring and validation systems. The FacultyLink system addresses this need by providing faculty members with rank advancement simulation capabilities which use actual assessment results to help them evaluate their progress and create effective professional development plans.
+Agile Software Development Methodology
+The study adopted an Agile Software Development Methodology in developing the FacultyLink system. Agile is a software development approach introduced through the Agile Manifesto by Kent Beck, Martin Fowler, Robert C. Martin, and other software developers in 2001. Agile promotes iterative development, collaboration, adaptability, and continuous improvement throughout the development process.
+For this study, the researchers adapted the Agile methodology into seven phases: Planning, Design, Development, Testing, Implementation, Launch, and Maintenance. These phases guided the researchers in systematically developing, evaluating, and improving the FacultyLink system based on user requirements and feedback. The methodology enabled continuous refinement of the system to ensure functionality, efficiency, and usability.
+Review of Related Applications
+This section presents faculty evaluation systems and management systems and their associated applications. The systems are examined to determine their functional capabilities and their technological systems and their existing system constraints which researchers used as a foundation to identify the deficiencies which the FacultyLink system will resolve.
+SUC Faculty Position Reclassification System (SFPRS)
+The SUC Faculty Position Reclassification System (SFPRS) serves as an essential tool which State Universities and Colleges (SUCs) utilize to manage faculty promotion together with reclassification procedures. The system operates according to policies which the Commission on Higher Education and the Department of Budget and Management established through DBM–CHED Joint Circular No. 3, s. 2022 (DBM & CHED, 2022).
+The system measures faculty performance through Key Result Areas (KRAs) which require faculty members to submit their academic records and research outputs and certifications as proof of their work. The evaluators will review each submission and apply the established criteria to determine the corresponding points.
+The system provides a structured evaluation framework which organizations use to implement their assessments through manual or semi-digital methods that depend on spreadsheets and physical documents. The methods create delays while producing inconsistent scores and increasing the probability of computational mistakes. The lack of automated validation together with predictive tools prevents faculty members from understanding their evaluation readiness before they undergo formal assessment process.
+Creatrix Campus Faculty Performance System
+Several higher education institutions have implemented digital platforms to enhance their faculty evaluation process and administrative functions. The Creatrix Campus Faculty Performance System offers document management and performance tracking and report generation capabilities. The system improves institutional operations through better data accessibility and data organization and improved institutional operational processes.
+The system uses web-based architecture and integrated database management to create a platform that supports institutional workflows. The system enables centralized data management while it allows users to track faculty activities during their teaching work and research work and administrative responsibilities. Research shows that most digital faculty management systems including Creatrix maintain their status as administrative tools because they lack complete intelligent evaluation features (Zawacki-Richter et al. 2023).
+The system has not yet achieved complete implementation of its advanced functions which include rule-based document validation and OCR verification and rank upgrade simulation. Faculty members at the school can track performance through system tools but they must interpret evaluation criteria manually which creates assessment problems because it generates extra work and decreases their evaluation results. The existing system needs FacultyLink because it provides intelligent validation and automated computation and simulation functions that meet DBM-CHED Joint Circular requirements.
+Figure 1 Creatrix Campus Faculty Performance System Interface
+Figure 1 shows the landing interface of the Creatrix Campus Faculty Performance System, which displays its faculty performance solution. The page shows that the platform helps higher education institutions by providing tools to efficiently collect and process and manage faculty performance data which the platform displays through visual elements that include sample analytics and performance charts and navigation menus to show system capabilities and services.
+Interfolio Faculty Activity Reporting System
+Interfolio serves as a popular platform which educational institutions use to handle faculty academic records and to assist their faculty members throughout the promotion and tenure process. The platform allows users to create their achievement records while they arrange their paperwork and engage in evaluation procedures which follow established guidelines (Interfolio, 2023).
+The system provides institutions with its centralized storage system together with reporting capabilities which help them to enhance their evaluation processes while keeping complete records of faculty achievements. The system serves as a common tool which institutions use to manage their review processes and handle their documentation needs.
+The DBM–CHED Joint Circular framework remains unsupported by Interfolio because it lacks the ability to automatically compute KRA-based scores. The system does not provide OCR capabilities for document verification purposes, and it does not offer simulation features that would help users forecast their advancement results. The system enables better document management, but it fails to meet all the analytical needs which faculty members require for their reclassification process in SUCs.
+Figure 2 Interfolio Faculty Activity Reporting System Interface
+Figure 2 displays the Interfolio system interface which features multiple modules that include Faculty Information System, Faculty Activity Reporting, Review, Promotion and Tenure, and Dossier management. The modules of the system enable educational institutions to handle faculty records while they archive academic accomplishments and manage evaluation processes. The system shows how digital platforms can improve both documentation and assessment procedures. The system lacks automated KRA scoring together with OCR-based document validation and rank simulation capabilities which should comply with the DBM–CHED Joint Circular.
+SAP SuccessFactors Human Resource Information System
+SAP SuccessFactors operates as a cloud-based Human Resource Information System (HRIS) which enables organizations to handle employee data and assess worker performance while providing analytical capabilities (SAP, 2023). The system handles workforce management tasks for multiple organizations which include educational institutions.
+The system provides features such as employee profiling, performance monitoring, and reporting, which help administrators work more efficiently while maintaining better control of their data. The system can handle large institutional needs because its components work together and its size can be expanded.
+Academic evaluation systems require different design elements than HRIS platforms, including SAP SuccessFactors. The system lacks essential features needed for KRA-based scoring and document verification and rank simulation, which the DBM–CHED Joint Circular mandates. Thus, their application in faculty evaluation functions as a basic personnel management tool.
+Figure 3 SAP SuccessFactors Human Capital Management System Interface
+Figure 3 displays the SAP SuccessFactors Human Capital Management system interface shown in its core HR functionality together with its talent management and workforce management and analytics and artificial intelligence modules. The system provides tools that enable organizations to handle employee information and assess their performance and conduct their business operations. The system demonstrates how enterprise-level HR systems can handle employee data throughout an organization. The system lacks academic assessment functions because it cannot perform KRA-based scoring and document validation and rank upgrade simulation that DBM-CHED Joint Circular requires.
+Comparison of Related Applications
+Table 1. FacultyLink Review of Related Applications
+Features
+SFPRS
+Creatrix Campus
+Interfolo
+HRIS (SAP)
+FacultyLink
+Document Upload
+✓
+✓
+✓
+✓
+✓
+OCR Document Validation
+✕
+✕
+✕
+✕
+✓
+Automated KRA Scoring
+✕
+✕
+✕
+✕
+✓
+DBM–CHED Alignment
+✓
+✕
+✕
+✕
+✓
+Rank Upgrade Simulation
+✕
+✕
+✕
+✕
+✓
+Compliance Monitoring
+✓
+✓
+✓
+✓
+✓
+Table 1 shows a comparison between five selected faculty evaluation systems which include SFPRS and the Creatrix Campus Faculty Performance System and Interfolio and SAP SuccessFactors and the proposed FacultyLink system. The comparison evaluates key functionalities of the system which includes document upload and OCR-based validation and automated KRA scoring and DBM–CHED alignment and rank upgrade simulation and compliance monitoring. Existing systems provide basic features which include document management and limited monitoring capabilities while SFPRS relies on manual computation and Interfolio and SAP SuccessFactors support administrative workflows. The systems currently available to users do not provide two essential functions which include automated scoring and OCR-based validation and simulation tools. FacultyLink provides all necessary functions through its single platform which enhances system performance and operational efficiency while meeting DBM–CHED Joint Circular standards.
+Synthesis
+The reviewed literature and related applications indicate that faculty evaluation systems under the DBM–CHED Joint Circular require complex procedures which need precise calculation and systematic verification and effective document handling. Existing studies demonstrate that digital transformation assists higher education institutions to achieve better administrative performance and improved transparency and enhanced data accessibility; however, currently available systems only provide basic administrative capabilities while lacking intelligent evaluation functionalities.
+Technologies such as Optical Character Recognition (OCR) and rule-based validation systems and automated scoring mechanisms have demonstrated their capacity to improve document processing and ensure compliance and enhance performance evaluation accuracy within Key Result Area (KRA) frameworks. The analysis of related applications which include SFPRS and Creatrix Campus Faculty Performance System and Interfolio and SAP SuccessFactors shows that these systems mainly deal with three functions document management and performance tracking and workflow processes. The platforms provide incomplete advanced capabilities which include OCR-based document validation and automated scoring that follows DBM-CHED Joint Circular standards and tools for simulating rank upgrades.
+The evaluation process becomes time-consuming because faculty members need to manually interpret evaluation criteria which creates inconsistencies and prevents transparent evaluation processes. The FacultyLink system developed in this study addresses identified gaps by unifying automated KRA-based scoring and OCR-enabled document validation and real-time compliance monitoring and rank upgrade simulation into a system that follows the DBM-CHED Joint Circular framework.
+CHAPTER III
+METHODOLOGY
+This chapter presents the methodology used in the development and evaluation of the FacultyLink system. It discusses the research design, data gathering procedures, and analysis techniques used in the study. It also describes the current faculty evaluation process and outlines the system architecture, development process, conceptual design, and implementation. Diagrams such as system architecture, flowcharts, use case, ERD, context diagram, and data flow diagram are included to illustrate the structure and functionality of the system.
+Research Methodology
+The study applied the Descriptive-Developmental Research Methodology in the design, development, and evaluation of the FacultyLink system. The descriptive aspect of the study was used to examine the existing faculty evaluation process under the DBM-CHED Joint Circular. Through this approach, the researchers identified several issues in the current process, including manual computation of Key Result Area (KRA) points, difficulties in document management, and the lack of transparency during evaluation procedures.
+The developmental aspect of the study focused on the creation of the FacultyLink system as a solution to the identified problems. The system was developed using an adapted Agile Software Development Methodology inspired by the Agile Manifesto introduced by Kent Beck and other software developers in 2001. Agile emphasizes iterative development, collaboration, flexibility, and continuous improvement throughout the software development process.
+For this study, the researchers adapted the Agile methodology into seven phases: Planning, Design, Development, Testing, Implementation, Launch, and Maintenance. The methodology enabled the researchers to continuously improve the system based on user feedback and system requirements. Through this approach, important system features such as automated scoring, document validation, and rank upgrade simulation were effectively developed and refined.
+The use of this methodology provided a systematic process for evaluating the existing faculty assessment procedures while ensuring that the developed system addressed user needs and complied with DBM-CHED Joint Circular requirements..
+Figure 4 Adapted Agile Software Development Methodology
+Figure 4 illustrates the adapted Agile Software Development Methodology utilized in the development of the FacultyLink system. The methodology was selected because it supports flexibility, iterative development, and continuous system improvement. The development process follows multiple phases, namely Planning, Design, Development, Testing, Implementation, Launch, and Maintenance, allowing the researchers to continuously enhance the system through user feedback and evaluation.
+The iterative nature of Agile enabled the researchers to improve system performance, accuracy, and usability throughout the development process. This approach also ensured that the FacultyLink system remained aligned with the standards and requirements of the DBM-CHED Joint Circular.
+Planning
+The research team began their work by collecting system requirements which they arranged into established structural components. The researchers gathered data by conducting interviews with faculty members, evaluators, and administrators, and through document analysis of the DBM–CHED Joint Circular guidelines. The stage aimed to achieve three goals, which included understanding how faculty evaluation operated, identifying its existing problems, and establishing system needs. The system design and development process started from this stage.
+Design
+The design phase of the project included the development of the system architecture, which consisted of database design, system workflow creation, and user interface development for both web and mobile applications. The system operated through a structured framework that enabled users to upload documents, validate them, and execute scoring and simulation tasks. The design team created an interface that faculty members and reviewers could easily use because it combined user-friendly elements with intuitive navigation.
+Development
+The development process will transform the system design into a functional application. The team will develop essential system features which will include document upload and management, OCR text extraction, automated KRA scoring, real-time dashboard visualization, and rank upgrade simulation. The team will also add reviewer validation features which will enable authorized users to evaluate submitted documents and provide feedback.
+Testing
+The system will reach its testing milestone during this phase, where its performance, accuracy, and reliability will be assessed. The testing process will utilize multiple test cases to discover system errors, inconsistencies, and performance limitations. The team will implement essential modifications and system enhancements to achieve compliance with required standards and to guarantee correct system operation across various operational scenarios.
+Implementation (Launch/Deployment)
+The system will be presented to users for real-world testing during its deployment phase. Faculty members and reviewers will be able to interact with the system and perform tasks such as document submission, validation, and self-assessment. The feedback collected from this stage will be used to improve the system.
+Support and Maintenance
+System efficiency and reliability will be maintained through continuous updates, system improvements, and troubleshooting activities during the support and maintenance phase. The system will undergo regular enhancements to accommodate changes in DBM–CHED Joint Circular policies and user requirements. The maintenance of the FacultyLink system during this phase will ensure its ongoing functionality, relevance, and up-to-date status throughout its operational life.
+Data Gathering Procedure
+The data gathering process was conducted to collect relevant information necessary for the design and development of the FacultyLink system. The researchers used interviews and document analysis and system observation to study the existing faculty evaluation system which operates under the DBM–CHED Joint Circular. The methods enabled identification of system requirements and existing challenges and user needs.
+Research Instrument
+The study utilized a semi-structured interview guide as the primary research instrument. The interview questions were classified into categories such as current faculty evaluation procedures, challenges in document submission and KRA computation, document validation and compliance monitoring, and recommended system features. The semi-structured interview was conducted with different classifications of respondents, namely faculty members, reviewers/evaluators, and administrators or client representatives. The format allowed the researchers to ask follow-up questions to obtain more detailed responses relevant to the study.
+Sampling Method
+The study used purposive sampling to choose its study participants. The researchers selected respondents from a particular group who had direct experience with the faculty evaluation process defined by the DBM–CHED Joint Circular. The group included a client, a system reviewer, and a faculty member with practical evaluation process knowledge. The experts collected data which matched study requirements while ensuring that data remained reliable and applicable to study goals.
+Statistical Treatment of Data
+The researchers used descriptive analysis to interpret the data gathered from the interviews. Responses were organized and analyzed according to common themes and patterns relevant to the study objectives.
+To evaluate the usability of the FacultyLink system, the researchers will utilize the System Usability Scale (SUS) developed by John Brooke (1996). The SUS is a standardized questionnaire consisting of ten statements measured using a five-point Likert scale ranging from Strongly Disagree (1) to Strongly Agree (5). The responses will be computed using the standard SUS formula:
+The computed SUS scores will be interpreted to determine the overall usability, acceptability, and user satisfaction of the system.
+Description of the Current System (Information Gathering)
+The current faculty rank advancement system which operates under the DBM-CHED Joint Circular functions through manual methods and partial digital processes instead of using a centralized system to manage its operations. Faculty members need to submit different documents which include their teaching records and research publications and advisership certifications and other supporting materials according to data from the selected interview respondents. The documents evaluate performance through four Key Result Areas (KRAs) which include Instruction, Research and Innovation, Extension or Community Services, and Professional Development.
+The interview results show that the submission and review process operates through email communication. Faculty members compile their documentary requirements in digital format and send them to the assigned reviewer or evaluation committee via email. The reviewers access the submitted documents through their email accounts which contain all submitted files that need to be evaluated. The document organization process requires fundamental digital tools which include email and spreadsheets and word processing applications that create challenges for efficient file management and tracking and organization.
+The KRA point computation process uses manual methods and spreadsheet tools for execution which needs precise data input and proper scoring rule implementation. The procedure requires extensive time to complete because it involves multiple stages which are susceptible to mistakes that arise when researchers work together on projects. The evaluation happens exclusively at designated assessment times because the system lacks automated document verification capabilities before submission.
+As a result, faculty members face difficulties with compliance requirements which results in incomplete submissions and evaluation process delays because their submissions contain inaccurate information. The existing system does not include a self-assessment tool which enables faculty members to track their progress and monitor their KRA scores and assess their rank advancement eligibility.
+The identified problems demonstrate the requirement for FacultyLink because it functions as a self-assessment platform which allows faculty to handle their documents and assess their performance while creating rank eligibility simulations. The system aims to reduce computation errors in the evaluation process.
+System Architecture and Development
+The FacultyLink system design and development process is shown through this section which presents its complete system architecture and all system components and available system tools and system capabilities. The system structure and implementation were designed to enable faculty self-assessment while document validation and automated scoring and rank upgrade simulation were performed according to the DBM–CHED Joint Circular guidelines.
+Overview of the Proposed System
+Figure 5 System Architecture
+Figure 5 shows the system architecture of FacultyLink, which consists of the front end, API gateway, backend or application layer, and database layer. The frontend includes the web application, mobile application, and admin panel used by faculty members and reviewers. The API gateway controls all communication that occurs between the frontend and backend systems. The backend handles core functions such as document upload, OCR processing through Tesseract, rule-based validation and KRA scoring and rank upgrade simulation and reporting and reviewer feedback notification. The database stores user records and documents and scores and evaluation results and feedback. The system operates on an online platform which allows for centralized data management and system access throughout the organization.
+System Objectives
+The FacultyLink system functions as a self-assessment platform which enables faculty members to prepare for rank advancement and reclassification according to the DBM–CHED Joint Circular. The system aims to improve the accuracy of KRA points, streamline document validation, and provide real-time monitoring of faculty performance and compliance through automation and intelligent document validation.
+The system has three main objectives which it will achieve through its development work.
+To develop a web-based system for admin and reviewer, and a mobile application for faculty members to manage their documentary requirements through a centralized system that allows them to upload and organize their documents. The system includes a validation module which checks whether documents meet the required guidelines of DBM-CHED Joint Circular standards.
+To integrate OCR using Tesseract enabling the system to extract relevant information from uploaded documents which will serve as input for rule-based validation for scoring the KRA in accordance with DBM-CHED Joint Circular guidelines.
+To automate faculty evaluation system using a rule-based KRA scoring and rank upgrade simulation algorithm for eligibility assessment and real-time performance monitoring dashboard and document status tracking system and notification module which enables reviewers to submit feedback for their evaluation process.
+System Tools and Requirements
+This section presents the tools and technologies which the FACULTYLINK system development team used to create and run their system. The system's functions which include document processing and validation and scoring and user interaction, are supported by these tools.
+Programming Languages
+Table 2 Programming Languages
+Programming Languages
+Purpose
+Dart
+Used for developing the mobile application and implementing cross-platform functionality for faculty users.
+HTML
+Used for designing and developing the responsive web-based user interface of the system.
+Python
+Used for backend development, OCR integration, rule-based validation, and automated KRA scoring processes.
+JavaScript
+Used for implementing dynamic content and interactive functionalities within the web application.
+Table 2 presents the programming languages and frameworks used in the development of FacultyLink. These technologies support the system’s mobile, web, and backend functionalities, ensuring efficient performance, scalability, and a user-friendly experience.
+Hardware Requirements
+Table 3 Hardware Requirement
+Component
+Specifications
+Processor
+Intel Core i5
+RAM
+8GB
+Internal Storage
+512GB SSD
+Mobile Device
+Android Smartphone/ iOS
+Table 3 presents the hardware requirements of the FacultyLink system, including an Intel Core i5 processor, 8GB RAM, 512GB SSD storage, and mobile devices such as Android smartphones or iOS devices. These hardware components support system development, document processing, database operations, testing, and mobile application accessibility to ensure efficient system performance and functionality.
+Software Requirements
+Table 4 Software Requirements
+Application
+Purpose
+Version
+Visual Studio Code (IDE
+Used for code development and system programming.
+Version 1.120.0
+Flutter
+Used for developing the cross-platform mobile application.
+Version 3.41.9
+Flask
+Used as the backend framework for API development, database connectivity, and system processing
+Version 3.1
+Web Browser (Google Chrome)
+Used for system access, testing, and debugging
+Version 148.0
+PostgreSQL
+Used as the database management system for storing records and evaluation data
+Version 18
+Tesseract OCR
+Used for extracting text from uploaded documents for validation and scoring
+Version 5.5
+Table 4 presents the software requirements of the FacultyLink system, including development tools, database system, OCR tool, and hosting platform used to support system development and operation.
+System Flow/Functions
+Figure 6 Flowchart Diagram
+Figure 6 shows how users access the FacultyLink system to start using its features. User authentication starts the flow which continues to determine whether users are admins reviewers or faculty users. Each role member accesses their dedicated dashboard to complete their assigned tasks. Faculty users can upload documents view scores, validate documents and receive notifications. The system uses OCR to process documents for validation and scoring. Reviewers and administrators handle submissions while they assess documents and give their assessments. The system completes its operations after the dashboard receives updates and all system operations finish.
+Automated KRA Scoring Algorithm
+The FacultyLink system utilizes a rule-based decision algorithm to compute faculty evaluation processes uploaded documents through structured stages, including data extraction, classification, validation, scoring, and rank simulation. Upon document upload, the system applies Tesseract OCR to extract relevant information such as title, author(s), and content. The extracted data are then analyzed using predefined keyword-based rules to classify the document into one of the Key Result Areas (KRAs):  Instruction, Research and Innovation, Extension, or Professional Development. In cases where multiple conditions are satisfied, a priority based rule is applied, and ambiguous results are forwarded to the reviewer.
+The system then performs validation by checking required fields and detecting duplicates using file hashing. Documents with missing fields or low-confidence extraction is flagged for review. Once validated, the system computes the score using the formula:
+Final Score = Base Points × Contribution Percentage
+Where the contribution percentage is based on the number of authors. For example, a 20-point publication with two authors results in 10 points per author.
+Pseudocode of the Automated KRA Scoring Algorithm
+BEGIN
+INPUT: Uploaded Document D
+1. Extract text using OCR
+2. Identify document type based on keywords
+3. Validate required fields (title, author, date)
+IF invalid → send to reviewer
+4. Assign base points based on KRA
+5. Apply contribution percentage (if co-authored)
+6. Compute final score
+7. Check duplicate
+IF duplicate → ignore
+8. Store and aggregate scores
+9. Perform rank simulation
+OUTPUT: KRA Score and Rank Result
+END
+Table 5. Document Classification Rules
+Extracted Fields
+Condition
+Assign KRA
+Priority
+Title, keywords, text
+Contains “Journal”, “ISSN”, “Publications”
+Research and Innovation
+1
+Title, keywords, text
+Contains “teaching”, “course”, “instruction”
+Instruction
+2
+Title, keywords, text
+Contains “community”, “outreach”, “extension”
+Extension
+3
+Title, keywords, text
+Contains “training”, “seminar”,    “certificate”
+Professional Develoment
+4
+Table 6. Validation Rules
+Condition
+Action
+Missing fields
+Invalid
+Cannot classify
+Send to reviewer
+Duplicate
+Ignore
+The algorithm follows a rule-based approach, where decisions are based on predefined conditions instead of machine learning. This ensures that all computations are transparent, consistent, and aligned with DBM–CHED guidelines.
+Figure 7. Automated KRA Scoring Process
+Figure 7 shows the overall process of document andling in the FacultyLink system. It illustrates how uploaded documents are processed through OCR extraction, rule-based validation, scoring, and rank simulation.
+Scope and Limitation of the Study
+The FacultyLink system functions as a centralized web and mobile-based self-assessment platform designed to assist faculty members in preparing for rank upgrade and reclassification in accordance with the DBM–CHED Joint Circular. The system enables users to upload and manage documentary evidence and utilizes Tesseract OCR for document processing, rule-based validation for compliance checking, and automated computation of Key Result Area (KRA) scores. It also provides a rank upgrade simulation feature to estimate eligibility and a performance monitoring dashboard with a notification system that allows reviewers to provide feedback on document status, missing requirements, and compliance verification.
+However, the system has several limitations. The official evaluation by authorized DBM–CHED committees will not be replaced by this tool which serves only as a preparatory tool. The accuracy of OCR and validation processes depends on the quality and clarity of the uploaded documents. The system operates according to current DBM–CHED Joint Circular guidelines and needs policy updates when there are changes. The system cannot be accessed offline and requires a stable internet connection. The system does not verify the authenticity of documents and relies on reviewer validation for final approval.
+Calendar of Activities (Gantt Chart)
+Figure 8 Gantt Chart
+Figure 8 shows the FacultyLink project timeline which includes all planned activities and events and essential project milestones that will occur during the twelve-month development period. The project schedule offers clear guidance which helps keep the project on track while maintaining effective progress through its activities.
+Conceptual Design and Implementation
+System Design
+Figure 9 Use Case Diagram
+Figure 9 illustrates the interactions between actors, Faculty Members and Administrators and the FacultyLink system. The system displays essential features which different user types use to handle records and track information and submit their evaluations and conduct faculty management tasks according to DBM-CHED Joint Circular standards.
+Database Design
+Figure 10 Entity Relationship Diagram (ERD)
+Figure 10 displays the FacultyLink system's data structure which demonstrates how its components interact with each other. The system contains a central User entity that maintains account details while providing access to both the Faculty Profile and Documents that users have uploaded. The system uses the KRA Score to assess performance which calculates points according to established performance categories. The system generates notifications to users about system updates while faculty members can use the Rank Simulation function to determine their promotion eligibility. The system keeps complete records of all operations in the Audit Log which functions as a security measure while providing transparent access to system activities.
+Context Diagram
+Figure 11. Context Diagram
+Figure 11 shows the FacultyLink system’s data structure and the relationships between its components. At the center is the User entity, which stores account information and links to the Faculty Profile and uploaded Documents. The system evaluates performance through the KRA Score, which calculates points based on defined categories. Notifications are generated to inform users of updates, while the Rank Simulation feature allows faculty members to estimate their eligibility for promotion. Additionally, all system activities are recorded in the Audit Log to ensure transparency and security.
+Data Flow Diagram
+Figure 12. Data Flow Diagram
+Figure 12 shows the Data Flow Diagram (DFD) Level 1 of the FacultyLink system shows how data moves between users and system processes and databases. The user authentication process starts the system which allows users to manage their profiles before they upload documents for optical character recognition validation. The scoring engine processes validated documents according to DBM-CHED guidelines to produce scores which the system uses to rank simulation results. The system stores results which the notification system delivers while administrators and reviewers handle validation and rule updates. The diagram shows how the system uses integrated databases to store user information and documents and scoring rules and results.
+REFERENCES
+Alaei, A., Bui, V., Doermann, D., & Pal, U. (2023) Document image quality assessment: A survey. ACM Computing Surveys, 56(2), Article 29.https://doi.org/10.1145/3606692
+Aquino, J. M. D. (2025) Best practices of high performing higher education institutions in the Philippines towards the development of harmonized quality-assured instructional leadership framework. Frontiers in https://doi.org/10.3389/feduc.2025.1663289
+Department of Budget and Management, & Commission on Higher Education. (2022) Joint Circular No. 3, s. 2022: Revised guidelines for faculty position classification and compensation in state universities and colleges (NBC 461, 9th cycle). https://ched.gov.ph
+Hegghammer, T. (2022). OCR with Tesseract, Amazon Textract, and Google Document AI: A benchmarking experiment. Journal of Computational Social Science, 5(2), 861–882. https://doi.org/10.1007/s42001-021-001491
+Mergel, I. (2021). Digital transformation of the public sector: A systematic literature review. Government Information Quarterly, 38(4), 101614.https://doi.org/10.1016/j.giq.2021.101614
+Nguyen, T. N., Nguyen, H. T., & Tran, Q. H. (2021). Deep learning-based optical character recognition for document digitization. Applied Sciences, 11(11), 5051.https://doi.org/10.3390/app11115051
+Prado, R. A. (2025). Evaluation of the quality assurance practices of the College of Education programs of a Philippine local university. Journal of Interdisciplinary Perspectives, 3(10), 83–100. https://doi.org/10.69569/jip.2025.608
+Yawson, R. M., & Paros, A. K. B. (2023). Systems perspective of the use of the balanced scorecard for organization development and change. SAGE Open. https://doi.org/10.1177/21582440231218064
+APPENDICES
+Interview Guide
+Request Letter
+Interview of Respondent
+Interview with Client
+Interview with Reviewer

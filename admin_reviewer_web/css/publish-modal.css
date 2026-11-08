@@ -1,0 +1,297 @@
+/* FacultyLink body-level modals (#modalRoot) — avoid .modal-backdrop / .card conflicts */
+body.fl-modal-open {
+  overflow: hidden;
+}
+
+.fl-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: max(1rem, env(safe-area-inset-top)) max(1rem, env(safe-area-inset-right))
+    max(1rem, env(safe-area-inset-bottom)) max(1rem, env(safe-area-inset-left));
+  background: rgba(7, 22, 41, 0.55);
+}
+
+.fl-modal-overlay--drawer {
+  align-items: stretch;
+  justify-content: flex-end;
+  padding: 0;
+}
+.fl-modal-overlay--drawer .cfg-side-panel {
+  margin-left: auto;
+  max-height: 100vh;
+  height: 100%;
+  border-radius: 16px 0 0 16px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fl-modal-overlay {
+    animation: fl-modal-fade-in 0.2s ease;
+  }
+  .fl-modal-dialog {
+    animation: fl-modal-slide-in 0.22s ease;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fl-modal-overlay,
+  .fl-modal-dialog {
+    animation: none;
+  }
+}
+
+@keyframes fl-modal-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes fl-modal-slide-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fl-modal-dialog {
+  position: relative;
+  z-index: 401;
+  width: 100%;
+  max-height: 90dvh;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid var(--fl-border);
+  box-shadow: 0 24px 64px rgba(7, 22, 41, 0.28);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--fl-text-navy);
+}
+
+.fl-modal-dialog--md {
+  max-width: 520px;
+  padding: 0;
+}
+
+.fl-modal-dialog--lg {
+  max-width: 720px;
+}
+
+.fl-modal-dialog--account {
+  max-width: 680px;
+}
+
+.fl-modal-dialog__header--icon {
+  align-items: center;
+  padding: 1.5rem 1.75rem 1rem;
+}
+.fl-modal-dialog__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(81, 200, 239, 0.15);
+  color: var(--fl-cyan);
+  flex-shrink: 0;
+}
+.fl-modal-dialog__icon .nav-svg {
+  width: 24px;
+  height: 24px;
+}
+.fl-modal-dialog__titles {
+  flex: 1;
+  min-width: 0;
+}
+.fl-modal-dialog--account .fl-modal-dialog__body {
+  padding: 1.75rem;
+}
+
+.fl-modal-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem 0.75rem;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--fl-border);
+}
+.fl-modal-dialog__header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+.fl-modal-dialog__lede {
+  margin: 0.35rem 0 0;
+  font-size: 0.92rem;
+  color: #5a7089;
+  font-weight: 400;
+}
+
+.fl-modal-close {
+  flex-shrink: 0;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid var(--fl-border);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 1.35rem;
+  line-height: 1;
+  color: var(--fl-text-navy);
+}
+.fl-modal-close:focus-visible {
+  outline: 3px solid var(--fl-cyan);
+  outline-offset: 2px;
+}
+
+.fl-modal-dialog__body {
+  overflow-y: auto;
+  flex: 1;
+  padding: 1.5rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.fl-modal-section {
+  margin-bottom: 1.25rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #eef2f7;
+}
+.fl-modal-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+.fl-modal-section h3 {
+  margin: 0 0 0.65rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #5a7089;
+}
+
+.fl-modal-dialog__footer {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--fl-border);
+  background: #fafbfd;
+}
+.fl-modal-dialog__footer .fl-modal-footer-err {
+  flex: 1 1 100%;
+  margin: 0 0 0.25rem;
+  font-size: 0.88rem;
+  color: #c62828;
+  font-weight: 500;
+}
+@media (min-width: 520px) {
+  .fl-modal-dialog__footer .fl-modal-footer-err {
+    flex: 1 1 auto;
+    margin: 0;
+    text-align: left;
+  }
+}
+
+.cfg-validation-ok {
+  color: #2e7d32;
+  font-weight: 600;
+  margin: 0;
+}
+
+.fl-publish-dialog__body label.fl-date-label,
+.fl-modal-dialog__body label.fl-date-label {
+  display: block;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+.fl-publish-dialog__body label.fl-date-label input,
+.fl-modal-dialog__body label.fl-date-label input {
+  display: block;
+  margin-top: 0.4rem;
+  min-height: 44px;
+  width: 100%;
+  max-width: 16rem;
+  border: 1px solid var(--fl-border);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+}
+.fl-publish-preview-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  font-weight: 500;
+}
+
+.fl-weight-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  margin: 0;
+}
+.fl-weight-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 0.75rem;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+.fl-weight-field input {
+  width: 5.5rem;
+  min-height: 44px;
+  border: 1px solid var(--fl-border);
+  border-radius: 8px;
+  padding: 0.45rem 0.65rem;
+  font: inherit;
+  font-weight: 700;
+  text-align: right;
+}
+.fl-weight-suffix {
+  font-weight: 600;
+  color: #5a7089;
+  min-width: 1.25rem;
+}
+.fl-weight-combined {
+  margin: 1rem 0 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+.fl-weight-combined.ok { color: #2e7d32; }
+.fl-weight-combined.bad { color: #c62828; }
+
+/* Legacy publish class names map to shared dialog */
+.fl-publish-dialog {
+  position: relative;
+  z-index: 401;
+  width: 100%;
+  max-width: 720px;
+  max-height: 90dvh;
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid var(--fl-border);
+  box-shadow: 0 24px 64px rgba(7, 22, 41, 0.28);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  color: var(--fl-text-navy);
+}
+.fl-publish-dialog__header,
+.fl-publish-dialog__body,
+.fl-publish-dialog__footer {
+  /* same rules as fl-modal-dialog__* — kept via grouped selectors below */
+}
+.fl-publish-dialog__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; padding: 1.25rem 1.5rem 0.75rem; flex-shrink: 0; border-bottom: 1px solid var(--fl-border); }
+.fl-publish-dialog__header h2 { margin: 0; font-size: 1.25rem; font-weight: 700; }
+.fl-publish-dialog__body { overflow-y: auto; flex: 1; padding: 1rem 1.5rem; -webkit-overflow-scrolling: touch; }
+.fl-publish-dialog__footer { flex-shrink: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 0.75rem; padding: 1rem 1.5rem; border-top: 1px solid var(--fl-border); background: #fafbfd; }
+.fl-publish-section { margin-bottom: 1.25rem; padding-bottom: 1rem; border-bottom: 1px solid #eef2f7; }
+.fl-publish-section:last-child { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+.fl-publish-section h3 { margin: 0 0 0.65rem; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #5a7089; }
+.fl-publish-footer-err { flex: 1 1 100%; margin: 0 0 0.25rem; font-size: 0.88rem; color: #c62828; font-weight: 500; }

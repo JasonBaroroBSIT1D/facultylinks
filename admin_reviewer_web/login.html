@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <base href="/" />
+  <title>Sign in — FacultyLink</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/login.css" />
+</head>
+<body>
+  <div class="login-page">
+    <aside class="login-left">
+      <a class="back" href="index.html">← Back to home</a>
+      <span class="badge">DBM–CHED aligned faculty assessment</span>
+      <h1>Welcome to <span>FacultyLink</span></h1>
+      <p style="color:#bdccdf;margin:0 0 1rem">Faculty Evaluation &amp; Self-Assessment System</p>
+      <p style="color:#bdccdf;line-height:1.6;max-width:420px">Sign in as an institution administrator or assigned reviewer. Faculty members use the mobile application.</p>
+      <div class="tiles">
+        <div class="tile">Document Validation</div>
+        <div class="tile">KRA Scoring</div>
+        <div class="tile">Review &amp; Compliance</div>
+      </div>
+      <a class="back" href="index.html#about" style="margin-top:auto">About FacultyLink</a>
+      <p class="muted" style="margin-top:2rem">© <span id="yr"></span> FacultyLink</p>
+    </aside>
+    <main class="login-right">
+      <div class="login-card">
+        <img src="assets/logo.svg" width="40" height="40" alt="" />
+        <h2 style="margin:0.75rem 0 0.25rem;color:#102d50">Welcome back.</h2>
+        <p class="muted">Sign in to access your academic portal.</p>
+        <form id="loginForm" novalidate>
+          <div class="field">
+            <label for="email">Email</label>
+            <div class="input-wrap"><span aria-hidden="true">✉</span><input id="email" name="email" type="email" autocomplete="username" required /></div>
+          </div>
+          <div class="field">
+            <label for="password">Password</label>
+            <div class="input-wrap">
+              <span aria-hidden="true">🔒</span>
+              <input id="password" name="password" type="password" autocomplete="current-password" required />
+              <button type="button" id="togglePw" aria-label="Show password" style="border:none;background:none;cursor:pointer">👁</button>
+            </div>
+          </div>
+          <div class="row-between">
+            <label><input type="checkbox" id="remember" /> Remember me</label>
+            <a class="link" href="forgot-password.html">Forgot Password</a>
+          </div>
+          <p class="form-error" id="formError" role="alert"></p>
+          <button class="btn-submit" id="submitBtn" type="submit">Sign in</button>
+        </form>
+        <p class="muted" style="margin-top:1.25rem">Use institution-issued accounts. Demo: see <code>docs/DEMO_ACCOUNTS.md</code>.</p>
+        <p class="muted">New to FacultyLink? Contact Institution Admin.</p>
+        <button type="button" class="link" id="contactBtn" style="border:none;background:none;cursor:pointer;padding:0;font:inherit">Institution contact details</button>
+        <div id="contactPanel" class="muted" hidden style="margin-top:0.5rem;padding:0.75rem;background:#f1f6fb;border-radius:8px">
+          <strong>USTP Oroquieta (demo)</strong><br />Office of Academic Affairs · eval@ustp.edu.ph · +63 88 531 8000
+        </div>
+      </div>
+    </main>
+  </div>
+  <script type="module" src="js/login.js?v=2"></script>
+</body>
+</html>

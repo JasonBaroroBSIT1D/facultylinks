@@ -1,0 +1,152 @@
+/* Account management — scoped under .fl-account-* (does not affect scoring modals) */
+.fl-account-demo-note {
+  font-size: 0.82rem;
+  color: #5a7089;
+  margin: 0 0 1.25rem;
+  padding: 0.65rem 0.85rem;
+  background: #f4f8fc;
+  border-radius: 8px;
+  border: 1px solid var(--fl-border);
+}
+
+.fl-account-form section {
+  margin-bottom: 1.5rem;
+}
+.fl-account-form section:last-child {
+  margin-bottom: 0;
+}
+.fl-account-form h3 {
+  margin: 0 0 1rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #5a7089;
+}
+.fl-account-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem 1.25rem;
+}
+.fl-account-grid--single {
+  grid-template-columns: 1fr;
+}
+@media (max-width: 600px) {
+  .fl-account-grid {
+    grid-template-columns: 1fr;
+  }
+}
+.fl-account-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.fl-account-field label {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--fl-text-navy);
+}
+.fl-account-field input,
+.fl-account-field select {
+  min-height: 48px;
+  width: 100%;
+  border: 1px solid var(--fl-border);
+  border-radius: 10px;
+  padding: 0.55rem 0.75rem;
+  font: inherit;
+  font-size: 1rem;
+  background: #fff;
+}
+.fl-account-field input:focus-visible,
+.fl-account-field select:focus-visible {
+  outline: 3px solid var(--fl-cyan);
+  outline-offset: 1px;
+}
+.fl-account-field--full {
+  grid-column: 1 / -1;
+}
+.fl-account-field-error {
+  font-size: 0.82rem;
+  color: #c62828;
+  font-weight: 500;
+  margin: 0;
+}
+.fl-account-empty-hint {
+  font-size: 0.88rem;
+  color: #5a7089;
+  margin: 0.35rem 0 0;
+}
+
+.fl-page-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+.fl-page-toolbar input[type="search"] {
+  min-height: 48px;
+  flex: 1;
+  min-width: 12rem;
+  border: 1px solid var(--fl-border);
+  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
+}
+.fl-page-card {
+  background: #fff;
+  border: 1px solid var(--fl-border);
+  border-radius: 16px;
+  padding: 0;
+  overflow: hidden;
+  box-shadow: 0 4px 16px rgba(7, 22, 41, 0.06);
+}
+.fl-page-card .table-wrap {
+  border: none;
+  border-radius: 0;
+}
+.fl-empty-state {
+  padding: 2rem 1.5rem;
+  text-align: center;
+  color: #5a7089;
+}
+
+@media (max-width: 720px) {
+  .fl-account-cards {
+    display: none;
+  }
+}
+.fl-account-card-list {
+  display: none;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+}
+@media (max-width: 720px) {
+  .fl-page-card .table-wrap {
+    display: none;
+  }
+  .fl-account-card-list {
+    display: flex;
+  }
+}
+.fl-account-card {
+  border: 1px solid var(--fl-border);
+  border-radius: 12px;
+  padding: 1rem;
+  background: #fafbfd;
+}
+.fl-account-card h4 {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+}
+.fl-account-card p {
+  margin: 0.2rem 0;
+  font-size: 0.88rem;
+  color: #5a7089;
+}
+.fl-account-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}

@@ -1,0 +1,309 @@
+================================================================================
+SHEET: Luthie KRA Score
+merged: ['B3:G3', 'B2:G2', 'C9:F9', 'C8:F8', 'C12:F12', 'B1:G1', 'C7:F7', 'C11:F11', 'C10:F10']
+B1	'ANNEX A'
+B2	'Enhanced Implementing Guidelines of DBM-CHED Joint Circular No. 3, series of 2022'
+B3	'LIST OF CRITERIA AND DOCUMENTARY EVIDENCES'
+B5	'NAME: LUTHERLY QUIJADA-BONGCAWEL'
+B7	'CRITERIA'
+C7	'POINTS'
+G7	'SCORE'
+B8	'KRA I - INSTRUCTION'
+C8	100
+G8	"='KRA I - Instruction'!F5"
+B9	'KRA II - RESEARCH, INNOVATION AND/OR CREATIVE WORK'
+C9	100
+G9	"='KRA II - Research & Innovation'!F5"
+B10	'KRA III - EXTENSION SERVICES'
+C10	100
+G10	"='KRA III - Extension Services'!F5"
+B11	'KRA IV - PROFESSIONAL DEVELOPMENT'
+C11	100
+G11	"='KRA IV - Professional Dev''t'!F5"
+C12	'TOTAL POINTS'
+G12	'=SUM(G8:G11)'
+================================================================================
+SHEET: KRA I - Instruction
+merged: ['B9:E9', 'L7:M7', 'N7:O7', 'B6:E6', 'B15:E15', 'B5:E5', 'B20:E20', 'F22:F26', 'A1:H1', 'A22:A26', 'B4:E4', 'B16:E16', 'B7:E7', 'I6:O6', 'G22:G26', 'A3:H3', 'B18:E18', 'B27:E27', 'B12:E12', 'A2:H2', 'J7:K7', 'B21:E21', 'B11:E11', 'B14:E14', 'B17:E17', 'B8:E8', 'B13:E13', 'B22:E23', 'B19:E19', 'B10:E10']
+A1	'ANNEX A'
+A2	'Enhanced Implementing Guidelines of DBM-CHED Joint Circular No. 3, series of 2022'
+A3	'LIST OF CRITERIA AND DOCUMENTARY EVIDENCES'
+A4	'CRITERIA'
+B4	'POINTS'
+F4	'SCORE'
+G4	'REQUIRED EVIDENCE'
+A5	'KRA I - INSTRUCTION'
+B5	100
+F5	'=SUM(F6+F14+F21)*60%'
+A6	'Criterion A – Teaching Effectiveness'
+B6	60
+F6	'=SUM(F7:F13)'
+I6	'Teaching Effectiveness'
+A7	'1.  Student Evaluation of Teachers (SET)'
+B7	36
+F7	'=J11'
+J7	'2023-2024'
+L7	'2024-2025'
+N7	'2025-2026'
+A8	'2.  Supervisor’s Evaluation of Faculty (SEF)'
+B8	24
+F8	'=J12'
+J8	'1st Sem'
+K8	'2nd Sem'
+L8	'1st Sem'
+M8	'2nd Sem'
+N8	'1st Sem'
+O8	'2nd Sem'
+A9	'For Faculty with Special Status'
+G9	'Additional\xa0Evidence:'
+I9	'Student Evaluation of Teachers (SET)'
+J9	95
+K9	95
+L9	95
+M9	95
+N9	95
+O9	95
+A10	'1.  If on Official Study Leave'
+I10	'Supervisor’s Evaluation of Faculty (SEF)'
+J10	95
+K10	95
+L10	95
+M10	98
+N10	100
+O10	96
+A11	'2.  If on Maternity Leave'
+I11	'SET Points'
+J11	'=SUM(J9:O9)/6*36%'
+A12	'3.  If on Sabbatical Leave'
+I12	'SEF Points'
+J12	'=SUM(J10:O10)/6*24%'
+A13	'4.  Other Circumstances\na.  Newly Appointed Faculty\nb.  Teaching in SUC Laboratory Schools'
+A14	'Criterion B – Instructional Materials Development'
+B14	'Max = 30'
+F14	'=SUM(F15:F20)'
+A15	'1.    For every instructional material developed and approved for use.'
+A16	'1.1   Sole Author of a Textbook\n(See Section 12; and Item 1 of Section 13 of the Enhanced Guidelines for the applicable conditions)'
+B16	30
+A17	'1.2   Sole Author of a Module\n(See Section 12; and Item 2 of Section 13 of the Enhanced Guidelines for the applicable conditions)'
+B17	16
+A18	'1.3   Sole Author of Instructional Manual\n(See Section 12; and Item 3 of Section 13 of the Enhanced Guidelines for the applicable conditions)'
+B18	16
+A19	'1.4  Sole Author of Multimedia Teaching Materials\n(See Section 12; and Item 4 of Section 13 of the Enhanced Guidelines for the applicable conditions)'
+B19	16
+A20	'2.    Academic Programs Developed/Revised and Implemented by the SUC\n2.1  Lead\n2.2  Contributor\n(See Section 14 of the Enhanced Guidelines for the applicable conditions)'
+B20	'10\n5'
+A21	'Criterion C – Research Advising and Mentorship Services'
+B21	'Max = 10'
+F21	'=SUM(F22:F27)'
+A22	'1.    Research-Related Services\nFor every service rendered as adviser or panel member in undergraduate and master’s theses, special/capstone project, or doctoral dissertations\n1.1   Adviser\n1.2   Panel\n(See Item 1, Section 15 of the Enhanced Guidelines for the applicable conditions)'
+B22	"SP - Special Project \nCP - Capstone Project\nUT-  Undergraduate Thesis\nMT - Master's Thesis \nDD - Dissertation"
+F22	10
+G22	'COPC'
+B24	'SP/ CP'
+C24	'UT'
+D24	'M T'
+E24	'D D'
+B25	3
+C25	5
+D25	8
+E25	10
+B26	1
+C26	1
+D26	2
+E26	2
+A27	'2.    Mentorship Services\n\nFor every service rendered to a student/group of students as a coach/mentor.\n(See Item 2, Section 15 of the Enhanced Guidelines for the applicable conditions)'
+B27	3
+================================================================================
+SHEET: KRA II - Research & Innovation
+merged: ['B9:E9', 'B6:E6', 'B30:E30', 'B15:E15', 'B33:E33', 'B24:E24', 'B5:E5', 'A1:H1', 'B20:E20', 'B36:E36', 'B32:E32', 'B26:E26', 'B35:E35', 'B4:E4', 'B7:E7', 'B25:E25', 'A15:A17', 'D17:E17', 'B22:E22', 'B31:E31', 'A3:H3', 'D16:E16', 'B18:E18', 'B27:E27', 'B12:E12', 'A2:H2', 'B21:E21', 'B39:E39', 'B11:E11', 'F15:F17', 'B14:E14', 'B23:E23', 'B8:E8', 'B13:E13', 'B38:E38', 'G15:G17', 'B29:E29', 'B19:E19', 'B37:E37', 'B10:E10', 'B28:E28', 'B34:E34']
+A1	'ANNEX A'
+A2	'Enhanced Implementing Guidelines of DBM-CHED Joint Circular No. 3, series of 2022'
+A3	'LIST OF CRITERIA AND DOCUMENTARY EVIDENCES'
+A4	'CRITERIA'
+B4	'POINTS'
+F4	'SCORE'
+G4	'REQUIRED EVIDENCE'
+A5	'KRA II - RESEARCH, INNOVATION AND/OR CREATIVE WORK'
+B5	100
+F5	'=SUM(F6+F13+F21)*20%'
+A6	'Criterion A – Research Outputs Published'
+B6	'Max = 100'
+F6	'=SUM(F7:F12)'
+A7	'1.    Sole Author of an Academic Book\n(See Section 18; and Item 1 of Section 19 of the Enhanced Guidelines for the applicable conditions)'
+B7	100
+A8	'2.    Sole Author of Edited Academic Book Chapter\n(See Section 18; and Item 2 of Section 19 of the Enhanced Guidelines for the applicable conditions)'
+B8	35
+A9	'3.    Sole Author of a Journal Article\n(See Section 18; and Item 3 of Section 19 of the Enhanced Guidelines for the applicable conditions)'
+B9	50
+A10	'4.    Sole Author of Academic Monograph\n(See Section 18; and Item 4 of Section 19 of the Enhanced Guidelines for the applicable conditions)'
+B10	100
+A11	'5.    Research Outputs Translated Into Project, Policy, or Product\n(See Section 20 of the Enhanced Guidelines for the applicable conditions and the examples provided under item 4(d).)'
+B11	'Max = 70\n35'
+A12	'6.    Research Publication Cited\n(See Section 21 of the Enhanced Guidelines for the applicable conditions)'
+B12	'Max = 60\n10'
+A13	'Criterion B – Inventions'
+B13	'Max = 100'
+F13	'=SUM(F14:F20)'
+A14	'1.    Patentable Inventions, Utility Models and Industrial Design'
+A15	'1.1  Invention Patent\n(See Item 1, Section 23 of the Enhanced Guidelines for the applicable conditions)'
+B15	'Patenting Stages A – Acceptance\nP – Publication\nG – Grant'
+B16	'A'
+C16	'P'
+D16	'G'
+B17	10
+C17	20
+D17	80
+A18	'1.2   Commercialized Patented Product\n1.2.1   Local (max = 20)\n1.2.2   International (max = 30)\n(See Item 2, Section 23 of the Enhanced Guidelines for the applicable conditions)\n\n'
+B18	'\n5\n10'
+A19	'2.   For every non-patentable product\n\n2.1   Copyrighted and utilized software products\n2.1.1   New Software product\n2.1.2   Updated Software product\n(See Item 1, Section 24 of the Enhanced Guidelines for the applicable conditions)'
+B19	'\n\n10\n4'
+A20	'2.2   New plant variety or animal breeds developed, or new microbial strains isolated, that are propagated or reproduced\n(See Item 2, Section 24 of the Enhanced Guidelines for the applicable conditions)'
+B20	10
+A21	'Criterion C – Creative Works'
+B21	'Max = 100'
+F21	'=SUM(F22:F39)'
+A22	'1.   For every creative work produced and performed, presented, exhibited, or published.\n\n1.1   Performing Arts\n1.1.1   Music\n1.1.1.1   Musical Composition (orchestra, band, chamber, ensemble or choral)\n(See Section 26; and Item 1 of Section 27 of the Enhanced Guidelines for the applicable conditions)\n'
+B22	20
+A23	'1.1.1.2   Musical Arrangement (orchestra, band, chamber, ensemble or choral)\n(See Section 26; and Item 1 of Section 27 of the Enhanced Guidelines for the applicable conditions)'
+B23	20
+A24	'1.1.1.3   Musical Performance (vocal or instrumental)\n(See Section 26; and Item 1 of Section 27 of the Enhanced Guidelines for the applicable conditions)'
+B24	10
+A25	'1.1.1.4   Conducting\n(See Section 26; and Item 1 of Section 27 of the Enhanced Guidelines for the applicable conditions)'
+B25	10
+A26	'1.1.1.5   Music Production\n(See Section 26; and Item 1 of Section 27 of the Enhanced Guidelines for the applicable conditions)'
+B26	20
+A27	'1.1.2   Dance\n1.1.2.1   Original Choreography\n(See Section 26; and Item 1 of Section 27 of the Enhanced Guidelines for the applicable conditions)'
+B27	20
+A28	'1.1.2.2   Dance Performance\n(See Section 26; and Item 1 of Section 27 of the Enhanced Guidelines for the applicable conditions)'
+B28	10
+A29	'1.1.3   Theatre\n1.1.3.1   Playwright\n(See Section 26; and Item 1 of Section 27 of the Enhanced Guidelines for the applicable conditions)'
+B29	20
+A30	'1.1.3.2   Directing\n(See Section 26; and Item 1 of Section 27 of the Enhanced Guidelines for the applicable conditions)'
+B30	20
+A31	'1.1.3.3   Acting\n(See Section 26; and Item 1 of Section 27 of the Enhanced Guidelines for the applicable conditions)'
+B31	20
+A32	'1.1.3.4   Production Design\n(See Section 26; and Item 1 of Section 27 of the Enhanced Guidelines for the applicable conditions)'
+B32	20
+A33	'1.2   Visual Arts\n1.2.1     Painting\n1.2.2     Drawing\n1.2.3     Mixed Media\n1.2.4     Sculpture\n1.2.5     Photography\n1.2.6     Digital Art\n(See Section 26; and Item 2 of Section 27 of the Enhanced Guidelines for the applicable conditions)'
+B33	20
+A34	'1.2.7   Architectural and Interior Designs\n1.1.1.1  Architectural Designs\n1.1.1.2  Engineering Designs\n1.1.1.3  Interior Design\n(See Section 26; and Item 2 of Section 27 of the Enhanced Guidelines for the applicable conditions)'
+A35	'1.3   Film\n1.3.1    Short Films\n1.3.2    Feature-Length Films\n1.3.3    Documentary Films\n1.3.4    Experimental Video Art\n1.3.5    Animated Film\n(See Section 26; and Item 2 of Section 27 of the Enhanced Guidelines for the applicable conditions)'
+B35	20
+A36	'1.4   Literary Publications\n1.4.1    Novel\n(See Section 26; and Item 3 of Section 27 of the Enhanced Guidelines for the applicable conditions)'
+B36	20
+A37	'1.4.2    Short story\n(See Section 26; and Item 3 of Section 27 of the Enhanced Guidelines for the applicable conditions)'
+B37	10
+A38	'1.4.3    Poetry\n(See Section 26; and Item 3 of Section 27 of the Enhanced Guidelines for the applicable conditions)'
+B38	2
+A39	'1.4.4    Literary Essay\n(See Section 26; and Item 3 of Section 27 of the Enhanced Guidelines for the applicable conditions)'
+B39	2
+================================================================================
+SHEET: KRA III - Extension Services
+merged: ['B9:E9', 'B6:E6', 'B15:E15', 'B5:E5', 'B20:E20', 'A1:H1', 'B4:E4', 'B16:E16', 'B7:E7', 'B22:E22', 'A3:H3', 'B18:E18', 'B12:E12', 'A2:H2', 'B21:E21', 'B11:E11', 'B14:E14', 'B17:E17', 'B23:E23', 'B8:E8', 'B13:E13', 'B19:E19', 'B10:E10']
+A1	'ANNEX A'
+A2	'Enhanced Implementing Guidelines of DBM-CHED Joint Circular No. 3, series of 2022'
+A3	'LIST OF CRITERIA AND DOCUMENTARY EVIDENCES'
+A4	'CRITERIA'
+B4	'POINTS'
+F4	'SCORE'
+G4	'REQUIRED EVIDENCE'
+A5	'KRA III - EXTENSION SERVICES'
+B5	100
+F5	'=SUM(F6+F9+F20+F22)*10%'
+A6	'Criterion A – Service to the Institution'
+B6	'Max = 30'
+F6	'=SUM(F7:F8)'
+A7	'1.   For every successful linkages/ networking/ partnership activity.\n(See Section 30 of the Enhanced Guidelines for the applicable conditions)'
+B7	5
+A8	'2.   Total contribution to income generation\n2.1.  Lead\n2.1.1.100,000 and below\n2.1.2.100,001 to 500,000\n2.1.3.500,000 to 6,000,0000\n2.1.4.6,000,001 to 12,000,000\n2.1.5.Above 12,000,000\n(See Section 31 of the Enhanced Guidelines for the applicable conditions)\n2.2.  Contributor\n2.2.1.100,000 and below\n2.2.2.100,001 to 500,000\n2.2.3.500,000 to 6,000,0000\n2.2.4.6,000,001 to 12,000,000\n2.2.5.Above 12,000,000\n(See Section 31 of the Enhanced Guidelines for the applicable conditions)'
+B8	'\n\n2\n4\n6\n12\n18\n\n\n\n1\n2\n3\n6\n9'
+A9	'Criterion B – Service to the Community'
+B9	'Max = 50'
+F9	'=SUM(F10:F19)'
+A10	'1.   Professional/Expertise-based Services\n1.1   For Services in Accreditation, Evaluation, Assessment Works, and other related Educational QA Activities\n1.1.1   Local\n1.1.2   International\n(See Item 1, Section 33 of the Enhanced Guidelines for the applicable conditions)'
+B10	'\n\n8\n10'
+A11	'1.2   For Services as Judge/ Examiner for local/international research awards and academic competitions\n1.2.1   Research Awards\n1.2.2   Academic Competitions\n(See Item 2, Section 33 of the Enhanced Guidelines for the applicable conditions)'
+B11	'2\n1'
+A12	'1.3   For services rendered as a short-term consultant/expert in an activity of an educational, technological, professional, scientific or cultural nature (foreign or local) sponsored by a private organization or government.\n1.3.1   Local\n1.3.2   International\n(See Item 3, Section 33 of the Enhanced Guidelines for the applicable conditions. For peer reviewers, see Item 3(e)'
+B12	'8\n10'
+A13	'1.4   For services through media\n(See Item 4, Section 33 of the Enhanced Guidelines for the applicable conditions)\n1.4.1   Writer of occasional newspaper column (max = 10)'
+B13	2
+A14	'1.4.2   Writer of regular newspaper column'
+B14	10
+A15	'1.4.3   Host of TV/Radio Program'
+B15	10
+A16	'1.4.4   Guesting as technical expert for TV or radio program/print media/online media (max = 10)'
+B16	1
+A17	'1.5   For every hour of training course, seminar, or workshop conducted in the capacity as Resource Person, Facilitator, Moderator, Plenary Speaker, or Panelist\n1.5.1   Local\n1.5.2   International\n(See Item 5, Section 33 of the Enhanced Guidelines for the applicable conditions)'
+B17	'2\n3'
+A18	'2.   Institutional Social Responsibility'
+B18	'Max = 30'
+A19	'2.1.  Extension Project Activities\n2.1.1.  Lead/Head of Extension Activity\n2.1.2.  Participant of Extension Activity\n(See Section 34 of the Enhanced Guidelines for the applicable conditions)'
+B19	'5\n2'
+F19	2
+G19	'TechBridge: Speaker\n2025-2026\n'
+A20	'Criterion C – Relevance and Quality of Extension Services'
+B20	'Max = 20'
+F20	'=F21'
+A21	'1.     Client Satisfaction Rating for Extension Projects\n(See Section 35 of the Enhanced Guidelines for the applicable conditions)\nNote: the Extension Project should have also been declared under Institutional Social Responsibility indicator in Criterion B – Service to the Community in order to be credited.'
+B21	20
+F21	'=[1]Luthie!$P$21' COMMENT='Lamdag: Facilitator - not credited support roles such as: secretariat, ushers, etc\n\nTechBridge: Speaker\ndirect delivery of technical or professional expertise to\nbeneficiaries,\n'
+G21	'TechBridge / Lamdag:\n2024-2025 -- proponent / lecturer  (???)\n2025-2026 -- proponent / lecturer  (???)'
+A22	'Criterion D – Bonus Criterion'
+B22	'Max = 20'
+F22	'=F23'
+A23	'1.   For Administrative Designation\n1.1   Institutional Level\n1.1.1   President or OIC President\n1.1.2   Vice-President\n1.1.3   Chancellor\n1.1.4   Vice-Chancellor\n1.1.5   Campus Director/Administrator\n1.1.6   Faculty Trustee/Regent\n1.1.7   Office Director\n1.1.8   University/College Secretary\n1.1.9   Project Head\n\n1.1.10 Institution-level Committee\n●   Chair\n●   Member\n\n1.1.11 Coordinators\n\n1.2   College/Department Level\n1.2.1 Dean\n1.2.2 Associate Dean\n1.2.3 College Secretary\n1.2.4 Department Head\n1.2.5 Program Chair/Project Head\n\n1.2.6 Department-level Committee\n●   Chair\n●   Member\n\n1.2.7 Coordinators\n(See Section 36 of the Enhanced Guidelines for the applicable conditions)'
+B23	'\n\n20\n15\n10\n8\n8\n8\n6\n6\n4\n\n\n3\n2\n\n2\n\n\n6\n5\n3\n4\n3\n\n\n2\n1\n\n1'
+F23	1
+G23	'CCIR Coordinator 1 or 2 points???'
+================================================================================
+SHEET: KRA IV - Professional Dev't
+merged: ['B17:E17', 'A3:H3', 'B9:E9', 'B8:E8', 'B4:E4', 'B12:E12', 'B13:E13', 'A2:H2', 'B6:E6', 'B16:E16', 'B15:E15', 'B7:E7', 'B11:E11', 'B5:E5', 'A1:H1', 'B10:E10', 'B14:E14']
+A1	'ANNEX A'
+A2	'Enhanced Implementing Guidelines of DBM-CHED Joint Circular No. 3, series of 2022'
+A3	'LIST OF CRITERIA AND DOCUMENTARY EVIDENCES'
+A4	'CRITERIA'
+B4	'POINTS'
+F4	'SCORE'
+G4	'REQUIRED EVIDENCE'
+A5	'KRA IV - PROFESSIONAL DEVELOPMENT'
+B5	100
+F5	'=SUM(F6+F8+F13+F15)*10%'
+A6	'Criterion A –  Involvement in Professional Organizations'
+B6	'Max = 20'
+F6	'=F7'
+A7	'1.   Membership and Participation in Registered Professional Organizations and Societies\n(See Section 38 of the Enhanced Guidelines for the applicable conditions)'
+B7	5
+A8	'Criterion B – Continuing Development'
+B8	'Max = 60'
+F8	'=SUM(F9:F12)'
+A9	'1.   Educational Qualifications\n1.1   For every post-master diploma or certificate\n1.2   For every post-doctorate diploma or certificate\n1.3   For additional master’s degree\n1.4   For doctorate degree or additional doctorate degree\n(See Section 40 of the Enhanced Guidelines for the applicable conditions)'
+B9	'\n10\n10\n20\n40'
+A10	'2.   For every attendance in conferences, seminars, workshops, industry immersion\n2.1   Local\n2.2   International\n(See Section 41 of the Enhanced Guidelines for the applicable conditions)'
+B10	'Max = 10\n\n1\n2'
+F10	4
+G10	'2023 - RCITE\n2024 - IPOPHIL Patent Drafting\n          - Research Extension Seminar at Manla\n2025 - Research Capacity\n          - CyberConnect ???\n          - CITL???\n2026 - Lambigit Conference ???'
+A11	'3.   For every paper presentation in conferences\n3.1.  Local'
+B11	'Max = 10\n3'
+F11	3
+G11	'2026 - Lambigit Conference'
+A12	'3.2.  International\n(See Section 42 of the Enhanced Guidelines for the applicable conditions)'
+B12	5
+A13	'Criterion C – Awards and Recognition'
+B13	'Max = 20'
+F13	'=F14'
+A14	'1.   For every award of distinction received in recognition of achievement in relevant areas of specialization/ profession and/or assignment of the faculty concerned.\n1.1    Institutional\n1.2    Local and Regional (City, Municipality, Province)\n1.3    National\n(See Section 43 of the Enhanced Guidelines for the applicable conditions)'
+B14	'2\n3\n4'
+A15	'*Criterion D – Additional Points for Newly Appointed Faculty'
+B15	'Max = 20'
+F15	'=SUM(F16:F17)'
+A16	'1.1.  For every year of full-time academic service in an institution of higher learning as:\n1.1  President\n1.2  Vice President/ Dean/Director\n1.3  Department/ Program Head\n1.4  Faculty member\n(See Section 44 of the Enhanced Guidelines for the applicable conditions)'
+B16	'5\n4\n3\n2'
+F16	4 COMMENT='Points shall be awarded for every full year of academic\nexperience. Proportionate points shall also be granted for\nfractional years of service, based on the equivalent number of\nmonths rendered.'
+G16	'NMSC:\n2021-2022 -- 2 sems (2pts)\n2022-2023 -- 1 sem  (???)\n2023-2024 -- 2 sems  (2pts)'
+A17	'2.   For every year of industry experience (non-academic organization) in:\n2.1.  Managerial/ Supervisory Position\n2.2.  Technical and Skilled\n2.3.  Support/Administrative Staff\n(See Section 44 of the Enhanced Guidelines for the applicable conditions)'
+B17	'\n\n4\n3\n2'
+F17	16 COMMENT='What if 2 separate positions?'
+G17	'Nexen:\n2019 -- Senior Software Engineer / HR Commitee Chair \n2020 -- Senior Software Engineer / HR Commitee Chair\n2021 -- Senior Software Engineer / HR Commitee Chair \n2022 -- Senior Software Engineer / HR Commitee Chair \n2023 -- Senior Software Engineer / HR Commitee Chair \n\n2016 to Present -- BOD Member/Secretary '
+DEFINED NAMES:
+names err 'DefinedNameDict' object has no attribute 'definedName'

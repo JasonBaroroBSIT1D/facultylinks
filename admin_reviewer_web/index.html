@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>FacultyLink — CONNECT · EVALUATE · ADVANCE.</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/landing.css" />
+</head>
+<body>
+  <header class="fl-header" id="top">
+    <div class="fl-header-inner">
+      <a class="fl-brand" href="#top">
+        <img src="assets/logo.svg" width="48" height="48" alt="" />
+        <div>
+          <h1><span class="faculty">Faculty</span><span class="link">Link</span></h1>
+          <p class="fl-tagline">CONNECT · EVALUATE · ADVANCE.</p>
+        </div>
+      </a>
+      <nav class="fl-nav" aria-label="Primary">
+        <a href="#home" class="nav-link active" data-section="home">Home</a>
+        <a href="#features" class="nav-link" data-section="features">Features</a>
+        <a href="#about" class="nav-link" data-section="about">About</a>
+        <a href="login.html" class="fl-btn-login">↗ Sign in</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="hero" id="home">
+    <div class="hero-inner">
+      <p class="hero-eyebrow">DBM–CHED JOINT CIRCULAR · SELF-ASSESSMENT</p>
+      <h2>ASSESS YOUR PROGRESS.<span class="line2">EXPLORE YOUR POTENTIAL.</span></h2>
+      <p>FacultyLink helps you organize your files, estimate your KRA points, get reviewer feedback, and check your progress before official rank review—committee decisions stay official.</p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href="login.html">Get Started →</a>
+        <a class="btn btn-outline" href="#features">Explore Features ↓</a>
+      </div>
+      <p class="hero-note">Rank simulation results are for preparation only—not official promotion or reclassification decisions.</p>
+    </div>
+  </section>
+
+  <section class="features" id="features">
+    <div class="features-inner">
+      <p class="section-label">FEATURES</p>
+      <h2>Everything the assessment needs, in one place.</h2>
+      <p>From supporting documents to reviewer verification, FacultyLink keeps each step of the assessment organized.</p>
+      <div class="features-grid">
+        <article class="feature-card"><span class="feature-num">01</span><div class="feature-icon">📁</div><h3>Academic Document Management</h3><p>Organize evidence by KRA, criterion, and indicator—including SET and SEF folders for Instruction.</p></article>
+        <article class="feature-card"><span class="feature-num">02</span><div class="feature-icon">🔍</div><h3>OCR-Assisted Document Extraction</h3><p>Planned Tesseract integration; demonstrations show <strong>simulated</strong> extracted text separate from human review.</p></article>
+        <article class="feature-card"><span class="feature-num">03</span><div class="feature-icon">✓</div><h3>Rule-Based Document Validation</h3><p>Transparent rule references aligned with DBM–CHED JC No. 3, s. 2022 Enhanced Guidelines.</p></article>
+        <article class="feature-card"><span class="feature-num">04</span><div class="feature-icon">📊</div><h3>KRA Self-Assessment</h3><p>Workbook-aligned criteria, caps, and supported calculations for estimated and verified points.</p></article>
+        <article class="feature-card"><span class="feature-num">05</span><div class="feature-icon">👥</div><h3>Reviewer Verification</h3><p>Approve, reject, or request corrections with remarks—OCR completion does not auto-approve.</p></article>
+        <article class="feature-card"><span class="feature-num">06</span><div class="feature-icon">📈</div><h3>Academic Rank Simulation</h3><p>Preparation-only readiness view; rank mapping pending official configuration.</p></article>
+      </div>
+    </div>
+  </section>
+
+  <section class="about" id="about">
+    <div class="about-grid">
+      <div>
+        <p class="section-label" style="color:#51c8ef">ABOUT FACULTYLINK</p>
+        <h2 style="font-size:2.25rem;margin:0.5rem 0 1rem">Assessment support, with human review at the center.</h2>
+        <div class="about-panel">
+          <strong style="color:#fff">Faculty</strong><span style="color:#51c8ef">Link</span>
+          <p class="fl-tagline" style="margin-top:0.5rem">CONNECT · EVALUATE · ADVANCE.</p>
+        </div>
+      </div>
+      <div>
+        <p class="about-quote">FacultyLink is a faculty self-assessment platform designed to support document organization, KRA-based scoring, reviewer verification, and rank upgrade simulation. It helps streamline preparation while maintaining human review and alignment with applicable evaluation guidelines.</p>
+        <div class="about-cols">
+          <div><h4>Human review</h4><p>Reviewer feedback, correction requests, and verified points remain central to every indicator.</p></div>
+          <div><h4>Guideline aligned</h4><p>Structured around DBM–CHED Joint Circular No. 3, s. 2022 (Enhanced Implementing Guidelines).</p></div>
+          <div><h4>Supports, not replaces</h4><p>Official rank decisions stay with authorized committees and DBM–CHED processes.</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>© <span id="yr"></span> FacultyLink · Preparatory faculty self-assessment demonstration</footer>
+  <script type="module" src="js/landing.js"></script>
+</body>
+</html>
