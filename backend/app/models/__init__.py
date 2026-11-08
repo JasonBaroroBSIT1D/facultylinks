@@ -6,6 +6,7 @@ from app.models.notification import Notification
 from app.models.reviewer_assignment import ReviewerAssignment
 from app.models.user import User, UserRole
 from app.models.user_session import UserSession
+from app.models.password_recovery import PasswordRecoveryChallenge, PasswordResetGrant
 
 __all__ = [
     "User",
@@ -17,4 +18,6 @@ __all__ = [
     "Notification",
     "ActivityLog",
     "FacultyAssessment",
+    "PasswordRecoveryChallenge",
+    "PasswordResetGrant",
 ]

@@ -23,7 +23,8 @@ async function apiJson(path, options = {}) {
 }
 
 export const PortalApi = {
-  fetchState: () => apiJson('/api/portal/state'),
+  fetchState: ({ full = false } = {}) =>
+    apiJson(full ? '/api/portal/state' : '/api/portal/state?lite=1'),
   createFaculty: (body) => apiJson('/api/admin/faculty', { method: 'POST', body: JSON.stringify(body) }),
   updateFaculty: (id, body) => apiJson(`/api/admin/faculty/${encodeURIComponent(id)}`, { method: 'PUT', body: JSON.stringify(body) }),
   createReviewer: (body) => apiJson('/api/admin/reviewers', { method: 'POST', body: JSON.stringify(body) }),
@@ -50,4 +51,8 @@ export const PortalApi = {
     }),
   reviewDocument: (publicId, patch) =>
     apiJson(`/api/documents/${encodeURIComponent(publicId)}/review`, { method: 'PATCH', body: JSON.stringify(patch) }),
+  resendFacultyCredentials: (portalId) =>
+    apiJson(`/api/admin/faculty/${encodeURIComponent(portalId)}/resend-credentials`, { method: 'POST', body: '{}' }),
+  resendReviewerCredentials: (portalId) =>
+    apiJson(`/api/admin/reviewers/${encodeURIComponent(portalId)}/resend-credentials`, { method: 'POST', body: '{}' }),
 };

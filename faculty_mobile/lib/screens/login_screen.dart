@@ -50,7 +50,9 @@ class _LoginScreenState extends State<LoginScreen> {
       return;
     }
     if (!mounted) return;
-    Navigator.pushReplacementNamed(context, '/home');
+    final mustChange = await AuthRepository.mustChangePassword();
+    if (!mounted) return;
+    Navigator.pushReplacementNamed(context, mustChange ? '/change-password' : '/home');
   }
 
   @override

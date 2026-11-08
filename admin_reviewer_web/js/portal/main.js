@@ -23,6 +23,7 @@ import {
   openReviewerForm,
   openReviewerAssignModal,
   countFacultyForReviewer,
+  showAppToast,
 } from './account-modals.js';
 import { brandCompactHtml } from '../core/brand-markup.js';
 import { openCenteredModal } from './modal-access.js';
@@ -153,7 +154,18 @@ function renderView() {
     dashboard: () => renderDashboard(el, title),
     faculty: () => renderFacultyList(el, title),
     reviewers: () => renderReviewerList(el, title),
-    evalSettings: () => renderEvaluationSettings(el, title),
+    evalSettings: () => {
+      el.innerHTML = '<p class="muted" style="padding:1rem">Loading evaluation settings…</p>';
+      void MockStore.refresh({ full: true, force: true }).then(
+        () => renderEvaluationSettings(el, title),
+        (err) => {
+          el.innerHTML = `<div class="card" style="padding:1rem"><h2>Could not load evaluation settings</h2>
+            <p>${err?.message || 'Request failed.'}</p>
+            <button type="button" class="btn-primary-sm" id="evalSettingsRetry">Retry</button></div>`;
+          document.getElementById('evalSettingsRetry')?.addEventListener('click', () => renderView());
+        }
+      );
+    },
     config: () => {
       state.params = { ...state.params, tab: 'rules' };
       renderEvaluationSettings(el, title);
@@ -221,7 +233,6 @@ function renderFacultyList(root, title, preservedQuery = '') {
   title.textContent = 'Faculty management';
   root.innerHTML = `
     ${pageIntro(SCREEN_INTRO.faculty)}
-    <p class="muted" style="font-size:0.85rem;margin:-0.25rem 0 1rem">Demo mode: changes are saved on this browser.</p>
     <div class="fl-page-toolbar">
       <input type="search" id="facSearch" placeholder="Search by name or email…" aria-label="Search faculty" />
       <button type="button" class="btn-primary-sm btn-sm" id="addFac">Add Faculty Member</button>
@@ -267,6 +278,7 @@ function renderFacultyList(root, title, preservedQuery = '') {
           <td>${statusBadge(f.status)}</td>
           <td class="fl-account-card-actions">
             <button type="button" class="btn-ghost btn-sm" data-edit="${f.id}" title="Edit faculty">Edit</button>
+            <button type="button" class="btn-ghost btn-sm" data-resend="${f.id}" title="Resend sign-in credentials">Resend credentials</button>
             <button type="button" class="btn-ghost btn-sm" data-toggle="${f.id}" title="${f.status === 'active' ? 'Deactivate faculty' : 'Activate faculty'}">${f.status === 'active' ? 'Deactivate' : 'Activate'}</button>
           </td></tr>`;
       })
@@ -282,6 +294,7 @@ function renderFacultyList(root, title, preservedQuery = '') {
           <p>${statusBadge(f.status)}</p>
           <div class="fl-account-card-actions">
             <button type="button" class="btn-ghost btn-sm" data-edit="${f.id}">Edit</button>
+            <button type="button" class="btn-ghost btn-sm" data-resend="${f.id}">Resend credentials</button>
             <button type="button" class="btn-ghost btn-sm" data-toggle="${f.id}">${f.status === 'active' ? 'Deactivate' : 'Activate'}</button>
           </div>
         </article>`;
@@ -293,6 +306,29 @@ function renderFacultyList(root, title, preservedQuery = '') {
           opener: b,
           onSaved: () => renderFacultyList(root, title, searchEl.value),
         });
+    });
+    root.querySelectorAll('[data-resend]').forEach((b) => {
+      b.onclick = async () => {
+        const st = MockStore.load();
+        const f = st.faculty.find((x) => x.id === b.dataset.resend);
+        if (!f) return;
+        if (!confirm(`Resend credentials for ${f.firstName} ${f.lastName}? This replaces their password and signs them out.`)) return;
+        b.disabled = true;
+        try {
+          const res = await PortalApi.resendFacultyCredentials(f.id);
+          await bootstrapPortal();
+          showAppToast(
+            res.emailDelivery?.ok
+              ? 'Replacement credentials email was accepted by the mail server.'
+              : res.emailDelivery?.message || 'Credential email failed.',
+            !res.emailDelivery?.ok
+          );
+          redraw(searchEl.value);
+        } catch (err) {
+          showAppToast(err.message || 'Could not resend credentials.', true);
+          b.disabled = false;
+        }
+      };
     });
     root.querySelectorAll('[data-toggle]').forEach((b) => {
       b.onclick = () => {
@@ -320,7 +356,6 @@ function renderReviewerList(root, title, preservedQuery = '') {
   title.textContent = 'Reviewer management';
   root.innerHTML = `
     ${pageIntro(SCREEN_INTRO.reviewers)}
-    <p class="muted" style="font-size:0.85rem;margin:-0.25rem 0 1rem">Demo mode: changes are saved on this browser.</p>
     <div class="fl-page-toolbar">
       <input type="search" id="revSearch" placeholder="Search by name or email…" aria-label="Search reviewers" />
       <button type="button" class="btn-primary-sm btn-sm" id="addRev">Add Reviewer</button>
@@ -348,7 +383,7 @@ function renderReviewerList(root, title, preservedQuery = '') {
       const msg =
         needle && store.reviewers.length
           ? 'No reviewers match your search.'
-          : 'No reviewers yet. Use Add Reviewer to invite someone for the demo.';
+          : 'No reviewers yet. Use Add Reviewer to create an account.';
       body.innerHTML = `<tr><td colspan="6"><p class="fl-empty-state">${msg}</p></td></tr>`;
       cards.innerHTML = `<p class="fl-empty-state">${msg}</p>`;
       return;
@@ -365,6 +400,7 @@ function renderReviewerList(root, title, preservedQuery = '') {
           <td class="fl-account-card-actions">
             <button type="button" class="btn-ghost btn-sm" data-edit="${r.id}" title="Edit reviewer">Edit</button>
             <button type="button" class="btn-ghost btn-sm" data-assign="${r.id}" title="Manage faculty assignments">Assignments</button>
+            <button type="button" class="btn-ghost btn-sm" data-resend-rev="${r.id}" title="Resend sign-in credentials">Resend credentials</button>
             <button type="button" class="btn-ghost btn-sm" data-toggle="${r.id}" title="${r.status === 'active' ? 'Deactivate reviewer' : 'Activate reviewer'}">${r.status === 'active' ? 'Deactivate' : 'Activate'}</button>
           </td></tr>`;
       })
@@ -381,6 +417,7 @@ function renderReviewerList(root, title, preservedQuery = '') {
           <div class="fl-account-card-actions">
             <button type="button" class="btn-ghost btn-sm" data-edit="${r.id}">Edit</button>
             <button type="button" class="btn-ghost btn-sm" data-assign="${r.id}">Assignments</button>
+            <button type="button" class="btn-ghost btn-sm" data-resend-rev="${r.id}">Resend credentials</button>
             <button type="button" class="btn-ghost btn-sm" data-toggle="${r.id}">${r.status === 'active' ? 'Deactivate' : 'Activate'}</button>
           </div>
         </article>`;
@@ -399,6 +436,29 @@ function renderReviewerList(root, title, preservedQuery = '') {
           opener: b,
           onSaved: () => renderReviewerList(root, title, searchEl.value),
         });
+    });
+    root.querySelectorAll('[data-resend-rev]').forEach((b) => {
+      b.onclick = async () => {
+        const st = MockStore.load();
+        const r = st.reviewers.find((x) => x.id === b.dataset.resendRev);
+        if (!r) return;
+        if (!confirm(`Resend credentials for ${r.firstName} ${r.lastName}? This replaces their password and signs them out.`)) return;
+        b.disabled = true;
+        try {
+          const res = await PortalApi.resendReviewerCredentials(r.id);
+          await bootstrapPortal();
+          showAppToast(
+            res.emailDelivery?.ok
+              ? 'Replacement credentials email was accepted by the mail server.'
+              : res.emailDelivery?.message || 'Credential email failed.',
+            !res.emailDelivery?.ok
+          );
+          redraw(searchEl.value);
+        } catch (err) {
+          showAppToast(err.message || 'Could not resend credentials.', true);
+          b.disabled = false;
+        }
+      };
     });
     root.querySelectorAll('[data-toggle]').forEach((b) => {
       b.onclick = () => {
@@ -903,15 +963,17 @@ function showPortalError(err) {
   document.getElementById('portalRetry')?.addEventListener('click', () => startPortal());
 }
 
-async function startPortal() {
+async function startPortal({ skipBootstrap = false } = {}) {
   initSidebarLayout();
   initConfigUi(session, renderView);
   renderShell();
   applySidebarLayout();
   const el = document.getElementById('appContent');
-  el.innerHTML = '<p class="muted" style="padding:1rem">Loading…</p>';
+  if (!skipBootstrap) {
+    el.innerHTML = '<p class="muted" style="padding:1rem">Loading…</p>';
+  }
   try {
-    await bootstrapPortal();
+    if (!skipBootstrap) await bootstrapPortal();
     if (location.hash.startsWith('#review/')) {
       state.route = 'review';
       state.params.docId = location.hash.replace('#review/', '');
@@ -930,22 +992,37 @@ async function startPortal() {
 
 async function initPortalApp() {
   const el = document.getElementById('appContent');
-  if (el) el.innerHTML = '<p class="muted" style="padding:1rem">Checking session…</p>';
+  if (el) el.innerHTML = '<p class="muted" style="padding:1rem">Loading…</p>';
   try {
-    session = await AuthRepository.ensureWebPortalSession(['admin', 'reviewer']);
+    await bootstrapPortal();
+    session = AuthRepository.getSession();
+    if (!session) {
+      const me = await AuthRepository.ensureWebPortalSession(['admin', 'reviewer']);
+      session = me;
+    }
   } catch (e) {
-    el.innerHTML = `<div class="card" style="margin:1rem"><h2>Could not verify session</h2><p>${e.message || 'Network error.'}</p>
+    if (e?.name === 'AuthRedirect') {
+      AuthRepository.clearClientSession();
+      clearPortalCache();
+      window.location.replace('/login.html');
+      return;
+    }
+    el.innerHTML = `<div class="card" style="margin:1rem"><h2>Could not load portal</h2><p>${e.message || 'Network error.'}</p>
       <button type="button" class="btn-primary-sm" id="sessionRetry">Retry</button></div>`;
     document.getElementById('sessionRetry')?.addEventListener('click', () => initPortalApp());
     return;
   }
-  if (!session) {
+  if (!session || !['admin', 'reviewer'].includes(session.role)) {
     AuthRepository.clearClientSession();
     clearPortalCache();
     window.location.replace('/login.html');
     return;
   }
-  await startPortal();
+  if (session.mustChangePassword) {
+    window.location.replace('/change-password.html');
+    return;
+  }
+  await startPortal({ skipBootstrap: true });
 }
 
 window.addEventListener('pageshow', (ev) => {

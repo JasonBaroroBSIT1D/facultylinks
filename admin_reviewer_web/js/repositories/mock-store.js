@@ -66,6 +66,9 @@ function normalizeFromApi(data) {
   };
   ensureAssessmentConfig(s);
   hydrateAssessmentConfigFromPortal(s);
+  if (data.user) {
+    AuthRepository.syncSessionFromApiUser(data.user);
+  }
   return s;
 }
 
@@ -137,12 +140,13 @@ export function clearDemoStorageKeys() {
   }
 }
 
-export async function bootstrapPortal() {
-  if (_bootstrapPromise) return _bootstrapPromise;
+export async function bootstrapPortal(options = {}) {
+  const useLite = options.full ? false : options.lite !== false;
+  if (_bootstrapPromise && !options.force) return _bootstrapPromise;
   _bootstrapPromise = (async () => {
     clearDemoStorageKeys();
     try {
-      const data = await PortalApi.fetchState();
+      const data = await PortalApi.fetchState({ full: !useLite });
       _cache = normalizeFromApi(data);
       _loadError = null;
     } catch (e) {
@@ -195,8 +199,8 @@ export class MockStore {
     return s;
   }
 
-  static async refresh() {
-    return bootstrapPortal();
+  static async refresh(options = {}) {
+    return bootstrapPortal({ ...options, force: true });
   }
 
   static save(state, { notify = true } = {}) {
@@ -236,15 +240,15 @@ export class MockStore {
       phone: faculty.phone,
       status: faculty.status,
       reviewerId: faculty.reviewerId,
-      password: faculty.password,
     };
+    let res;
     if (faculty.id && String(faculty.id).startsWith('u-')) {
-      await PortalApi.updateFaculty(faculty.id, body);
+      res = await PortalApi.updateFaculty(faculty.id, body);
     } else {
-      await PortalApi.createFaculty(body);
+      res = await PortalApi.createFaculty(body);
     }
     await bootstrapPortal();
-    return faculty;
+    return res;
   }
 
   static async upsertReviewer(rev) {
@@ -255,15 +259,16 @@ export class MockStore {
       employeeId: rev.employeeId,
       department: rev.department,
       status: rev.status,
-      password: rev.password,
+      phone: rev.phone,
     };
+    let res;
     if (rev.id && String(rev.id).startsWith('u-')) {
-      await PortalApi.updateReviewer(rev.id, body);
+      res = await PortalApi.updateReviewer(rev.id, body);
     } else {
-      await PortalApi.createReviewer(body);
+      res = await PortalApi.createReviewer(body);
     }
     await bootstrapPortal();
-    return rev;
+    return res;
   }
 
   static logActivity(_text, _actor) {

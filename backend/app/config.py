@@ -10,7 +10,20 @@ _ENV_FILE = _BACKEND_ROOT / ".env"
 
 
 def load_backend_env() -> None:
-    load_dotenv(_ENV_FILE)
+    # Prefer backend/.env over inherited empty shell variables (common on Windows).
+    load_dotenv(_ENV_FILE, override=True)
+
+
+def apply_mail_config_from_env(app) -> None:
+    """Refresh SMTP settings on the running app from os.environ (after load_dotenv)."""
+    app.config["SMTP_HOST"] = os.environ.get("SMTP_HOST", "").strip() or None
+    app.config["SMTP_PORT"] = int(os.environ.get("SMTP_PORT", "587") or "587")
+    app.config["SMTP_USE_TLS"] = os.environ.get("SMTP_USE_TLS", "true").lower() == "true"
+    app.config["SMTP_USERNAME"] = os.environ.get("SMTP_USERNAME", "").strip() or None
+    raw_pw = os.environ.get("SMTP_PASSWORD", "") or ""
+    app.config["SMTP_PASSWORD"] = "".join(raw_pw.split()) or None
+    app.config["MAIL_FROM"] = os.environ.get("MAIL_FROM", "").strip() or None
+    app.config["MAIL_FROM_NAME"] = (os.environ.get("MAIL_FROM_NAME", "FacultyLink") or "FacultyLink").strip()
 
 
 load_backend_env()
@@ -35,7 +48,11 @@ def _database_url() -> str | None:
 
 
 def _engine_options(url: str | None) -> dict:
-    opts: dict = {"pool_pre_ping": True}
+    opts: dict = {
+        "pool_pre_ping": True,
+        "pool_size": int(os.environ.get("SQLALCHEMY_POOL_SIZE", "5")),
+        "max_overflow": int(os.environ.get("SQLALCHEMY_MAX_OVERFLOW", "10")),
+    }
     if url and ":6543" in url:
         # Supabase transaction pooler: disable prepared statements (official guidance)
         opts["connect_args"] = {"prepare_threshold": None}
@@ -79,6 +96,17 @@ class Config:
     )
 
     API_TOKEN_TTL_HOURS = int(os.environ.get("API_TOKEN_TTL_HOURS", "168"))
+
+    # SMTP (Gmail: smtp.gmail.com, port 587, TLS on, App Password)
+    SMTP_HOST = os.environ.get("SMTP_HOST", "").strip() or None
+    SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
+    SMTP_USE_TLS = os.environ.get("SMTP_USE_TLS", "true").lower() == "true"
+    SMTP_USERNAME = os.environ.get("SMTP_USERNAME", "").strip() or None
+    SMTP_PASSWORD = "".join((os.environ.get("SMTP_PASSWORD", "") or "").split()) or None
+    MAIL_FROM = os.environ.get("MAIL_FROM", "").strip() or None
+    MAIL_FROM_NAME = os.environ.get("MAIL_FROM_NAME", "FacultyLink").strip()
+
+    RECOVERY_HMAC_SECRET = os.environ.get("RECOVERY_HMAC_SECRET", "").strip() or None
 
 
 class DevelopmentConfig(Config):

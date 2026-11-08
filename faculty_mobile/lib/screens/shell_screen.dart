@@ -28,7 +28,16 @@ class _ShellScreenState extends State<ShellScreen> {
   @override
   void initState() {
     super.initState();
+    _guardSession();
     _load();
+  }
+
+  Future<void> _guardSession() async {
+    final mustChange = await AuthRepository.mustChangePassword();
+    if (!mounted) return;
+    if (mustChange) {
+      Navigator.pushReplacementNamed(context, '/change-password');
+    }
   }
 
   Future<void> _load() async {

@@ -28,7 +28,9 @@ document.getElementById('contactBtn').addEventListener('click', () => {
 void (async () => {
   try {
     const session = await AuthRepository.ensureWebPortalSession(['admin', 'reviewer']);
-    if (session) window.location.replace('/app.html');
+    if (session) {
+      window.location.replace(session.mustChangePassword ? '/change-password.html' : '/app.html');
+    }
   } catch {
     /* stay on login — user can sign in or refresh */
   }
@@ -65,6 +67,10 @@ form.addEventListener('submit', async (e) => {
     }
     if (document.getElementById('remember').checked) localStorage.setItem('fl_remember_email', em);
     else localStorage.removeItem('fl_remember_email');
+    if (session.mustChangePassword) {
+      window.location.replace('/change-password.html');
+      return;
+    }
     window.location.replace('/app.html');
   } catch (ex) {
     err.textContent = ex.message || 'Sign in failed.';

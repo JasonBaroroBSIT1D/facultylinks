@@ -18,6 +18,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   bool _loading = false;
   bool _unavailable = false;
   bool _completed = false;
+  String _resetToken = '';
+  String _neutralMsg = 'If an eligible account exists, a verification code will be sent.';
 
   final _email = TextEditingController();
   final _code = TextEditingController();
@@ -50,23 +52,46 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     setState(() => _error = err);
     if (err != null) return;
     setState(() {
-      _step = 2;
+      _loading = true;
       _error = null;
     });
+    try {
+      final msg = await PasswordRecoveryRepository.requestCode(_email.text);
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _step = 2;
+        _neutralMsg = msg;
+      });
+    } catch (ex) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = ex.toString().replaceFirst('Exception: ', '');
+      });
+    }
   }
 
   Future<void> _verifyCode() async {
-    setState(() => _loading = true);
-    final err = PasswordRecoveryRepository.verifyCode(_code.text);
-    await Future.delayed(const Duration(milliseconds: 300));
-    if (!mounted) return;
     setState(() {
-      _loading = false;
-      _error = err;
-      if (err == null) {
-        _step = 3;
-      }
+      _loading = true;
+      _error = null;
     });
+    try {
+      final token = await PasswordRecoveryRepository.verifyCode(_email.text, _code.text);
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _resetToken = token;
+        _step = 3;
+      });
+    } catch (ex) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = ex.toString().replaceFirst('Exception: ', '');
+      });
+    }
   }
 
   Future<void> _savePassword() async {
@@ -79,13 +104,20 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       _loading = true;
       _error = null;
     });
-    await PasswordRecoveryRepository.savePassword(_email.text, _password.text);
-    await Future.delayed(const Duration(milliseconds: 300));
-    if (!mounted) return;
-    setState(() {
-      _loading = false;
-      _completed = true;
-    });
+    try {
+      await PasswordRecoveryRepository.completeReset(_resetToken, _password.text, _confirm.text);
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _completed = true;
+      });
+    } catch (ex) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _error = ex.toString().replaceFirst('Exception: ', '');
+      });
+    }
   }
 
   @override
@@ -149,7 +181,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           Text('Password updated', style: TextStyle(fontSize: scale.scale(22), fontWeight: FontWeight.w700)),
           const SizedBox(height: 12),
           const Text(
-            'Your password has been updated. Sign in with your new password.',
+            'Your password has been updated. Please sign in.',
             style: TextStyle(color: AppColors.textMuted, height: 1.45),
           ),
           const SizedBox(height: 20),
@@ -170,18 +202,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           const SizedBox(height: 8),
           Text(
             _step == 1
-                ? 'Forgot Password'
+                ? 'Forgot Password?'
                 : _step == 2
-                    ? 'Verify Code'
-                    : 'Set New Password',
+                    ? 'Check Your Email'
+                    : 'Set Your New Password',
             style: TextStyle(fontSize: scale.scale(22), fontWeight: FontWeight.w700, color: AppColors.navyDeep),
           ),
           const SizedBox(height: 8),
           Text(
             _step == 1
-                ? 'Enter your account email to continue.'
+                ? 'Enter your account email to request a verification code.'
                 : _step == 2
-                    ? 'Enter verification code.'
+                    ? _neutralMsg
                     : 'Choose a new password for your account.',
             style: TextStyle(fontSize: scale.scale(15), color: AppColors.textMuted, height: 1.4),
           ),
@@ -196,7 +228,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             TextField(
               controller: _code,
               keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9A-Za-z]'))],
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              maxLength: 6,
               decoration: const InputDecoration(labelText: 'Verification Code', prefixIcon: Icon(Icons.pin_outlined)),
             ),
           ] else ...[
@@ -252,7 +285,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     },
               child: _loading
                   ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : Text(_step == 1 ? 'Continue' : _step == 2 ? 'Verify Code' : 'Save New Password'),
+                  : Text(_step == 1 ? 'Send Verification Code' : _step == 2 ? 'Verify Code' : 'Save New Password'),
             ),
           ),
           if (_step == 1)

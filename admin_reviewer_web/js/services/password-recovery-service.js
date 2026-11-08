@@ -1,8 +1,20 @@
-/** Local frontend password recovery (see docs/DEMO_ACCOUNTS.md for test verification code). */
+import { getApiBase } from '../core/api-config.js';
 
-/** Backend phase 1: account recovery is admin-managed; this flow stays disabled. */
-
-const VERIFICATION_CODE = '123456';
+async function post(path, body) {
+  const res = await fetch(`${getApiBase()}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Client-Type': 'web' },
+    credentials: 'include',
+    body: JSON.stringify(body),
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const err = new Error(data.error || `Request failed (${res.status})`);
+    err.status = res.status;
+    throw err;
+  }
+  return data;
+}
 
 export const PasswordRecoveryService = {
   isAvailable() {
@@ -13,19 +25,17 @@ export const PasswordRecoveryService = {
     const em = email?.trim() ?? '';
     if (!em) return 'Email address is required.';
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return 'Enter a valid email address.';
-    return 'Password recovery is not enabled yet. Contact your institution administrator.';
+    return null;
   },
 
-  /** Step 1 → 2 (no email-delivery messaging). */
-  prepareVerification(_email) {
-    return { ok: true };
+  async requestCode(email) {
+    const data = await post('/api/auth/password-recovery/request', { email: email.trim() });
+    return data;
   },
 
-  verifyCode(code) {
-    const c = (code ?? '').trim();
-    if (!c) return { ok: false, error: 'Verification code is required.' };
-    if (c !== VERIFICATION_CODE) return { ok: false, error: 'The code you entered is not valid.' };
-    return { ok: true };
+  async verifyCode(email, code) {
+    const data = await post('/api/auth/password-recovery/verify', { email: email.trim(), code: String(code).trim() });
+    return data;
   },
 
   validateNewPassword(password, confirm) {
@@ -38,10 +48,12 @@ export const PasswordRecoveryService = {
     return null;
   },
 
-  updatePassword(_email, _password, _confirm) {
-    return {
-      ok: false,
-      error: 'Password recovery is not enabled yet. Contact your institution administrator.',
-    };
+  async completeReset(resetToken, password, confirm) {
+    await post('/api/auth/password-recovery/complete', {
+      resetToken,
+      newPassword: password,
+      confirmPassword: confirm,
+    });
+    return { ok: true };
   },
 };

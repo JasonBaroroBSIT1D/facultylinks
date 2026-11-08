@@ -5,6 +5,18 @@ import { navIcon } from '../core/icons.js';
 import { openCenteredModal } from './modal-access.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_RE = /^(\+639\d{9}|09\d{9})$/;
+
+function normalizePhoneInput(raw) {
+  const trimmed = (raw || '').trim();
+  if (!trimmed) return { value: '', error: null };
+  const compact = trimmed.replace(/[\s\-()]/g, '');
+  if (PHONE_RE.test(compact)) return { value: compact, error: null };
+  return {
+    value: compact,
+    error: 'Enter a valid Philippine mobile number (09XXXXXXXXX or +639XXXXXXXXX).',
+  };
+}
 
 function esc(s) {
   return String(s)
@@ -113,6 +125,7 @@ export function openFacultyForm(facultyId, { opener, onSaved }) {
     department: '',
     reviewerId: '',
     status: 'active',
+    phone: '',
   };
 
   const activeRevs = activeReviewers(store);
@@ -139,7 +152,6 @@ export function openFacultyForm(facultyId, { opener, onSaved }) {
   const rankOpts = ranks.map((r) => `<option value="${escAttr(r)}" ${r === f.rank ? 'selected' : ''}>${esc(r)}</option>`).join('');
 
   const bodyHtml = `
-    <p class="fl-account-demo-note">Demo mode: changes are saved on this browser.</p>
     <form id="facultyAccountForm" class="fl-account-form" novalidate>
       <section aria-labelledby="facSecPersonal">
         <h3 id="facSecPersonal">Personal details</h3>
@@ -159,22 +171,13 @@ export function openFacultyForm(facultyId, { opener, onSaved }) {
             <input id="facEmail" name="email" type="email" required value="${escAttr(f.email)}" autocomplete="email"/>
             <p class="fl-account-field-error" data-error-for="email" role="alert"></p>
           </div>
-        </div>
-      </section>
-      ${
-        isEdit
-          ? ''
-          : `<section aria-labelledby="facSecAuth">
-        <h3 id="facSecAuth">Sign-in</h3>
-        <div class="fl-account-grid fl-account-grid--single">
           <div class="fl-account-field fl-account-field--full">
-            <label for="facPassword">Initial password</label>
-            <input id="facPassword" name="password" type="password" minlength="8" required autocomplete="new-password"/>
-            <p class="muted" style="font-size:0.85rem;margin:0.35rem 0 0">At least 8 characters for the mobile app.</p>
+            <label for="facPhone">Phone number <span class="muted" style="font-weight:400">(optional)</span></label>
+            <input id="facPhone" name="phone" type="tel" value="${escAttr(f.phone || '')}" autocomplete="tel" inputmode="tel" placeholder="09XXXXXXXXX or +639XXXXXXXXX"/>
+            <p class="fl-account-field-error" data-error-for="phone" role="alert"></p>
           </div>
         </div>
-      </section>`
-      }
+      </section>
       <section aria-labelledby="facSecAcademic">
         <h3 id="facSecAcademic">Academic details</h3>
         <div class="fl-account-grid">
@@ -205,7 +208,9 @@ export function openFacultyForm(facultyId, { opener, onSaved }) {
 
   const modal = openCenteredModal({
     title: isEdit ? 'Edit Faculty' : 'Add Faculty Member',
-    lede: isEdit ? 'Update this faculty member’s profile and reviewer assignment.' : 'Create a faculty record for the local demonstration.',
+    lede: isEdit
+      ? 'Update this faculty member’s profile and reviewer assignment.'
+      : 'Enter faculty details and assign a reviewer.',
     size: 'account',
     iconHtml: navIcon.faculty,
     bodyHtml,
@@ -258,6 +263,12 @@ export function openFacultyForm(facultyId, { opener, onSaved }) {
       setFieldError(form, 'rank', 'Select a rank.');
       valid = false;
     }
+    const phoneRaw = fd.get('phone')?.toString() || '';
+    const phoneParsed = normalizePhoneInput(phoneRaw);
+    if (phoneParsed.error) {
+      setFieldError(form, 'phone', phoneParsed.error);
+      valid = false;
+    }
     if (!valid) return;
 
     submitBtn.disabled = true;
@@ -274,12 +285,19 @@ export function openFacultyForm(facultyId, { opener, onSaved }) {
         reviewerId: reviewerId || null,
         status: existing?.status || 'active',
         employeeId: existing?.employeeId || '',
-        phone: existing?.phone || '',
-        password: fd.get('password')?.toString() || '',
+        phone: phoneParsed.value || null,
       };
-      await MockStore.upsertFaculty(record);
+      const res = await MockStore.upsertFaculty(record);
       modal.close();
-      showAppToast(`${firstName} ${lastName} saved.`);
+      if (isEdit) {
+        showAppToast(`${firstName} ${lastName} saved.`);
+      } else {
+        const delivery = res?.emailDelivery;
+        const msg = delivery?.ok
+          ? `${firstName} ${lastName} added. Credential email was accepted by the mail server.`
+          : `${firstName} ${lastName} added, but credential email failed. Use Resend Credentials after fixing SMTP.`;
+        showAppToast(msg, !delivery?.ok);
+      }
       onSaved?.();
     } catch (err) {
       setFieldError(form, '_form', err.message || 'Could not save.');
@@ -300,10 +318,10 @@ export function openReviewerForm(reviewerId, { opener, onSaved }) {
     department: '',
     status: 'active',
     assignedFacultyIds: [],
+    phone: '',
   };
 
   const bodyHtml = `
-    <p class="fl-account-demo-note">Demo mode: changes are saved on this browser.</p>
     <form id="reviewerAccountForm" class="fl-account-form" novalidate>
       <section aria-labelledby="revSecPersonal">
         <h3 id="revSecPersonal">Personal details</h3>
@@ -322,6 +340,11 @@ export function openReviewerForm(reviewerId, { opener, onSaved }) {
             <label for="revEmail">Email address</label>
             <input id="revEmail" name="email" type="email" required value="${escAttr(r.email)}" autocomplete="email"/>
             <p class="fl-account-field-error" data-error-for="email" role="alert"></p>
+          </div>
+          <div class="fl-account-field fl-account-field--full">
+            <label for="revPhone">Phone number <span class="muted" style="font-weight:400">(optional)</span></label>
+            <input id="revPhone" name="phone" type="tel" value="${escAttr(r.phone || '')}" autocomplete="tel" inputmode="tel" placeholder="09XXXXXXXXX or +639XXXXXXXXX"/>
+            <p class="fl-account-field-error" data-error-for="phone" role="alert"></p>
           </div>
         </div>
       </section>
@@ -346,7 +369,9 @@ export function openReviewerForm(reviewerId, { opener, onSaved }) {
 
   const modal = openCenteredModal({
     title: isEdit ? 'Edit Reviewer' : 'Add Reviewer',
-    lede: isEdit ? 'Update reviewer contact details and status.' : 'Create a reviewer who can check faculty documents in the demo.',
+    lede: isEdit
+      ? 'Update reviewer contact details and status.'
+      : 'Enter reviewer details to create an account.',
     size: 'account',
     iconHtml: navIcon.reviewers,
     bodyHtml,
@@ -392,6 +417,12 @@ export function openReviewerForm(reviewerId, { opener, onSaved }) {
       setFieldError(form, 'email', 'This email is already used by another account.');
       valid = false;
     }
+    const phoneRaw = fd.get('phone')?.toString() || '';
+    const phoneParsed = normalizePhoneInput(phoneRaw);
+    if (phoneParsed.error) {
+      setFieldError(form, 'phone', phoneParsed.error);
+      valid = false;
+    }
     if (!valid) return;
 
     submitBtn.disabled = true;
@@ -406,11 +437,19 @@ export function openReviewerForm(reviewerId, { opener, onSaved }) {
         department,
         status,
         employeeId: existing?.employeeId || '',
-        password: fd.get('password')?.toString() || '',
+        phone: phoneParsed.value || null,
       };
-      await MockStore.upsertReviewer(record);
+      const res = await MockStore.upsertReviewer(record);
       modal.close();
-      showAppToast(`${firstName} ${lastName} saved.`);
+      if (isEdit) {
+        showAppToast(`${firstName} ${lastName} saved.`);
+      } else {
+        const delivery = res?.emailDelivery;
+        const msg = delivery?.ok
+          ? `${firstName} ${lastName} added. Credential email was accepted by the mail server.`
+          : `${firstName} ${lastName} added, but credential email failed. Use Resend Credentials after fixing SMTP.`;
+        showAppToast(msg, !delivery?.ok);
+      }
       onSaved?.();
     } catch (err) {
       setFieldError(form, '_form', err.message || 'Could not save.');

@@ -8,6 +8,7 @@ function sessionFromUser(user) {
     role: user.role,
     name: user.name,
     userId: user.id,
+    mustChangePassword: !!user.mustChangePassword,
     reviewerId: user.role === 'reviewer' ? `u-${user.id}` : null,
     at: Date.now(),
   };
@@ -46,6 +47,14 @@ export class AuthRepository {
       throw err;
     }
     return data.user || null;
+  }
+
+  /** Sync sessionStorage from /api/portal/state `user` (avoids duplicate /api/auth/me). */
+  static syncSessionFromApiUser(user) {
+    if (!user?.role) return null;
+    const session = sessionFromUser(user);
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    return session;
   }
 
   /** Validate Flask session and sync sessionStorage from the server. */

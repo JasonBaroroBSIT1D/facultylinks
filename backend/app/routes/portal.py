@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request
@@ -6,7 +7,8 @@ from app.extensions import db
 from app.models import Document, FacultyAssessment, Notification, ReviewerAssignment, User, UserRole
 from app.services.activity import log_activity
 from app.services.auth_context import current_user, faculty_may_access_document, logout_user_all, require_roles
-from app.services.passwords import hash_password
+from app.services.account_provisioning import deliver_new_account_credentials
+from app.services.passwords import generate_provision_password, hash_password
 from app.services.assessment_sync import sync_review_to_assessment
 from app.services.portal_state import build_portal_state, parse_portal_user_id
 from app.services.settings_store import (
@@ -20,14 +22,28 @@ from app.services.settings_store import (
 
 bp = Blueprint("portal", __name__)
 
+def _normalize_phone(value) -> tuple[str | None, str | None]:
+    if value is None:
+        return None, None
+    raw = str(value).strip()
+    if not raw:
+        return None, None
+    compact = re.sub(r"[\s\-()]", "", raw)
+    if re.fullmatch(r"09\d{9}", compact) or re.fullmatch(r"\+639\d{9}", compact):
+        return compact, None
+    return None, "Enter a valid Philippine mobile number (09XXXXXXXXX or +639XXXXXXXXX)."
+
 
 @bp.get("/api/portal/state")
 def portal_state():
     user = current_user()
     if not user or user.role not in (UserRole.admin, UserRole.reviewer):
         return jsonify({"error": "Forbidden"}), 403
+    if user.must_change_password:
+        return jsonify({"error": "Password change required.", "code": "MUST_CHANGE_PASSWORD"}), 403
     try:
-        return jsonify(build_portal_state(user))
+        lite = request.args.get("lite", "").lower() in ("1", "true", "yes")
+        return jsonify(build_portal_state(user, lite=lite))
     except Exception:
         return jsonify({"error": "Failed to load portal state."}), 500
 
@@ -38,28 +54,32 @@ def create_faculty():
     user = current_user()
     data = request.get_json(silent=True) or {}
     email = (data.get("email") or "").strip().lower()
-    password = data.get("password") or ""
     if not email or "@" not in email:
         return jsonify({"error": "Valid email is required."}), 400
     if User.query.filter_by(email=email).first():
         return jsonify({"error": "Email already exists."}), 409
-    if password and len(password) < 8:
-        return jsonify({"error": "Password must be at least 8 characters."}), 400
+
+    phone, phone_err = _normalize_phone(data.get("phone"))
+    if phone_err:
+        return jsonify({"error": phone_err}), 400
 
     first = (data.get("firstName") or "").strip()
     last = (data.get("lastName") or "").strip()
     full_name = f"{first} {last}".strip() or email.split("@")[0]
+    temp_password = generate_provision_password()
 
     faculty = User(
         email=email,
-        password_hash=hash_password(password or secrets_token()),
+        password_hash=hash_password(temp_password),
         role=UserRole.faculty,
         full_name=full_name,
         is_active=(data.get("status") or "active") == "active",
         employee_id=(data.get("employeeId") or "").strip() or None,
         department=(data.get("department") or "").strip() or None,
         rank=(data.get("rank") or "").strip() or None,
-        phone=(data.get("phone") or "").strip() or None,
+        phone=phone,
+        must_change_password=True,
+        credential_email_status="pending",
     )
     db.session.add(faculty)
     db.session.flush()
@@ -71,14 +91,19 @@ def create_faculty():
         if rev:
             db.session.add(ReviewerAssignment(reviewer_user_id=rev.id, faculty_user_id=faculty.id))
     db.session.commit()
-    log_activity(user.email, f"Faculty record added: {full_name}")
-    return jsonify({"faculty": faculty.to_faculty_dict(reviewer_id_for(faculty.id))}), 201
-
-
-def secrets_token() -> str:
-    import secrets
-
-    return secrets.token_urlsafe(16) + "Aa1!"
+    delivery = deliver_new_account_credentials(faculty, temp_password)
+    db.session.commit()
+    log_activity(
+        user.email,
+        f"Faculty record added: {full_name}"
+        + (" (credential email sent)" if delivery.get("ok") else " (credential email failed)"),
+    )
+    return jsonify(
+        {
+            "faculty": faculty.to_faculty_dict(reviewer_id_for(faculty.id)),
+            "emailDelivery": delivery,
+        }
+    ), 201
 
 
 def reviewer_id_for(faculty_user_id: int) -> str | None:
@@ -110,7 +135,11 @@ def update_faculty(portal_id: str):
     faculty.employee_id = (data.get("employeeId") or faculty.employee_id or "").strip() or None
     faculty.department = (data.get("department") or faculty.department or "").strip() or None
     faculty.rank = (data.get("rank") or faculty.rank or "").strip() or None
-    faculty.phone = (data.get("phone") or faculty.phone or "").strip() or None
+    if "phone" in data:
+        phone, phone_err = _normalize_phone(data.get("phone"))
+        if phone_err:
+            return jsonify({"error": phone_err}), 400
+        faculty.phone = phone
     if "status" in data:
         faculty.is_active = data.get("status") == "active"
 
@@ -132,30 +161,46 @@ def create_reviewer():
     actor = current_user()
     data = request.get_json(silent=True) or {}
     email = (data.get("email") or "").strip().lower()
-    password = data.get("password") or ""
     if not email:
         return jsonify({"error": "Email required."}), 400
     if User.query.filter_by(email=email).first():
         return jsonify({"error": "Email already exists."}), 409
-    if password and len(password) < 8:
-        return jsonify({"error": "Password must be at least 8 characters."}), 400
+
+    phone, phone_err = _normalize_phone(data.get("phone"))
+    if phone_err:
+        return jsonify({"error": phone_err}), 400
 
     first = (data.get("firstName") or "").strip()
     last = (data.get("lastName") or "").strip()
     full_name = f"{first} {last}".strip() or email.split("@")[0]
+    temp_password = generate_provision_password()
     reviewer = User(
         email=email,
-        password_hash=hash_password(password or secrets_token()),
+        password_hash=hash_password(temp_password),
         role=UserRole.reviewer,
         full_name=full_name,
         is_active=(data.get("status") or "active") == "active",
         employee_id=(data.get("employeeId") or "").strip() or None,
         department=(data.get("department") or "").strip() or None,
+        phone=phone,
+        must_change_password=True,
+        credential_email_status="pending",
     )
     db.session.add(reviewer)
     db.session.commit()
-    log_activity(actor.email, f"Reviewer added: {full_name}")
-    return jsonify({"reviewer": reviewer.to_reviewer_dict([])}), 201
+    delivery = deliver_new_account_credentials(reviewer, temp_password)
+    db.session.commit()
+    log_activity(
+        actor.email,
+        f"Reviewer added: {full_name}"
+        + (" (credential email sent)" if delivery.get("ok") else " (credential email failed)"),
+    )
+    return jsonify(
+        {
+            "reviewer": reviewer.to_reviewer_dict([]),
+            "emailDelivery": delivery,
+        }
+    ), 201
 
 
 @bp.put("/api/admin/reviewers/<portal_id>")
@@ -177,6 +222,11 @@ def update_reviewer(portal_id: str):
     reviewer.email = email
     reviewer.employee_id = (data.get("employeeId") or reviewer.employee_id or "").strip() or None
     reviewer.department = (data.get("department") or reviewer.department or "").strip() or None
+    if "phone" in data:
+        phone, phone_err = _normalize_phone(data.get("phone"))
+        if phone_err:
+            return jsonify({"error": phone_err}), 400
+        reviewer.phone = phone
     if "status" in data:
         reviewer.is_active = data.get("status") == "active"
     db.session.commit()

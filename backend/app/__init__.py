@@ -2,7 +2,7 @@ import os
 
 from flask import Flask, request
 
-from app.config import config_by_name, load_backend_env
+from app.config import apply_mail_config_from_env, config_by_name, load_backend_env
 from app.extensions import cors, db, migrate
 from app.cli import register_cli
 from app.routes.auth import bp as auth_bp
@@ -17,6 +17,7 @@ def create_app() -> Flask:
     env = os.environ.get("FLASK_ENV", "development")
     app = Flask(__name__)
     app.config.from_object(config_by_name.get(env, config_by_name["development"]))
+    apply_mail_config_from_env(app)
     if not app.config.get("SQLALCHEMY_DATABASE_URI"):
         raise RuntimeError(
             "DATABASE_URL is required (Supabase PostgreSQL). Copy backend/.env.example to .env "

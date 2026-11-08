@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'screens/change_password_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/splash_screen.dart';
@@ -24,6 +25,7 @@ class FacultyLinkApp extends StatelessWidget {
         '/': (_) => const SplashScreen(),
         '/login': (_) => const LoginScreen(),
         '/forgot': (_) => const ForgotPasswordScreen(),
+        '/change-password': (_) => const ChangePasswordScreen(),
         '/home': (_) => const ShellScreen(),
       },
       initialRoute: '/',

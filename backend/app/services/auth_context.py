@@ -50,6 +50,15 @@ def revoke_api_token(raw_token: str) -> None:
     db.session.commit()
 
 
+def revoke_other_api_sessions(user: User, keep_raw_token: str | None = None) -> None:
+    q = UserSession.query.filter_by(user_id=user.id)
+    if keep_raw_token:
+        keep_h = _hash_token(keep_raw_token)
+        q = q.filter(UserSession.token_hash != keep_h)
+    q.delete(synchronize_session=False)
+    db.session.commit()
+
+
 def _user_from_bearer() -> User | None:
     auth = request.headers.get("Authorization", "")
     if not auth.lower().startswith("bearer "):
@@ -91,7 +100,12 @@ def login_user_web(user: User) -> None:
 
 
 def logout_user_all(user: User) -> None:
-    session.clear()
+    try:
+        if session.get("user_id") == user.id:
+            session.clear()
+    except RuntimeError:
+        # No Flask request context (CLI / background jobs) — only revoke API tokens.
+        pass
     UserSession.query.filter_by(user_id=user.id).delete()
     db.session.commit()
 
@@ -103,11 +117,32 @@ def require_roles(*roles: UserRole):
             user = current_user()
             if not user or user.role not in roles:
                 return jsonify({"error": "Forbidden"}), 403
+            if user.must_change_password:
+                return (
+                    jsonify(
+                        {
+                            "error": "Password change required.",
+                            "code": "MUST_CHANGE_PASSWORD",
+                        }
+                    ),
+                    403,
+                )
             return fn(*args, **kwargs)
 
         return wrapper
 
     return decorator
+
+
+def require_authenticated(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        user = current_user()
+        if not user:
+            return jsonify({"error": "Not authenticated."}), 401
+        return fn(*args, **kwargs)
+
+    return wrapper
 
 
 def faculty_may_access_document(user: User, owner_user_id: int) -> bool:

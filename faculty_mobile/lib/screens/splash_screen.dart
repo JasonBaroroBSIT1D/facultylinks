@@ -22,12 +22,23 @@ class _SplashScreenState extends State<SplashScreen> {
 
   Future<void> _bootstrap() async {
     String? email;
+    var mustChange = false;
     await Future.wait<void>([
       AuthRepository.currentEmail().then((v) => email = v),
+      AuthRepository.mustChangePassword().then((v) => mustChange = v),
       Future.delayed(_minDisplay),
     ]);
+    if (email != null) {
+      final me = await AuthRepository.fetchMe();
+      if (me != null) {
+        mustChange = me['mustChangePassword'] == true;
+      }
+    }
     if (!mounted) return;
-    Navigator.pushReplacementNamed(context, email != null ? '/home' : '/login');
+    final route = email == null
+        ? '/login'
+        : (mustChange ? '/change-password' : '/home');
+    Navigator.pushReplacementNamed(context, route);
   }
 
   @override

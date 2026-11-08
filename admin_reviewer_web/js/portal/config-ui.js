@@ -978,7 +978,7 @@ function openPublishPanel(store) {
       ConfigRepository.saveDraft(store, { catalog: d.catalog, kraWeights: w, actor: _session.email, summary: 'Pre-publish save' });
       ConfigRepository.publishDraft(store, { effectiveDate: eff, actor: _session.email, summary: 'Published via admin UI' });
       await PortalApi.publishCatalog({ assessmentConfig: store.assessmentConfig });
-      await bootstrapPortal();
+      await bootstrapPortal({ full: true, force: true });
       _pendingWeights = null;
       _savedFingerprint = '';
       _ui.dirty = false;

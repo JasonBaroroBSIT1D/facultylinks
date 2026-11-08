@@ -23,6 +23,9 @@ class User(db.Model):
     department = db.Column(db.String(200), nullable=True)
     rank = db.Column(db.String(120), nullable=True)
     phone = db.Column(db.String(40), nullable=True)
+    must_change_password = db.Column(db.Boolean, nullable=False, default=False)
+    credential_email_status = db.Column(db.String(32), nullable=True)
+    credential_email_error = db.Column(db.String(500), nullable=True)
     created_at = db.Column(
         db.DateTime(timezone=True),
         nullable=False,
@@ -51,6 +54,13 @@ class User(db.Model):
             "email": self.email,
             "role": self.role.value,
             "name": self.full_name,
+            "mustChangePassword": bool(self.must_change_password),
+        }
+
+    def credential_delivery_dict(self) -> dict:
+        return {
+            "status": self.credential_email_status or "unknown",
+            "error": self.credential_email_error or "",
         }
 
     def to_faculty_dict(self, reviewer_id: str | None = None) -> dict:
@@ -67,6 +77,7 @@ class User(db.Model):
             "status": "active" if self.is_active else "inactive",
             "reviewerId": reviewer_id,
             "phone": self.phone or "",
+            "credentialEmail": self.credential_delivery_dict(),
         }
 
     def to_reviewer_dict(self, assigned_faculty_ids: list[str]) -> dict:
@@ -80,5 +91,7 @@ class User(db.Model):
             "email": self.email,
             "department": self.department or "",
             "status": "active" if self.is_active else "inactive",
+            "phone": self.phone or "",
             "assignedFacultyIds": assigned_faculty_ids,
+            "credentialEmail": self.credential_delivery_dict(),
         }
