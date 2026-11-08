@@ -1,17 +1,26 @@
-# Demonstration Accounts
+# Test accounts (backend phase)
 
-**Warning:** These credentials are for local demonstration only. There is no server-side authentication, password hashing, or session hardening. Do not use in production.
+Authentication is served by the Flask API ([BACKEND_SETUP_WINDOWS.md](./BACKEND_SETUP_WINDOWS.md)). **Do not rely on hard-coded demo passwords** unless you recreate them with CLI commands.
 
-| Role    | Email                      | Password    | Application        |
-|---------|----------------------------|-------------|--------------------|
-| Admin   | admin@ustp.demo            | Admin@2026  | Web (login.html)   |
-| Reviewer| reviewer@ustp.demo         | Review@2026 | Web (login.html)   |
-| Faculty | faculty@ustp.demo          | Faculty@2026| Flutter mobile app |
-| Faculty (empty assessment) | maria.santos@ustp.demo | Faculty@2026 | Flutter |
+## Create accounts
+
+```powershell
+cd backend
+flask create-admin admin@yourinstitution.edu "YourSecurePass1!"
+flask create-user reviewer reviewer@yourinstitution.edu "ReviewPass1!" --name "Reviewer"
+flask create-user faculty faculty@yourinstitution.edu "FacultyPass1!" --name "Faculty"
+flask assign-reviewer reviewer@yourinstitution.edu faculty@yourinstitution.edu
+```
+
+| Role    | Application        | Notes |
+|---------|--------------------|--------|
+| Admin   | Web `login.html`   | Institution-issued email |
+| Reviewer| Web `login.html`   | Same |
+| Faculty | Flutter mobile     | Not accepted on web login screen |
 
 Remember-email stores only the address in `localStorage` (`fl_remember_email`).
 
-Faculty accounts are not accepted on the web login screen; use the Flutter app.
+Faculty accounts are rejected on the web login screen (client check + API role rules).
 
 ## Password recovery (local frontend testing)
 

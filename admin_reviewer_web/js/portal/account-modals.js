@@ -1,4 +1,5 @@
 import { MockStore } from '../repositories/mock-store.js';
+import { PortalApi } from '../services/portal-api.js';
 import { DEFAULT_INSTITUTION_CONFIG } from '../core/institution-config.js';
 import { navIcon } from '../core/icons.js';
 import { openCenteredModal } from './modal-access.js';
@@ -160,6 +161,20 @@ export function openFacultyForm(facultyId, { opener, onSaved }) {
           </div>
         </div>
       </section>
+      ${
+        isEdit
+          ? ''
+          : `<section aria-labelledby="facSecAuth">
+        <h3 id="facSecAuth">Sign-in</h3>
+        <div class="fl-account-grid fl-account-grid--single">
+          <div class="fl-account-field fl-account-field--full">
+            <label for="facPassword">Initial password</label>
+            <input id="facPassword" name="password" type="password" minlength="8" required autocomplete="new-password"/>
+            <p class="muted" style="font-size:0.85rem;margin:0.35rem 0 0">At least 8 characters for the mobile app.</p>
+          </div>
+        </div>
+      </section>`
+      }
       <section aria-labelledby="facSecAcademic">
         <h3 id="facSecAcademic">Academic details</h3>
         <div class="fl-account-grid">
@@ -211,7 +226,7 @@ export function openFacultyForm(facultyId, { opener, onSaved }) {
   const form = modal.dialog.querySelector('#facultyAccountForm');
   const submitBtn = modal.dialog.querySelector('#facultySubmitBtn');
 
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
     clearFormErrors(form);
     const fd = new FormData(form);
@@ -249,10 +264,8 @@ export function openFacultyForm(facultyId, { opener, onSaved }) {
     submitBtn.textContent = 'Saving…';
 
     try {
-      const state = MockStore.load();
-      const id = existing?.id || `fac-${Date.now()}`;
       const record = {
-        id,
+        id: existing?.id,
         firstName,
         lastName,
         email,
@@ -260,17 +273,13 @@ export function openFacultyForm(facultyId, { opener, onSaved }) {
         department,
         reviewerId: reviewerId || null,
         status: existing?.status || 'active',
-        employeeId: existing?.employeeId || `USTP-F-${String(Date.now()).slice(-4)}`,
+        employeeId: existing?.employeeId || '',
         phone: existing?.phone || '',
+        password: fd.get('password')?.toString() || '',
       };
-      MockStore.upsertFaculty(record);
-      const fresh = MockStore.load();
-      if (record.reviewerId) syncReviewerAssignments(fresh, id, record.reviewerId);
-      else syncReviewerAssignments(fresh, id, null);
-      MockStore.save(fresh);
-      MockStore.logActivity(`Faculty record ${isEdit ? 'updated' : 'added'}: ${firstName} ${lastName}`, 'admin');
+      await MockStore.upsertFaculty(record);
       modal.close();
-      showAppToast(`${firstName} ${lastName} saved locally.`);
+      showAppToast(`${firstName} ${lastName} saved.`);
       onSaved?.();
     } catch (err) {
       setFieldError(form, '_form', err.message || 'Could not save.');
@@ -357,7 +366,7 @@ export function openReviewerForm(reviewerId, { opener, onSaved }) {
   const form = modal.dialog.querySelector('#reviewerAccountForm');
   const submitBtn = modal.dialog.querySelector('#reviewerSubmitBtn');
 
-  form.addEventListener('submit', (e) => {
+  form.addEventListener('submit', async (e) => {
     e.preventDefault();
     clearFormErrors(form);
     const fd = new FormData(form);
@@ -389,21 +398,19 @@ export function openReviewerForm(reviewerId, { opener, onSaved }) {
     submitBtn.textContent = 'Saving…';
 
     try {
-      const id = existing?.id || `rev-${Date.now()}`;
       const record = {
-        id,
+        id: existing?.id,
         firstName,
         lastName,
         email,
         department,
         status,
-        employeeId: existing?.employeeId || `USTP-R-${String(Date.now()).slice(-4)}`,
-        assignedFacultyIds: existing?.assignedFacultyIds || [],
+        employeeId: existing?.employeeId || '',
+        password: fd.get('password')?.toString() || '',
       };
-      MockStore.upsertReviewer(record);
-      MockStore.logActivity(`Reviewer ${isEdit ? 'updated' : 'added'}: ${firstName} ${lastName}`, 'admin');
+      await MockStore.upsertReviewer(record);
       modal.close();
-      showAppToast(`${firstName} ${lastName} saved locally.`);
+      showAppToast(`${firstName} ${lastName} saved.`);
       onSaved?.();
     } catch (err) {
       setFieldError(form, '_form', err.message || 'Could not save.');
@@ -440,21 +447,17 @@ export function openReviewerAssignModal(reviewerId, { opener, onSaved }) {
   });
   if (!modal) return;
 
-  modal.dialog.querySelector('#saveAssignBtn')?.addEventListener('click', () => {
-    const state = MockStore.load();
+  modal.dialog.querySelector('#saveAssignBtn')?.addEventListener('click', async () => {
     const ids = [...modal.dialog.querySelectorAll('[data-fid]')].filter((c) => c.checked).map((c) => c.dataset.fid);
-    const rIdx = state.reviewers.findIndex((x) => x.id === reviewerId);
-    if (rIdx < 0) return;
-    state.reviewers[rIdx] = { ...state.reviewers[rIdx], assignedFacultyIds: ids };
-    state.faculty.forEach((f, i) => {
-      if (ids.includes(f.id)) state.faculty[i] = { ...f, reviewerId };
-      else if (f.reviewerId === reviewerId) state.faculty[i] = { ...f, reviewerId: null };
-    });
-    MockStore.save(state);
-    MockStore.logActivity(`Assignments updated for ${rev.firstName} ${rev.lastName}`, 'admin');
-    modal.close();
-    showAppToast('Reviewer assignments updated.');
-    onSaved?.();
+    try {
+      await PortalApi.setAssignments(reviewerId, ids);
+      await MockStore.refresh();
+      modal.close();
+      showAppToast('Reviewer assignments updated.');
+      onSaved?.();
+    } catch (err) {
+      showAppToast(err.message || 'Could not save assignments.', { error: true });
+    }
   });
 }
 

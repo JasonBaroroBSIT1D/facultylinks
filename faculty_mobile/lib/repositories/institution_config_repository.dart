@@ -1,25 +1,21 @@
 import 'dart:convert';
 
-import 'package:shared_preferences/shared_preferences.dart';
-
 import '../models/institution_config.dart';
+import '../services/api_client.dart';
 
 class InstitutionConfigRepository {
-  static const _key = 'facultylink_institution_config_v1';
-
   static Future<InstitutionConfig> load() async {
-    final prefs = await SharedPreferences.getInstance();
-    final raw = prefs.getString(_key);
-    if (raw == null) {
-      final defaults = InstitutionConfig.defaults();
-      await save(defaults);
-      return defaults;
+    try {
+      final res = await ApiClient.get('/api/config/institution');
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        if (data['configured'] == true && data['institutionConfig'] != null) {
+          return InstitutionConfig.fromJson(data['institutionConfig'] as Map<String, dynamic>);
+        }
+      }
+    } catch (_) {
+      /* fall through */
     }
-    return InstitutionConfig.fromJson(jsonDecode(raw) as Map<String, dynamic>);
-  }
-
-  static Future<void> save(InstitutionConfig cfg) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_key, jsonEncode(cfg.toJson()));
+    return InstitutionConfig.defaults();
   }
 }

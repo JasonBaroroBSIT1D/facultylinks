@@ -1,6 +1,6 @@
 /** Local frontend password recovery (see docs/DEMO_ACCOUNTS.md for test verification code). */
 
-import { DEMO_USER_EMAILS, getPasswordForUser, setPasswordOverride } from './auth-repository.js';
+/** Backend phase 1: account recovery is admin-managed; this flow stays disabled. */
 
 const VERIFICATION_CODE = '123456';
 
@@ -13,11 +13,7 @@ export const PasswordRecoveryService = {
     const em = email?.trim() ?? '';
     if (!em) return 'Email address is required.';
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return 'Enter a valid email address.';
-    const key = em.toLowerCase();
-    if (!DEMO_USER_EMAILS.includes(key)) {
-      return 'No matching account was found. Contact your institution administrator.';
-    }
-    return null;
+    return 'Password recovery is not enabled yet. Contact your institution administrator.';
   },
 
   /** Step 1 → 2 (no email-delivery messaging). */
@@ -42,14 +38,10 @@ export const PasswordRecoveryService = {
     return null;
   },
 
-  updatePassword(email, password, confirm) {
-    const err = this.validateNewPassword(password, confirm);
-    if (err) return { ok: false, error: err };
-    const key = email.trim().toLowerCase();
-    if (!DEMO_USER_EMAILS.includes(key)) {
-      return { ok: false, error: 'Password recovery is currently unavailable. Please contact your institution administrator.' };
-    }
-    setPasswordOverride(key, password);
-    return { ok: true };
+  updatePassword(_email, _password, _confirm) {
+    return {
+      ok: false,
+      error: 'Password recovery is not enabled yet. Contact your institution administrator.',
+    };
   },
 };

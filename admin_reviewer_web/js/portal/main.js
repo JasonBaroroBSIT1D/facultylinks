@@ -1,5 +1,6 @@
 import { AuthRepository } from '../services/auth-repository.js';
-import { MockStore, MOCK_STORE_STORAGE_KEY, syncEntryPointsFromDocument } from '../repositories/mock-store.js';
+import { MockStore, bootstrapPortal, clearPortalCache, portalLoadError } from '../repositories/mock-store.js';
+import { PortalApi } from '../services/portal-api.js';
 import { computeKraSummaries, computeSetSefPoints, computeTeachingEffectiveness } from '../core/scoring.js';
 import { ConfigRepository } from '../repositories/config-repository.js';
 import { initConfigUi, renderConfig } from './config-ui.js';
@@ -26,8 +27,8 @@ import {
 import { brandCompactHtml } from '../core/brand-markup.js';
 import { openCenteredModal } from './modal-access.js';
 
-const session = AuthRepository.requireRole(['admin', 'reviewer']);
-if (!session) throw new Error('No session');
+/** Set after server session verification in initPortalApp(). */
+let session = null;
 
 const ADMIN_NAV = [
   { id: 'dashboard', label: 'Dashboard' },
@@ -69,11 +70,31 @@ function openSignOutConfirm(opener) {
       <button type="button" class="cfg-btn-primary" id="confirmSignOut">Sign Out</button>`,
   });
   if (!modal) return;
-  modal.dialog.querySelector('#confirmSignOut')?.addEventListener('click', () => {
-    if (isMobileViewport()) closeMobileDrawer(false);
-    AuthRepository.logout();
-    modal.close();
-    location.href = '/login.html';
+  const confirmBtn = modal.dialog.querySelector('#confirmSignOut');
+  const errEl = document.createElement('p');
+  errEl.className = 'fl-account-field-error';
+  errEl.setAttribute('role', 'alert');
+  errEl.hidden = true;
+  modal.dialog.querySelector('.fl-modal-dialog__footer')?.insertAdjacentElement('beforebegin', errEl);
+
+  confirmBtn?.addEventListener('click', async () => {
+    if (confirmBtn.disabled) return;
+    errEl.hidden = true;
+    errEl.textContent = '';
+    confirmBtn.disabled = true;
+    confirmBtn.textContent = 'Signing out…';
+    try {
+      await AuthRepository.logout();
+      clearPortalCache();
+      if (isMobileViewport()) closeMobileDrawer(false);
+      modal.close();
+      window.location.replace('/login.html');
+    } catch (ex) {
+      errEl.textContent = ex.message || 'Sign out failed. Try again.';
+      errEl.hidden = false;
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Sign Out';
+    }
   });
 }
 
@@ -280,8 +301,7 @@ function renderFacultyList(root, title, preservedQuery = '') {
         if (!f) return;
         const next = f.status === 'active' ? 'inactive' : 'active';
         if (!confirm(`${next === 'inactive' ? 'Deactivate' : 'Activate'} ${f.firstName} ${f.lastName}?`)) return;
-        MockStore.upsertFaculty({ ...f, status: next });
-        MockStore.logActivity(`Faculty ${next === 'active' ? 'activated' : 'deactivated'}: ${f.firstName} ${f.lastName}`, session.email);
+        PortalApi.setFacultyStatus(f.id, next).then(() => bootstrapPortal()).then(() => renderView());
         redraw(searchEl.value);
       };
     });
@@ -387,8 +407,7 @@ function renderReviewerList(root, title, preservedQuery = '') {
         if (!r) return;
         const next = r.status === 'active' ? 'inactive' : 'active';
         if (!confirm(`${next === 'inactive' ? 'Deactivate' : 'Activate'} ${r.firstName} ${r.lastName}?`)) return;
-        MockStore.upsertReviewer({ ...r, status: next });
-        MockStore.logActivity(`Reviewer ${next === 'active' ? 'activated' : 'deactivated'}: ${r.firstName} ${r.lastName}`, session.email);
+        PortalApi.setReviewerStatus(r.id, next).then(() => bootstrapPortal()).then(() => renderView());
         redraw(searchEl.value);
       };
     });
@@ -456,16 +475,45 @@ function renderEvaluationSettings(root, title) {
     });
   });
 
-  renderConfig(document.getElementById('evalTabRules'), title, { embedded: true });
-  renderEvaluationPeriod(document.getElementById('evalTabPeriod'), title, { embedded: true, readOnly: periodReadOnly });
+  const rulesHost = root.querySelector('#evalTabRules');
+  const periodHost = root.querySelector('#evalTabPeriod');
+  try {
+    renderConfig(rulesHost, title, { embedded: true });
+  } catch (e) {
+    console.error(e);
+    if (rulesHost) {
+      rulesHost.innerHTML = `<div class="card" style="padding:1rem"><h3>Could not load scoring rules</h3>
+        <p>${e.message || 'Unknown error.'}</p>
+        <button type="button" class="btn-primary-sm" id="evalRulesRetry">Retry</button></div>`;
+      rulesHost.querySelector('#evalRulesRetry')?.addEventListener('click', () => {
+        state.params = { ...state.params, tab: 'rules' };
+        renderEvaluationSettings(root, title);
+      });
+    }
+  }
+  try {
+    renderEvaluationPeriod(periodHost, title, { embedded: true, readOnly: periodReadOnly });
+  } catch (e) {
+    console.error(e);
+    if (periodHost) {
+      periodHost.innerHTML = `<div class="card" style="padding:1rem"><h3>Could not load evaluation period</h3>
+        <p>${e.message || 'Unknown error.'}</p>
+        <button type="button" class="btn-primary-sm" id="evalPeriodRetry">Retry</button></div>`;
+      periodHost.querySelector('#evalPeriodRetry')?.addEventListener('click', () => {
+        state.params = { ...state.params, tab: 'period' };
+        renderEvaluationSettings(root, title);
+      });
+    }
+  }
   setEvalSettingsTab(root, tab);
 }
 
 function renderEvaluationPeriod(root, title, { embedded = false, readOnly = false } = {}) {
+  if (!root) return;
   if (!embedded) title.textContent = 'Evaluation Period';
   const store = MockStore.load();
   const ic = store.institutionConfig || DEFAULT_INSTITUTION_CONFIG();
-  const period = ic.preparationPeriod;
+  const period = { ...DEFAULT_INSTITUTION_CONFIG().preparationPeriod, ...(ic.preparationPeriod || {}) };
   const status = computeEvaluationPeriodStatus(period);
   const rev = reviewerAvailabilityDetail(period);
 
@@ -541,7 +589,7 @@ function renderEvaluationPeriod(root, title, { embedded = false, readOnly = fals
 
   form.querySelectorAll('input[type="date"]').forEach((inp) => inp.addEventListener('change', refreshPreview));
 
-  document.getElementById('saveEvalPeriod').onclick = () => {
+  document.getElementById('saveEvalPeriod').onclick = async () => {
     const start = document.getElementById('ppStart').value;
     const end = document.getElementById('ppEnd').value;
     const reviewerAvailableFrom = document.getElementById('ppRev').value || '';
@@ -554,11 +602,16 @@ function renderEvaluationPeriod(root, title, { embedded = false, readOnly = fals
     const s = MockStore.load();
     s.institutionConfig = s.institutionConfig || DEFAULT_INSTITUTION_CONFIG();
     s.institutionConfig.preparationPeriod = { start, end, reviewerAvailableFrom };
-    MockStore.save(s);
-    MockStore.logActivity('Updated evaluation period (demo)', session.email);
-    msg.style.color = '';
-    msg.textContent = `Saved. Evaluation period is ${computeEvaluationPeriodStatus(s.institutionConfig.preparationPeriod)} (${formatEvaluationDate(start)} – ${formatEvaluationDate(end)}).`;
-    refreshPreview();
+    try {
+      await PortalApi.saveInstitution(s.institutionConfig);
+      await bootstrapPortal();
+      msg.style.color = '';
+      msg.textContent = `Saved. Evaluation period is ${computeEvaluationPeriodStatus(s.institutionConfig.preparationPeriod)} (${formatEvaluationDate(start)} – ${formatEvaluationDate(end)}).`;
+      refreshPreview();
+    } catch (ex) {
+      msg.style.color = 'var(--fl-danger, #b42318)';
+      msg.textContent = ex.message || 'Could not save evaluation period.';
+    }
   };
 }
 
@@ -801,9 +854,11 @@ function renderDocumentReview(root, title) {
         verifiedPoints: verified ? Number(verified) : null,
         history: [...(doc.history || []), { at: new Date().toISOString().slice(0, 10), by: session.email, action, note }],
       };
-      MockStore.updateDocument(doc.id, patch);
-      syncEntryPointsFromDocument({ ...doc, ...patch });
-      MockStore.logActivity(`${action} document ${doc.fileName} for faculty ${doc.facultyId}`, session.email);
+      MockStore.updateDocument(doc.id, {
+        reviewStatus: patch.reviewStatus,
+        remarks: patch.remarks,
+        verifiedPoints: patch.verifiedPoints,
+      }).then(() => {
       const ok = document.getElementById('revOk');
       if (ok) {
         ok.style.display = 'block';
@@ -815,6 +870,9 @@ function renderDocumentReview(root, title) {
               : 'Document rejected. The faculty member can read your reason.';
         setTimeout(() => navigate('workspace'), 1200);
       } else navigate('workspace');
+      }).catch((err) => {
+        document.getElementById('revErr').textContent = err.message || 'Could not save review.';
+      });
     };
   });
 }
@@ -831,22 +889,86 @@ function renderNotifications(root, title) {
 }
 
 window.addEventListener('fl-state-changed', () => renderView());
-window.addEventListener('storage', (e) => {
-  if (e.key === MOCK_STORE_STORAGE_KEY) renderView();
-});
 
-initSidebarLayout();
-initConfigUi(session, renderView);
-renderShell();
-applySidebarLayout();
-renderView();
+function showPortalError(err) {
+  const el = document.getElementById('appContent');
+  el.innerHTML = `<motion class="card"><h2>Could not load data</h2><p>${err?.message || 'Request failed.'}</p>
+    <button type="button" class="btn-primary-sm" id="portalRetry">Retry</button></motion>`;
+  document.querySelectorAll('motion').forEach((m) => {
+    const d = document.createElement('div');
+    d.className = m.className;
+    d.innerHTML = m.innerHTML;
+    m.replaceWith(d);
+  });
+  document.getElementById('portalRetry')?.addEventListener('click', () => startPortal());
+}
 
-// hash routing for review deep links
-if (location.hash.startsWith('#review/')) {
-  const docId = location.hash.replace('#review/', '');
-  state.route = 'review';
-  state.params.docId = docId;
+async function startPortal() {
+  initSidebarLayout();
+  initConfigUi(session, renderView);
   renderShell();
   applySidebarLayout();
-  renderView();
+  const el = document.getElementById('appContent');
+  el.innerHTML = '<p class="muted" style="padding:1rem">Loading…</p>';
+  try {
+    await bootstrapPortal();
+    if (location.hash.startsWith('#review/')) {
+      state.route = 'review';
+      state.params.docId = location.hash.replace('#review/', '');
+      renderShell();
+      applySidebarLayout();
+    }
+    renderView();
+  } catch (err) {
+    if (err?.name === 'AuthRedirect') {
+      window.location.replace('/login.html');
+      return;
+    }
+    showPortalError(err || portalLoadError());
+  }
 }
+
+async function initPortalApp() {
+  const el = document.getElementById('appContent');
+  if (el) el.innerHTML = '<p class="muted" style="padding:1rem">Checking session…</p>';
+  try {
+    session = await AuthRepository.ensureWebPortalSession(['admin', 'reviewer']);
+  } catch (e) {
+    el.innerHTML = `<div class="card" style="margin:1rem"><h2>Could not verify session</h2><p>${e.message || 'Network error.'}</p>
+      <button type="button" class="btn-primary-sm" id="sessionRetry">Retry</button></div>`;
+    document.getElementById('sessionRetry')?.addEventListener('click', () => initPortalApp());
+    return;
+  }
+  if (!session) {
+    AuthRepository.clearClientSession();
+    clearPortalCache();
+    window.location.replace('/login.html');
+    return;
+  }
+  await startPortal();
+}
+
+window.addEventListener('pageshow', (ev) => {
+  if (!ev.persisted || !session) return;
+  void (async () => {
+    try {
+      const next = await AuthRepository.ensureWebPortalSession(['admin', 'reviewer']);
+      if (!next) {
+        clearPortalCache();
+        try {
+          await AuthRepository.logout();
+        } catch {
+          AuthRepository.clearClientSession();
+        }
+        window.location.replace('/login.html');
+        return;
+      }
+      session = next;
+      renderShell();
+    } catch {
+      /* keep current view on transient network errors */
+    }
+  })();
+});
+
+void initPortalApp();

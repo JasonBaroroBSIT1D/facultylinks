@@ -1,11 +1,22 @@
-import { MockStore } from '../repositories/mock-store.js';
-import { ConfigRepository, findIndicatorInCatalog, validateCatalog, SOURCE_CIRCULAR } from '../repositories/config-repository.js';
+import { MockStore, bootstrapPortal, persistConfigDraft } from '../repositories/mock-store.js';
+import { PortalApi } from '../services/portal-api.js';
+import {
+  ConfigRepository,
+  findIndicatorInCatalog,
+  validateCatalog,
+  SOURCE_CIRCULAR,
+  isCatalogWorkbookComplete,
+} from '../repositories/config-repository.js';
 import { KRA_HELP, SCREEN_INTRO, pageIntro } from '../core/copy.js';
 import { computeKraSummaries } from '../core/scoring.js';
 import { modalHost, bindModalShell, teardownModal, openCenteredModal, openDrawerModal } from './modal-access.js';
 
 let _session = null;
 let _onRefresh = null;
+
+function persistDraftSafe(store) {
+  return persistConfigDraft(store).catch((e) => toast(e.message, true));
+}
 
 const _ui = {
   kraTab: 0,
@@ -31,7 +42,7 @@ let _savedFingerprint = '';
 const HOW_IT_WORKS = `
   <p>Set reference points and caps for each indicator under DBM–CHED JC No. 3, s. 2022. Faculty who already started an assessment keep the rule version they began with.</p>
   <ul>
-    <li><strong>Save Draft</strong> stores your work in the browser without affecting published rules.</li>
+    <li><strong>Save Draft</strong> stores draft rules on the server without affecting published rules.</li>
     <li><strong>Review &amp; Publish</strong> checks weights and catalog validation, then sets an effective date for new work.</li>
     <li><strong>Preview</strong> (inside Review &amp; Publish) runs what-if calculations only — it does not change saved faculty scores.</li>
   </ul>
@@ -165,7 +176,24 @@ function indicatorPointsLabel(ind) {
 }
 
 export function renderConfig(root, title, { embedded = false } = {}) {
-  if (!embedded) title.textContent = 'Scoring Rules';
+  if (!root) return;
+  if (!embedded && title) title.textContent = 'Scoring Rules';
+  void renderConfigBody(root, title, { embedded });
+}
+
+async function renderConfigBody(root, title, { embedded = false } = {}) {
+  try {
+    await renderConfigBodyInner(root, { embedded });
+  } catch (e) {
+    console.error(e);
+    root.innerHTML = `<div class="card cfg-error" style="padding:1rem"><h3>Could not load scoring rules</h3>
+      <p>${esc(e.message || 'Unknown error.')}</p>
+      <button type="button" class="cfg-btn-secondary" id="cfgRenderRetry">Retry</button></div>`;
+    root.querySelector('#cfgRenderRetry')?.addEventListener('click', () => renderConfig(root, title, { embedded }));
+  }
+}
+
+async function renderConfigBodyInner(root, { embedded = false } = {}) {
   syncWeightsFromDom();
 
   const store = MockStore.load();
@@ -173,11 +201,66 @@ export function renderConfig(root, title, { embedded = false } = {}) {
   if (_session?.role !== 'reviewer') pruneEmptyPlaceholderKras(store);
 
   const readOnly = _session?.role === 'reviewer';
-  const active = ConfigRepository.getActivePublished(store);
-  const draft = ConfigRepository.getDraft(store);
+  const view = ConfigRepository.resolveRulesView(store, { readOnly });
 
-  const catalog = readOnly ? active.catalog : draft?.catalog || active.catalog;
-  const weights = effectiveWeights(readOnly ? active.kraWeights : draft?.kraWeights || active.kraWeights);
+  if (view.mode === 'no_published') {
+    root.innerHTML = `${embedded ? pageIntro(SCREEN_INTRO.rules) : ''}
+      <div class="card" style="padding:1rem"><p class="muted">No published scoring rules are available yet. Your administrator must publish a configuration.</p></div>`;
+    return;
+  }
+
+  if (view.mode === 'uninitialized') {
+    root.innerHTML = `${embedded ? pageIntro(SCREEN_INTRO.config) : ''}
+      <div class="card" style="padding:1rem">
+        <h3 style="margin-top:0">Initialize scoring rules</h3>
+        <p class="muted">No draft or published configuration is stored yet. Start a draft from the official DBM–CHED JC3 workbook reference mapping. Nothing is published until you review and publish.</p>
+        <p class="muted" style="font-size:0.9rem">${esc(SOURCE_CIRCULAR)}</p>
+        <button type="button" class="cfg-btn-primary" id="cfgInitDraft">Initialize draft from reference catalog</button>
+        <p id="cfgInitErr" class="fl-account-field-error" role="alert" hidden></p>
+      </div>`;
+    root.querySelector('#cfgInitDraft')?.addEventListener('click', async () => {
+      const errEl = root.querySelector('#cfgInitErr');
+      const btn = root.querySelector('#cfgInitDraft');
+      errEl.hidden = true;
+      btn.disabled = true;
+      try {
+        ConfigRepository.initializeDraftFromReference(store, _session?.email || 'admin');
+        await persistConfigDraft(store);
+        _onRefresh?.();
+        renderConfig(root, null, { embedded });
+      } catch (ex) {
+        errEl.textContent = ex.message || 'Could not initialize draft.';
+        errEl.hidden = false;
+        btn.disabled = false;
+      }
+    });
+    return;
+  }
+
+  const active = view.active;
+  let draft = view.draft;
+  let catalog = view.catalog;
+  let weights = effectiveWeights(view.weights);
+
+  if (!readOnly && !isCatalogWorkbookComplete(catalog)) {
+    root.innerHTML = `<p class="muted" style="padding:1rem">Loading workbook reference catalog…</p>`;
+    try {
+      const repair = ConfigRepository.ensureDraftCatalogComplete(store, _session?.email || 'admin');
+      draft = repair.draft;
+      catalog = draft.catalog;
+      weights = effectiveWeights(draft.kraWeights);
+      await persistConfigDraft(store);
+      if (repair.changed) {
+        toast(`Restored ${repair.report.length} missing workbook reference item(s). Review and Save Draft as needed.`);
+      }
+    } catch (ex) {
+      root.innerHTML = `<div class="card cfg-error" style="padding:1rem"><h3>Could not load scoring rules</h3>
+        <p>${esc(ex.message || 'Request failed.')}</p>
+        <button type="button" class="cfg-btn-secondary" id="cfgCatalogRetry">Retry</button></div>`;
+      root.querySelector('#cfgCatalogRetry')?.addEventListener('click', () => renderConfig(root, null, { embedded }));
+      return;
+    }
+  }
 
   if (!_savedFingerprint && draft) _savedFingerprint = fingerprintDraft(store);
 
@@ -210,11 +293,14 @@ export function renderConfig(root, title, { embedded = false } = {}) {
     </section>
   `;
 
-  const sticky = document.getElementById('cfgStickyStack');
+  const sticky = root.querySelector('#cfgStickyStack');
+  const publishedLabel = active
+    ? `${esc(active.label || 'Active')} · ${esc(formatDate(active.effectiveDate))}`
+    : 'Not published yet';
   sticky.innerHTML = `
     <div class="cfg-summary-strip">
       <div class="cfg-summary-main">
-        <span><strong>Published:</strong> ${esc(active.label || 'Active')} · ${esc(formatDate(active.effectiveDate))}</span>
+        <span><strong>Published:</strong> ${publishedLabel}</span>
         ${
           readOnly
             ? ''
@@ -228,7 +314,7 @@ export function renderConfig(root, title, { embedded = false } = {}) {
           ${readOnly ? '' : `<section><h4>How this works</h4>${HOW_IT_WORKS}</section>`}
           <section><h4>Version details</h4>
             <dl class="cfg-dl">
-              <dt>Published ID</dt><dd>${esc(active.id)}</dd>
+              <dt>Published ID</dt><dd>${active ? esc(active.id) : '—'}</dd>
               ${draft && !readOnly ? `<dt>Draft ID</dt><dd>${esc(draft.id)}</dd>` : ''}
               <dt>Catalog</dt><dd>${esc(catalog.version || '—')}</dd>
             </dl>
@@ -251,9 +337,9 @@ export function renderConfig(root, title, { embedded = false } = {}) {
     </div>`}
   `;
 
-  renderKraPanel(catalog, weights, readOnly);
+  renderKraPanel(catalog, weights, readOnly, root);
 
-  if (!readOnly) bindAdminActions(store);
+  if (!readOnly) bindAdminActions(store, root);
   updateDirtyChip();
 }
 
@@ -285,7 +371,7 @@ function readWeightsPct() {
   const store = MockStore.load();
   const d = ConfigRepository.getDraft(store);
   const active = ConfigRepository.getActivePublished(store);
-  return { ...(d?.kraWeights || active.kraWeights) };
+  return { ...(d?.kraWeights || active?.kraWeights || {}) };
 }
 
 function updateDirtyChip() {
@@ -311,9 +397,11 @@ function selectKraTab(navIndex, readOnly) {
   const store = MockStore.load();
   const activePub = ConfigRepository.getActivePublished(store);
   const d = ConfigRepository.getDraft(store);
-  const cat = d?.catalog || activePub.catalog;
-  const weights = effectiveWeights(d?.kraWeights || activePub.kraWeights);
-  renderKraPanel(cat, weights, readOnly);
+  const cat = d?.catalog || activePub?.catalog;
+  if (!cat) return;
+  const weights = effectiveWeights(d?.kraWeights || activePub?.kraWeights || {});
+  const cfgRoot = document.getElementById('cfgPage') || document;
+  renderKraPanel(cat, weights, readOnly, cfgRoot);
 }
 
 function criterionMaxPoints(crit) {
@@ -456,13 +544,19 @@ function openWeightsPanel(store, readOnly) {
   });
 }
 
-function renderKraPanel(catalog, weights, readOnly) {
+function renderKraPanel(catalog, weights, readOnly, root = document) {
   const navigable = getNavigableKras(catalog);
   const entry = navigable[_ui.kraTab];
   const kra = entry ? catalog.kras[entry.catalogIndex] : null;
-  const panel = document.getElementById('cfgKraPanel');
-  if (!kra) {
-    panel.innerHTML = '<p class="muted">No KRAs configured.</p>';
+  const panel = root.querySelector ? root.querySelector('#cfgKraPanel') : document.getElementById('cfgKraPanel');
+  if (!panel) return;
+  if (!kra || !navigable.length) {
+    panel.innerHTML = `<div class="card" style="padding:1rem"><p class="muted">Workbook reference catalog is incomplete.</p>
+      <button type="button" class="cfg-btn-secondary" id="cfgKraRepairRetry">Retry load</button></div>`;
+    panel.querySelector('#cfgKraRepairRetry')?.addEventListener('click', () => {
+      const cfgRoot = panel.closest('#cfgPage') || document.getElementById('evalTabRules');
+      if (cfgRoot) renderConfig(cfgRoot, null, { embedded: !!cfgRoot.closest('.fl-eval-settings') });
+    });
     return;
   }
 
@@ -589,9 +683,9 @@ function renderKraPanel(catalog, weights, readOnly) {
   document.getElementById('addCrit')?.addEventListener('click', (e) => addCriterion(e.currentTarget.dataset.kra));
 }
 
-function bindAdminActions(store) {
-  const moreBtn = document.getElementById('cfgMoreBtn');
-  const moreMenu = document.getElementById('cfgMoreMenu');
+function bindAdminActions(store, root = document) {
+  const moreBtn = root.querySelector('#cfgMoreBtn');
+  const moreMenu = root.querySelector('#cfgMoreMenu');
   moreBtn?.addEventListener('click', () => {
     const open = moreMenu.hidden;
     moreMenu.hidden = !open;
@@ -599,17 +693,17 @@ function bindAdminActions(store) {
   });
   moreMenu?.addEventListener('click', (e) => e.stopPropagation());
 
-  document.getElementById('cfgSaveDraft')?.addEventListener('click', () => saveDraft(store));
-  document.getElementById('cfgReviewPublish')?.addEventListener('click', () => openPublishPanel(store));
-  document.getElementById('cfgHistBtn')?.addEventListener('click', () => {
+  root.querySelector('#cfgSaveDraft')?.addEventListener('click', () => saveDraft(store));
+  root.querySelector('#cfgReviewPublish')?.addEventListener('click', () => openPublishPanel(store));
+  root.querySelector('#cfgHistBtn')?.addEventListener('click', () => {
     moreMenu.hidden = true;
     openHistoryModal(store);
   });
-  document.getElementById('addKra')?.addEventListener('click', () => {
+  root.querySelector('#addKra')?.addEventListener('click', () => {
     moreMenu.hidden = true;
     openAddKraForm(store);
   });
-  document.getElementById('cfgPruneKra')?.addEventListener('click', () => {
+  root.querySelector('#cfgPruneKra')?.addEventListener('click', () => {
     moreMenu.hidden = true;
     pruneEmptyPlaceholderKras(store);
     toast('Removed empty draft KRAs.');
@@ -617,7 +711,7 @@ function bindAdminActions(store) {
   });
 }
 
-function saveDraft(store) {
+async function saveDraft(store) {
   try {
     const w = readWeightsPct();
     const d = requireDraft(store);
@@ -627,7 +721,7 @@ function saveDraft(store) {
       actor: _session.email,
       summary: 'Draft saved from configuration UI',
     });
-    MockStore.save(store);
+    await persistConfigDraft(store);
     _pendingWeights = null;
     _savedFingerprint = fingerprintDraft(store);
     _ui.dirty = false;
@@ -684,8 +778,14 @@ function openAddKraForm(store) {
     }
     d.catalog.kras.push({ id, name, maxPoints: 100, weight: 0, criteria: [] });
     d.kraWeights[id] = 0;
-    MockStore.save(store);
-    modal.close();
+    persistConfigDraft(store)
+      .then(() => {
+        modal.close();
+      })
+      .catch((err) => {
+        err = err;
+        toast(err?.message || 'Could not save draft.', true);
+      });
     toast('KRA saved to draft catalog. Main tabs remain the four JC3 KRAs until you add criteria.');
     _onRefresh?.();
   });
@@ -699,10 +799,11 @@ function addCriterion(kraId) {
   const id = `crit-${Date.now()}`;
   kra.criteria.push({ id, name: 'New criterion', capMaxPoints: null, indicators: [] });
   _ui.expanded.add(id);
-  MockStore.save(store);
-  const w = readWeightsPct();
-  renderKraPanel(d.catalog, w, false);
-  toast('Criterion added. Save Draft when ready.');
+    persistDraftSafe(store).then(() => {
+      const w = readWeightsPct();
+      renderKraPanel(d.catalog, w, false);
+      toast('Criterion added.');
+    });
 }
 
 function addIndicator(kraId, critId) {
@@ -724,11 +825,13 @@ function addIndicator(kraId, critId) {
     contributionAllocation: { mode: 'percent', defaultPercent: 100 },
   });
   _ui.expanded.add(critId);
-  MockStore.save(store);
-  openIndicatorEditor(kraId, critId, indId);
+  persistDraftSafe(store).then(() => openIndicatorEditor(kraId, critId, indId));
 }
 
 function diffDraftVsActive(active, draft, weights) {
+  if (!active?.catalog) {
+    return ['First publication — no prior published configuration.'];
+  }
   const lines = [];
   Object.keys(weights).forEach((kid) => {
     const a = active.kraWeights[kid] ?? 0;
@@ -757,10 +860,13 @@ function openPublishPanel(store) {
 
   const sample = store.assessments['fac-001'];
   let previewHtml = '<p class="muted">No sample faculty assessment loaded for preview.</p>';
-  if (sample) {
+  if (sample && active?.catalog) {
     const estActive = computeKraSummaries(sample, active.catalog, active.kraWeights).overallWeighted;
     const estDraft = computeKraSummaries(sample, draft.catalog, weights).overallWeighted;
     previewHtml = `<p class="muted">Sample faculty weighted total — published: <strong>${estActive.toFixed(2)}</strong> · draft rules: <strong>${estDraft.toFixed(2)}</strong>. Preview only; pinned assessments stay unchanged.</p>`;
+  } else if (sample) {
+    const estDraft = computeKraSummaries(sample, draft.catalog, weights).overallWeighted;
+    previewHtml = `<p class="muted">Sample faculty weighted total under draft rules: <strong>${estDraft.toFixed(2)}</strong>. Preview only.</p>`;
   }
 
   const host = modalHost();
@@ -853,7 +959,7 @@ function openPublishPanel(store) {
     MockStore.save(store);
   });
 
-  publishBtn?.addEventListener('click', () => {
+  publishBtn?.addEventListener('click', async () => {
     footerErr.textContent = '';
     try {
       const eff = dateInput?.value;
@@ -871,8 +977,8 @@ function openPublishPanel(store) {
       }
       ConfigRepository.saveDraft(store, { catalog: d.catalog, kraWeights: w, actor: _session.email, summary: 'Pre-publish save' });
       ConfigRepository.publishDraft(store, { effectiveDate: eff, actor: _session.email, summary: 'Published via admin UI' });
-      MockStore.save(store);
-      MockStore.logActivity(`Published assessment config effective ${eff}`, _session.email);
+      await PortalApi.publishCatalog({ assessmentConfig: store.assessmentConfig });
+      await bootstrapPortal();
       _pendingWeights = null;
       _savedFingerprint = '';
       _ui.dirty = false;

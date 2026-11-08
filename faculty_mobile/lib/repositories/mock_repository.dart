@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/api_client.dart';
+import '../services/document_api.dart';
 import '../services/simulation_engine.dart';
 
 class FacultyProfile {
@@ -68,9 +70,9 @@ class AssessmentEntry {
       };
 
   factory AssessmentEntry.fromJson(Map<String, dynamic> j) => AssessmentEntry(
-        id: j['id'],
+        id: j['id'].toString(),
         indicatorId: j['indicatorId'],
-        title: j['title'],
+        title: j['title'] ?? '',
         date: j['date'],
         role: j['role'],
         contributionPercent: j['contributionPercent'],
@@ -102,7 +104,7 @@ class FacultyDocument {
     required this.fileName,
     this.reviewStatus = 'pending',
     this.remarks,
-    this.ocrText = 'SIMULATED OCR — pending upload integration',
+    this.ocrText = '',
     this.folder,
     this.academicYear,
     this.semester,
@@ -123,9 +125,9 @@ class FacultyDocument {
 
   factory FacultyDocument.fromJson(Map<String, dynamic> j) => FacultyDocument(
         id: j['id'],
-        indicatorId: j['indicatorId'],
-        kraId: j['kraId'],
-        fileName: j['fileName'],
+        indicatorId: j['indicatorId'] ?? '',
+        kraId: j['kraId'] ?? '',
+        fileName: j['fileName'] ?? j['filename'] ?? '',
         reviewStatus: j['reviewStatus'] ?? 'pending',
         remarks: j['remarks'],
         ocrText: j['ocrText'] ?? '',
@@ -135,132 +137,106 @@ class FacultyDocument {
       );
 }
 
+/// Faculty data loaded from the Flask API (legacy class name retained for screens).
 class MockRepository {
-  static const _key = 'facultylink_mobile_state_v1';
+  static const _legacyDemoKey = 'facultylink_mobile_state_v1';
 
   FacultyProfile profile = FacultyProfile(
-    id: 'fac-001',
-    name: 'Juan Dela Cruz',
-    email: 'faculty@ustp.demo',
-    rank: 'Instructor I',
-    reviewerName: 'Elena Mendoza',
+    id: '',
+    name: '',
+    email: '',
+    rank: '',
+    reviewerName: '',
   );
 
-  List<double?> setRatings = [92, 94, null, null, null, null];
-  List<double?> sefRatings = [95, 96, null, null, null, null];
-  List<String> academicYears = ['2023-2024', '2024-2025', '2025-2026'];
+  List<double?> setRatings = List.filled(6, null);
+  List<double?> sefRatings = List.filled(6, null);
+  List<String> academicYears = ['2024-2025', '2025-2026'];
   List<AssessmentEntry> entries = [];
   List<FacultyDocument> documents = [];
   List<Map<String, String>> notifications = [];
+  String? loadError;
 
   static Future<MockRepository> load() async {
     final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_legacyDemoKey);
+
     final repo = MockRepository();
-    final raw = prefs.getString(_key);
-    if (raw == null) {
-      repo._seedDemo();
-      await repo.save();
-      return repo;
+    try {
+      final meRes = await ApiClient.get('/api/faculty/me');
+      if (meRes.statusCode != 200) {
+        throw Exception('Could not load profile.');
+      }
+      final me = jsonDecode(meRes.body) as Map<String, dynamic>;
+      final p = me['profile'] as Map<String, dynamic>;
+      repo.profile = FacultyProfile(
+        id: p['id'],
+        name: p['name'],
+        email: p['email'],
+        rank: p['rank'] ?? '',
+        reviewerName: p['reviewerName'] ?? '',
+        reviewerRole: p['reviewerRole'] ?? 'Assigned Evaluator',
+        reviewerAssignmentStatus: p['reviewerAssignmentStatus'] ?? 'Unassigned',
+      );
+
+      final assessRes = await ApiClient.get('/api/faculty/assessment');
+      if (assessRes.statusCode == 200) {
+        final data = jsonDecode(assessRes.body) as Map<String, dynamic>;
+        final assessment = data['assessment'] as Map<String, dynamic>? ?? {};
+        final setSef = assessment['setSef'] as Map<String, dynamic>? ?? {};
+        repo.setRatings = (setSef['SET'] as List<dynamic>? ?? [])
+            .map((e) => e == null ? null : (e as num).toDouble())
+            .toList();
+        repo.sefRatings = (setSef['SEF'] as List<dynamic>? ?? [])
+            .map((e) => e == null ? null : (e as num).toDouble())
+            .toList();
+        if (repo.setRatings.length < 6) {
+          repo.setRatings = [...repo.setRatings, ...List.filled(6 - repo.setRatings.length, null)];
+        }
+        if (repo.sefRatings.length < 6) {
+          repo.sefRatings = [...repo.sefRatings, ...List.filled(6 - repo.sefRatings.length, null)];
+        }
+        final rawEntries = assessment['entries'] as Map<String, dynamic>? ?? {};
+        repo.entries = [];
+        rawEntries.forEach((_, list) {
+          for (final e in (list as List<dynamic>)) {
+            repo.entries.add(AssessmentEntry.fromJson(e as Map<String, dynamic>));
+          }
+        });
+      }
+
+      final docList = await DocumentApi.listMine();
+      repo.documents = docList.map(FacultyDocument.fromJson).toList();
+
+      final nRes = await ApiClient.get('/api/faculty/notifications');
+      if (nRes.statusCode == 200) {
+        final nData = jsonDecode(nRes.body) as Map<String, dynamic>;
+        repo.notifications = (nData['notifications'] as List<dynamic>? ?? [])
+            .map((n) => {
+                  'title': (n['title'] ?? '').toString(),
+                  'body': (n['body'] ?? '').toString(),
+                })
+            .toList();
+      }
+    } catch (e) {
+      repo.loadError = e.toString();
     }
-    final j = jsonDecode(raw) as Map<String, dynamic>;
-    final p = j['profile'] as Map<String, dynamic>;
-    repo.profile = FacultyProfile(
-      id: p['id'],
-      name: p['name'],
-      email: p['email'],
-      rank: p['rank'],
-      reviewerName: p['reviewerName'],
-      reviewerRole: p['reviewerRole'] ?? 'Assigned Evaluator',
-      reviewerAssignmentStatus: p['reviewerAssignmentStatus'] ?? 'Active',
-    );
-    repo.setRatings = (j['setRatings'] as List).map((e) => e == null ? null : (e as num).toDouble()).toList();
-    repo.sefRatings = (j['sefRatings'] as List).map((e) => e == null ? null : (e as num).toDouble()).toList();
-    repo.entries = (j['entries'] as List).map((e) => AssessmentEntry.fromJson(e)).toList();
-    repo.documents = (j['documents'] as List).map((e) => FacultyDocument.fromJson(e)).toList();
-    repo.notifications = (j['notifications'] as List).map((e) => Map<String, String>.from(e as Map)).toList();
     return repo;
   }
 
-  void _seedDemo() {
-    entries = [
-      AssessmentEntry(
-        id: 'e1',
-        indicatorId: 'kra-II-A-3',
-        title: 'IoT Classroom Monitoring',
-        date: '2025-06-01',
-        contributionPercent: 100,
-        estimatedPoints: 50,
-        reviewStatus: 'submitted',
-      ),
-    ];
-    documents = [
-      FacultyDocument(
-        id: 'd1',
-        indicatorId: 'kra-I-A-set',
-        kraId: 'kra-I',
-        fileName: 'SET_2024-2025_1st.pdf',
-        reviewStatus: 'approved',
-        folder: 'SET',
-        academicYear: '2024-2025',
-        semester: '1st Sem',
-        ocrText: 'SIMULATED OCR — SET rating 94%',
-      ),
-      FacultyDocument(
-        id: 'd2',
-        indicatorId: 'kra-II-A-3',
-        kraId: 'kra-II',
-        fileName: 'Journal_Article.pdf',
-        reviewStatus: 'correction_requested',
-        remarks: 'ISSN not legible',
-        ocrText: 'SIMULATED OCR — ISSN low confidence',
-      ),
-    ];
-    notifications = [
-      {'title': 'Correction requested', 'body': 'Journal article needs ISSN clarification'},
-      {'title': 'Document approved', 'body': 'SET evidence approved for 2024-2025 1st Sem'},
-    ];
-  }
-
   Future<void> save() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      _key,
-      jsonEncode({
-        'profile': {
-          'id': profile.id,
-          'name': profile.name,
-          'email': profile.email,
-          'rank': profile.rank,
-          'reviewerName': profile.reviewerName,
-          'reviewerRole': profile.reviewerRole,
-          'reviewerAssignmentStatus': profile.reviewerAssignmentStatus,
-        },
-        'setRatings': setRatings,
-        'sefRatings': sefRatings,
-        'entries': entries.map((e) => e.toJson()).toList(),
-        'documents': documents.map((d) => d.toJson()).toList(),
-        'notifications': notifications,
-      }),
-    );
+    final byIndicator = <String, List<Map<String, dynamic>>>{};
+    for (final e in entries) {
+      byIndicator.putIfAbsent(e.indicatorId, () => []).add(e.toJson());
+    }
+    final assessment = {
+      'setSef': {'SET': setRatings, 'SEF': sefRatings},
+      'entries': byIndicator,
+    };
+    await ApiClient.putJson('/api/faculty/assessment', {'assessment': assessment});
   }
 
   double estimatedKraWeightedTotal() => SimulationEngine.compute(this).weightedTotal;
 
   double verifiedKraWeightedTotal() => SimulationEngine.compute(this, verified: true).weightedTotal;
-
-  Future<void> resetEmptyProfile() async {
-    profile = FacultyProfile(
-      id: 'fac-002',
-      name: 'Maria Santos',
-      email: 'maria.santos@ustp.demo',
-      rank: 'Assistant Professor I',
-      reviewerName: 'Elena Mendoza',
-    );
-    setRatings = List.filled(6, null);
-    sefRatings = List.filled(6, null);
-    entries = [];
-    documents = [];
-    notifications = [];
-    await save();
-  }
 }

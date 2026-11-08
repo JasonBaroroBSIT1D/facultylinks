@@ -1,51 +1,106 @@
+import { getApiBase } from '../core/api-config.js';
+
 const SESSION_KEY = 'facultylink_session';
-const PASSWORD_OVERRIDES_KEY = 'fl_password_overrides';
 
-const DEMO_USERS = [
-  { email: 'admin@ustp.demo', password: 'Admin@2026', role: 'admin', name: 'System Administrator' },
-  { email: 'reviewer@ustp.demo', password: 'Review@2026', role: 'reviewer', name: 'Elena Mendoza', reviewerId: 'rev-001' },
-];
-
-export const DEMO_USER_EMAILS = DEMO_USERS.map((u) => u.email.toLowerCase());
-
-export function setPasswordOverride(email, password) {
-  const map = JSON.parse(localStorage.getItem(PASSWORD_OVERRIDES_KEY) || '{}');
-  map[email.trim().toLowerCase()] = password;
-  localStorage.setItem(PASSWORD_OVERRIDES_KEY, JSON.stringify(map));
-}
-
-export function getPasswordForUser(email) {
-  const key = email.trim().toLowerCase();
-  const overrides = JSON.parse(localStorage.getItem(PASSWORD_OVERRIDES_KEY) || '{}');
-  if (overrides[key]) return overrides[key];
-  const user = DEMO_USERS.find((u) => u.email.toLowerCase() === key);
-  return user?.password ?? null;
+function sessionFromUser(user) {
+  return {
+    email: user.email,
+    role: user.role,
+    name: user.name,
+    userId: user.id,
+    reviewerId: user.role === 'reviewer' ? `u-${user.id}` : null,
+    at: Date.now(),
+  };
 }
 
 export class AuthRepository {
-  static login(email, password) {
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        const key = email.trim().toLowerCase();
-        const user = DEMO_USERS.find((u) => u.email.toLowerCase() === key);
-        if (!user) {
-          reject(new Error('Invalid email or password.'));
-          return;
-        }
-        const expected = getPasswordForUser(email);
-        if (expected !== password) {
-          reject(new Error('Invalid email or password.'));
-          return;
-        }
-        const session = { email: user.email, role: user.role, name: user.name, reviewerId: user.reviewerId, at: Date.now() };
-        sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
-        resolve(session);
-      }, 600);
-    });
+  static clearClientSession() {
+    try {
+      sessionStorage.removeItem(SESSION_KEY);
+    } catch {
+      /* ignore */
+    }
   }
 
-  static logout() {
-    sessionStorage.removeItem(SESSION_KEY);
+  /** Backend identity; null if unauthenticated or network failure (throws on non-401 HTTP errors). */
+  static async fetchMe() {
+    let res;
+    try {
+      res = await fetch(`${getApiBase()}/api/auth/me`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+      });
+    } catch (e) {
+      const err = new Error(e.message || 'Could not reach the server.');
+      err.name = 'NetworkError';
+      throw err;
+    }
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401) {
+      return null;
+    }
+    if (!res.ok) {
+      const err = new Error(data.error || `Session check failed (${res.status}).`);
+      err.status = res.status;
+      throw err;
+    }
+    return data.user || null;
+  }
+
+  /** Validate Flask session and sync sessionStorage from the server. */
+  static async ensureWebPortalSession(roles) {
+    const user = await this.fetchMe();
+    if (!user || !roles.includes(user.role)) {
+      this.clearClientSession();
+      return null;
+    }
+    const session = sessionFromUser(user);
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    return session;
+  }
+
+  static async login(email, password) {
+    let res;
+    try {
+      res = await fetch(`${getApiBase()}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-Client-Type': 'web' },
+        credentials: 'include',
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+    } catch (e) {
+      const err = new Error(e.message || 'Could not reach the server.');
+      err.name = 'NetworkError';
+      throw err;
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || 'Sign in failed.');
+    }
+    const session = sessionFromUser(data.user);
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    return session;
+  }
+
+  static async logout() {
+    let res;
+    try {
+      res = await fetch(`${getApiBase()}/api/auth/logout`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+      });
+    } catch (e) {
+      const err = new Error(e.message || 'Could not reach the server.');
+      err.name = 'NetworkError';
+      throw err;
+    }
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      throw new Error(data.error || 'Sign out failed.');
+    }
+    this.clearClientSession();
   }
 
   static getSession() {
@@ -57,10 +112,10 @@ export class AuthRepository {
     }
   }
 
+  /** Client cache only — use ensureWebPortalSession before trusting access. */
   static requireRole(roles) {
     const s = AuthRepository.getSession();
     if (!s || !roles.includes(s.role)) {
-      window.location.href = '/login.html';
       return null;
     }
     return s;
@@ -70,3 +125,10 @@ export class AuthRepository {
     return /@ustp\.demo$/i.test(email) && /faculty|maria\.santos|ana\.reyes/i.test(email);
   }
 }
+
+/** @deprecated Demo-only password overrides removed with backend auth. */
+export function setPasswordOverride() {}
+export function getPasswordForUser() {
+  return null;
+}
+export const DEMO_USER_EMAILS = [];

@@ -25,9 +25,14 @@ document.getElementById('contactBtn').addEventListener('click', () => {
   p.hidden = !p.hidden;
 });
 
-if (AuthRepository.getSession()) {
-  window.location.href = '/app.html';
-}
+void (async () => {
+  try {
+    const session = await AuthRepository.ensureWebPortalSession(['admin', 'reviewer']);
+    if (session) window.location.replace('/app.html');
+  } catch {
+    /* stay on login — user can sign in or refresh */
+  }
+})();
 
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -42,17 +47,25 @@ form.addEventListener('submit', async (e) => {
     err.textContent = 'Enter a valid email address.';
     return;
   }
-  if (em.includes('faculty') || em.includes('maria.santos') || em.includes('ana.reyes')) {
-    err.textContent = 'Faculty accounts sign in via the FacultyLink mobile app.';
-    return;
-  }
+  if (btn.disabled) return;
   btn.disabled = true;
   btn.textContent = 'Signing in…';
   try {
-    await AuthRepository.login(em, pw);
+    const session = await AuthRepository.login(em, pw);
+    if (session.role === 'faculty') {
+      try {
+        await AuthRepository.logout();
+      } catch {
+        AuthRepository.clearClientSession();
+      }
+      err.textContent = 'Faculty accounts sign in via the FacultyLink mobile app.';
+      btn.disabled = false;
+      btn.textContent = 'Sign In';
+      return;
+    }
     if (document.getElementById('remember').checked) localStorage.setItem('fl_remember_email', em);
     else localStorage.removeItem('fl_remember_email');
-    window.location.href = '/app.html';
+    window.location.replace('/app.html');
   } catch (ex) {
     err.textContent = ex.message || 'Sign in failed.';
     btn.disabled = false;

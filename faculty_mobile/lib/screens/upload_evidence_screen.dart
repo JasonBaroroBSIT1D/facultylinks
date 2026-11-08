@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../core/ui_strings.dart';
 import '../data/assessment_catalog.dart';
 import '../repositories/mock_repository.dart';
+import '../services/document_api.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_theme.dart';
 
@@ -22,6 +23,8 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
   CriterionNode? _crit;
   IndicatorNode? _ind;
   String? _fileName;
+  List<int>? _fileBytes;
+  String? _mimeType;
   final _title = TextEditingController();
   final _year = TextEditingController();
   final _sem = TextEditingController();
@@ -104,17 +107,28 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
         return;
       }
     }
-    widget.repo.documents.add(FacultyDocument(
-      id: 'd-${DateTime.now().millisecondsSinceEpoch}',
-      indicatorId: _ind!.id,
-      kraId: _kra!.id,
-      fileName: _fileName!,
-      folder: _ind!.subType,
-      academicYear: _year.text.isEmpty ? null : _year.text,
-      semester: _sem.text.isEmpty ? null : _sem.text,
-      reviewStatus: 'pending',
-      ocrText: 'SIMULATED OCR — demonstration only until server upload',
-    ));
+    if (_fileBytes == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Choose a file to continue.')),
+      );
+      return;
+    }
+    try {
+      await DocumentApi.upload(
+        bytes: _fileBytes!,
+        filename: _fileName!,
+        mimeType: _mimeType ?? 'application/octet-stream',
+        indicatorId: _ind!.id,
+        kraId: _kra!.id,
+        title: _title.text.trim().isEmpty ? _fileName! : _title.text.trim(),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+      return;
+    }
     await widget.repo.save();
     widget.onSave();
     if (!mounted) return;
@@ -339,7 +353,17 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
                               allowedExtensions: ['pdf', 'png', 'jpg'],
                             );
                             if (r != null && r.files.single.name.isNotEmpty) {
-                              setState(() => _fileName = r.files.single.name);
+                              final f = r.files.single;
+                              setState(() {
+                                _fileName = f.name;
+                                _fileBytes = f.bytes;
+                                final ext = f.extension?.toLowerCase();
+                                _mimeType = ext == 'pdf'
+                                    ? 'application/pdf'
+                                    : ext == 'png'
+                                        ? 'image/png'
+                                        : 'image/jpeg';
+                              });
                             }
                           },
                           icon: const Icon(Icons.attach_file),

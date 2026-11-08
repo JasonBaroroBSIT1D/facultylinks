@@ -2,6 +2,8 @@ import { ASSESSMENT_CATALOG, KRA_WEIGHTS, SOURCE_CIRCULAR } from '../core/assess
 
 const SOURCE_SEED_TAG = 'dbm-jc3-workbook-seed';
 
+export const OFFICIAL_KRA_IDS = ['kra-I', 'kra-II', 'kra-III', 'kra-IV'];
+
 function deepClone(obj) {
   return JSON.parse(JSON.stringify(obj));
 }
@@ -54,6 +56,74 @@ export function buildSeedCatalog() {
   return catalog;
 }
 
+function mergeIndicators(existingCrit, seedCrit, report) {
+  if (!Array.isArray(existingCrit.indicators)) existingCrit.indicators = [];
+  for (const seedInd of seedCrit.indicators || []) {
+    const ex = existingCrit.indicators.find((i) => i.id === seedInd.id);
+    if (!ex) {
+      existingCrit.indicators.push(deepClone(normalizeIndicator(seedInd)));
+      report.push(`indicator ${seedInd.id}`);
+    }
+  }
+}
+
+function mergeCriteria(existingKra, seedKra, report) {
+  if (!Array.isArray(existingKra.criteria)) existingKra.criteria = [];
+  for (const seedCrit of seedKra.criteria || []) {
+    const ex = existingKra.criteria.find((c) => c.id === seedCrit.id);
+    if (!ex) {
+      existingKra.criteria.push(
+        deepClone({
+          ...seedCrit,
+          capMaxPoints: seedCrit.maxPoints ?? parseCapFromNote(seedCrit.capNote),
+          indicators: (seedCrit.indicators || []).map(normalizeIndicator),
+        })
+      );
+      report.push(`criterion ${seedCrit.id}`);
+    } else {
+      if (ex.capMaxPoints == null && seedCrit.maxPoints != null) {
+        ex.capMaxPoints = seedCrit.maxPoints ?? parseCapFromNote(seedCrit.capNote);
+      }
+      mergeIndicators(ex, seedCrit, report);
+    }
+  }
+}
+
+/** Add missing JC3 workbook nodes by stable id; preserve existing edits. Safe to run repeatedly. */
+export function mergeWorkbookReferenceIntoCatalog(catalog, report = []) {
+  const seed = buildSeedCatalog();
+  if (!catalog || typeof catalog !== 'object') {
+    return { catalog: seed, report: ['full reference catalog'], changed: true };
+  }
+  if (!Array.isArray(catalog.kras)) catalog.kras = [];
+  for (const seedKra of seed.kras) {
+    let ex = catalog.kras.find((k) => k.id === seedKra.id);
+    if (!ex) {
+      catalog.kras.push(deepClone(seedKra));
+      report.push(`kra ${seedKra.id}`);
+    } else {
+      if (!ex.name) ex.name = seedKra.name;
+      if (ex.maxPoints == null && seedKra.maxPoints != null) ex.maxPoints = seedKra.maxPoints;
+      mergeCriteria(ex, seedKra, report);
+    }
+  }
+  if (!catalog.version) catalog.version = seed.version;
+  if (!catalog.source) catalog.source = seed.source;
+  return { catalog, report, changed: report.length > 0 };
+}
+
+export function countOfficialKrasWithContent(catalog) {
+  if (!catalog?.kras?.length) return 0;
+  return OFFICIAL_KRA_IDS.filter((id) => {
+    const kra = catalog.kras.find((k) => k.id === id);
+    return kra && (kra.criteria?.length ?? 0) > 0;
+  }).length;
+}
+
+export function isCatalogWorkbookComplete(catalog) {
+  return countOfficialKrasWithContent(catalog) === OFFICIAL_KRA_IDS.length;
+}
+
 function parseCapFromNote(note) {
   if (!note) return null;
   const m = /Max\s*=\s*(\d+)/i.exec(note);
@@ -61,27 +131,17 @@ function parseCapFromNote(note) {
 }
 
 export function ensureAssessmentConfig(store) {
-  if (store.assessmentConfig?.versions?.length) return store.assessmentConfig;
-
-  const seed = buildSeedCatalog();
-  const v1 = {
-    id: 'cfg-published-1',
-    label: ASSESSMENT_CATALOG.version,
-    status: 'published',
-    effectiveDate: '2026-01-01',
-    publishedAt: new Date().toISOString(),
-    publishedBy: 'system',
-    sourceSeed: SOURCE_SEED_TAG,
-    catalog: seed,
-    kraWeights: { ...KRA_WEIGHTS },
-    changeHistory: [{ at: new Date().toISOString(), actor: 'system', summary: 'Seeded from DBM–CHED JC3 workbook source mapping.' }],
-  };
-  store.assessmentConfig = {
-    activePublishedId: v1.id,
-    draftId: null,
-    previewDraft: false,
-    versions: [v1],
-  };
+  if (!store.assessmentConfig || typeof store.assessmentConfig !== 'object') {
+    store.assessmentConfig = {
+      activePublishedId: null,
+      draftId: null,
+      previewDraft: false,
+      versions: [],
+    };
+  }
+  if (!Array.isArray(store.assessmentConfig.versions)) {
+    store.assessmentConfig.versions = [];
+  }
   return store.assessmentConfig;
 }
 
@@ -97,7 +157,119 @@ export const ConfigRepository = {
 
   getActivePublished(store) {
     const ctx = this.loadContext(store);
-    return this.getVersion(store, ctx.activePublishedId);
+    if (ctx.activePublishedId) {
+      const v = this.getVersion(store, ctx.activePublishedId);
+      if (v?.status === 'published') return v;
+    }
+    return ctx.versions.find((v) => v.status === 'published') || null;
+  },
+
+  /** Create an editable draft from the JC3 workbook reference mapping (not published). */
+  initializeDraftFromReference(store, actor) {
+    const ctx = this.loadContext(store);
+    const existing = this.getDraft(store);
+    if (existing) {
+      if (isCatalogWorkbookComplete(existing.catalog)) return existing;
+      const { report } = mergeWorkbookReferenceIntoCatalog(existing.catalog);
+      if (report.length) {
+        existing.changeHistory = existing.changeHistory || [];
+        existing.changeHistory.push({
+          at: new Date().toISOString(),
+          actor: actor || 'admin',
+          summary: `Merged missing workbook reference items (${report.length}).`,
+        });
+      }
+      if (!existing.kraWeights || !Object.keys(existing.kraWeights).length) {
+        existing.kraWeights = { ...KRA_WEIGHTS };
+      }
+      return existing;
+    }
+    const seed = buildSeedCatalog();
+    const draft = {
+      id: `cfg-draft-${Date.now()}`,
+      label: `${ASSESSMENT_CATALOG.version} (draft)`,
+      status: 'draft',
+      effectiveDate: null,
+      publishedAt: null,
+      publishedBy: null,
+      sourceSeed: SOURCE_SEED_TAG,
+      catalog: seed,
+      kraWeights: { ...KRA_WEIGHTS },
+      changeHistory: [
+        {
+          at: new Date().toISOString(),
+          actor: actor || 'admin',
+          summary: 'Draft initialized from DBM–CHED JC3 workbook reference mapping.',
+        },
+      ],
+    };
+    ctx.versions.push(draft);
+    ctx.draftId = draft.id;
+    return draft;
+  },
+
+  resolveRulesView(store, { readOnly = false } = {}) {
+    this.loadContext(store);
+    const published = this.getActivePublished(store);
+    const draft = this.getDraft(store);
+    if (readOnly) {
+      if (!published) return { mode: 'no_published' };
+      return {
+        mode: 'ok',
+        catalog: published.catalog,
+        weights: published.kraWeights,
+        active: published,
+        draft: null,
+      };
+    }
+    if (draft?.catalog) {
+      return {
+        mode: 'ok',
+        catalog: draft.catalog,
+        weights: draft.kraWeights || published?.kraWeights || { ...KRA_WEIGHTS },
+        active: published,
+        draft,
+      };
+    }
+    if (published?.catalog) {
+      return {
+        mode: 'ok',
+        catalog: published.catalog,
+        weights: published.kraWeights,
+        active: published,
+        draft: null,
+      };
+    }
+    return { mode: 'uninitialized', active: null, draft: null };
+  },
+
+  /** Ensure editable draft contains all four official KRAs from the workbook reference (no publish). */
+  ensureDraftCatalogComplete(store, actor) {
+    this.loadContext(store);
+    let draft = this.getDraft(store);
+    if (!draft) {
+      const pub = this.getActivePublished(store);
+      draft = pub ? this.forkDraftFromActive(store, actor) : this.initializeDraftFromReference(store, actor);
+    } else if (!draft.catalog) {
+      draft.catalog = buildSeedCatalog();
+    }
+    const { report, changed } = mergeWorkbookReferenceIntoCatalog(draft.catalog);
+    let weightsChanged = false;
+    if (!draft.kraWeights || Object.keys(draft.kraWeights).length < OFFICIAL_KRA_IDS.length) {
+      draft.kraWeights = { ...KRA_WEIGHTS, ...(draft.kraWeights || {}) };
+      weightsChanged = true;
+    }
+    if (changed || weightsChanged) {
+      draft.changeHistory = draft.changeHistory || [];
+      draft.changeHistory.push({
+        at: new Date().toISOString(),
+        actor: actor || 'admin',
+        summary: changed
+          ? `Restored missing workbook reference (${report.length} items).`
+          : 'Restored default KRA weights.',
+      });
+    }
+    return { draft, report, changed: changed || weightsChanged };
   },
 
   getDraft(store) {
@@ -126,6 +298,9 @@ export const ConfigRepository = {
     }
 
     const pub = this.getActivePublished(store);
+    if (!pub) {
+      return { catalog: { kras: [] }, kraWeights: {}, versionId: null, pinned: false };
+    }
     return { catalog: pub.catalog, kraWeights: pub.kraWeights, versionId: pub.id, pinned: false };
   },
 
@@ -133,6 +308,7 @@ export const ConfigRepository = {
     const ctx = this.loadContext(store);
     if (ctx.draftId) return this.getDraft(store);
     const active = this.getActivePublished(store);
+    if (!active) return this.initializeDraftFromReference(store, actor);
     const draft = {
       id: `cfg-draft-${Date.now()}`,
       label: `${active.label}-draft`,

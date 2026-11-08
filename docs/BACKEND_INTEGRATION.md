@@ -1,7 +1,11 @@
-# Future Backend Integration Guide
+# Backend Integration Guide
 
-## Target stack (manuscript)
-- **API:** Flask 3.x REST
+## Live stack (phase 1 — see `backend/`)
+- **API:** Flask 3.x REST (`backend/run.py`, port 5000 by default)
+- **Database:** PostgreSQL (`facultylinks`) via Supabase
+- **Storage:** Private Supabase Storage bucket `facultylinks-documents` (signed URLs from Flask)
+
+## Target stack (manuscript / later)
 - **Database:** PostgreSQL 18
 - **OCR:** Tesseract 5.5 (server-side)
 - **Auth:** Institution-issued accounts (JWT or session); replace `MockAuthRepository`
