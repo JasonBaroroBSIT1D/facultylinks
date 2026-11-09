@@ -1,3 +1,6 @@
+/** Default HTTP timeout for portal API calls (ms). */
+export const API_TIMEOUT_MS = 45000;
+
 /** API base URL — set window.__FACULTYLINK_API_BASE__ before app scripts, or use default local Flask. */
 export function getApiBase() {
   const fromWindow = typeof window !== 'undefined' && window.__FACULTYLINK_API_BASE__;

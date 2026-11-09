@@ -35,8 +35,14 @@ def attach_upload_to_assessment(
     title: str | None = None,
     estimated_points: float | None = None,
 ) -> None:
+    from app.services.catalog import get_published_catalog_and_weights, pin_assessment_config_version_if_needed
+
     row = _assessment_row(doc.owner_user_id)
     data = row.data or {"setSef": {"SET": [], "SEF": []}, "entries": {}}
+    data = pin_assessment_config_version_if_needed(doc.owner_user_id, data)
+    pub_catalog, _ = get_published_catalog_and_weights()
+    if pub_catalog and pub_catalog.get("version"):
+        doc.config_version = pub_catalog.get("version")
     entries = data.setdefault("entries", {})
     indicator_entries = entries.setdefault(doc.indicator_id or "", [])
 
@@ -63,7 +69,6 @@ def attach_upload_to_assessment(
         indicator_entries[idx] = {**prev, **payload}
     else:
         indicator_entries.append(payload)
-
     row.data = data
 
 

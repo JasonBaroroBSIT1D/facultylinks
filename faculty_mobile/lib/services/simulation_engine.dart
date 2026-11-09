@@ -1,6 +1,21 @@
 import '../core/scoring.dart';
 import '../models/institution_config.dart';
+import '../models/rank_simulation.dart';
 import '../repositories/mock_repository.dart';
+
+class CriterionBreakdownLine {
+  final String criterionId;
+  final String? name;
+  final double rawTotal;
+  final double? capMaxPoints;
+
+  CriterionBreakdownLine({
+    required this.criterionId,
+    this.name,
+    required this.rawTotal,
+    this.capMaxPoints,
+  });
+}
 
 class KraBreakdownLine {
   final String kraId;
@@ -9,6 +24,9 @@ class KraBreakdownLine {
   final double? rawCap;
   final double weight;
   final double weightedContribution;
+  final bool rawIncomplete;
+  final String? incompleteReason;
+  final List<CriterionBreakdownLine> criteria;
 
   KraBreakdownLine({
     required this.kraId,
@@ -17,6 +35,9 @@ class KraBreakdownLine {
     this.rawCap,
     required this.weight,
     required this.weightedContribution,
+    this.rawIncomplete = false,
+    this.incompleteReason,
+    this.criteria = const [],
   });
 }
 
@@ -26,6 +47,17 @@ class SimulationSnapshot {
   final List<KraBreakdownLine> kras;
   final List<String> missingRequirements;
   final List<String> pendingEvidence;
+  final bool scoresFromBackend;
+  /// When false, rank simulation must not treat weighted total as authoritative (e.g. KRA IV envelope unresolved).
+  final bool scoringAuthoritative;
+  final bool usesRankTableWeights;
+  final String? rankCategoryLabel;
+  final SubRankBracket? subRankBracket;
+  final PotentialRankResult? potentialRank;
+  final String scoreSourceLabel;
+  final String? basisLabel;
+  final String? bucketCurrentRank;
+  final List<ConditionalRankProjection> conditionalRankProjections;
 
   SimulationSnapshot({
     required this.weightedTotal,
@@ -33,6 +65,16 @@ class SimulationSnapshot {
     required this.kras,
     required this.missingRequirements,
     required this.pendingEvidence,
+    this.scoresFromBackend = false,
+    this.scoringAuthoritative = true,
+    this.usesRankTableWeights = false,
+    this.rankCategoryLabel,
+    this.subRankBracket,
+    this.potentialRank,
+    this.scoreSourceLabel = 'estimated',
+    this.basisLabel,
+    this.bucketCurrentRank,
+    this.conditionalRankProjections = const [],
   });
 }
 
@@ -69,6 +111,235 @@ class WhatIfScenario {
 
 class SimulationEngine {
   static SimulationSnapshot compute(MockRepository repo, {bool verified = false, WhatIfScenario whatIf = WhatIfScenario.empty}) {
+    if (repo.rankSimulationJson != null) {
+      final rankSim = FacultyRankSimulation.fromJson(repo.rankSimulationJson);
+      return _fromRankSimulation(repo, rankSim, verified: verified, whatIf: whatIf);
+    }
+    if (repo.scoresConfigured) {
+      return _fromBackendScores(repo, verified: verified, whatIf: whatIf);
+    }
+    return _legacyCompute(repo, verified: verified, whatIf: whatIf);
+  }
+
+  static SimulationSnapshot _fromRankSimulation(
+    MockRepository repo,
+    FacultyRankSimulation rankSim, {
+    required bool verified,
+    required WhatIfScenario whatIf,
+  }) {
+    final bucket = verified ? rankSim.verified : rankSim.estimated;
+    if (!bucket.configured) {
+      return SimulationSnapshot(
+        weightedTotal: 0,
+        overallRaw: 0,
+        kras: const [],
+        missingRequirements: const [
+          'Complete your profile with a recognized current rank before rank simulation can run.',
+        ],
+        pendingEvidence: const [],
+        scoresFromBackend: true,
+        scoringAuthoritative: false,
+        usesRankTableWeights: true,
+        scoreSourceLabel: verified ? 'verified' : 'estimated',
+      );
+    }
+
+    const kraNames = {
+      'kra-I': 'KRA I – Instruction',
+      'kra-II': 'KRA II – Research, Innovation and/or Creative Work',
+      'kra-III': 'KRA III – Extension Services',
+      'kra-IV': 'KRA IV – Professional Development',
+    };
+
+    var weighted = bucket.overallWeightedScore;
+    final lines = bucket.kras
+        .map(
+          (k) => KraBreakdownLine(
+            kraId: k.kraId,
+            name: kraNames[k.kraId] ?? k.kraId,
+            rawTotal: k.rawTotal,
+            weight: k.weight,
+            weightedContribution: k.weightedContribution,
+          ),
+        )
+        .toList();
+    final rawSum = lines.fold(0.0, (a, l) => a + l.rawTotal);
+
+    final missing = <String>[
+      ...bucket.notes,
+      if (!verified) 'Faculty self-assessment (estimated) — not reviewer-verified.',
+      if (whatIf != WhatIfScenario.empty)
+        'What-if scenario is shown separately and does not change saved assessment or review outcomes.',
+    ];
+    if (bucket.bracket?.unresolvedReason != null) {
+      missing.add(bucket.bracket!.unresolvedReason!);
+    }
+    for (final n in bucket.potentialRank?.notes ?? const <String>[]) {
+      missing.add(n);
+    }
+
+    final pending = repo.documents
+        .where((d) => d.countsAsPendingForFaculty)
+        .map((d) => d.fileName)
+        .toList();
+
+    return SimulationSnapshot(
+      weightedTotal: weighted,
+      overallRaw: rawSum,
+      kras: lines,
+      missingRequirements: missing,
+      pendingEvidence: pending,
+      scoresFromBackend: true,
+      scoringAuthoritative: bucket.scoringAuthoritative,
+      usesRankTableWeights: true,
+      rankCategoryLabel: bucket.rankCategoryLabel,
+      subRankBracket: bucket.bracket,
+      potentialRank: bucket.potentialRank,
+      scoreSourceLabel: verified ? 'verified' : 'estimated',
+      basisLabel: bucket.basisLabel,
+      bucketCurrentRank: bucket.currentRank,
+      conditionalRankProjections: bucket.conditionalRankProjections,
+    );
+  }
+
+  static RankEvaluation evaluateFromSnapshot(SimulationSnapshot snapshot) {
+    final pr = snapshot.potentialRank;
+    final bracket = snapshot.subRankBracket;
+    final basis = snapshot.basisLabel ??
+        (snapshot.scoreSourceLabel == 'verified' ? 'Reviewer-verified points' : 'Estimated points');
+    if (pr == null || pr.status == 'unresolved' || pr.potentialRank == null) {
+      return RankEvaluation(
+        potentialRank: bracket?.unresolvedReason ?? 'Projected rank unavailable',
+        readinessLabel: 'Not available',
+        simulationStatus: 'Basis: $basis',
+        unmetConditions: snapshot.missingRequirements,
+      );
+    }
+    final inc = pr.increments;
+    final movement = pr.movement;
+    final statusCore = pr.displayLabel ?? 'Preparation only — not an official promotion decision';
+    return RankEvaluation(
+      potentialRank: pr.potentialRank!,
+      readinessLabel: movement ?? (inc != null ? 'Sub-rank increment: $inc' : '—'),
+      simulationStatus: 'Basis: $basis · $statusCore',
+      unmetConditions: [...pr.notes, ...snapshot.missingRequirements],
+    );
+  }
+
+  static SimulationSnapshot _fromBackendScores(
+    MockRepository repo, {
+    required bool verified,
+    required WhatIfScenario whatIf,
+  }) {
+    final mode = verified ? repo.facultyScoresVerified : repo.facultyScoresEstimated;
+    final byKra = (mode?['byKra'] as Map<String, dynamic>?) ?? {};
+    final notes = (mode?['notes'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [];
+
+    final lines = <KraBreakdownLine>[];
+    var weighted = 0.0;
+    var rawSum = 0.0;
+
+    const kraOrder = ['kra-I', 'kra-II', 'kra-III', 'kra-IV'];
+    final names = {
+      'kra-I': 'KRA I – Instruction',
+      'kra-II': 'KRA II – Research, Innovation and/or Creative Work',
+      'kra-III': 'KRA III – Extension Services',
+      'kra-IV': 'KRA IV – Professional Development',
+    };
+    final caps = {
+      'kra-I': 60.0,
+      'kra-II': 100.0,
+      'kra-III': 100.0,
+      'kra-IV': 100.0,
+    };
+
+    for (final kraId in kraOrder) {
+      final row = byKra[kraId] as Map<String, dynamic>? ?? {};
+      final weight = (row['weight'] as num?)?.toDouble() ?? (repo.kraWeightsFromApi?[kraId] as num?)?.toDouble() ?? kraWeights[kraId] ?? 0.0;
+      var raw = (row['rawTotal'] as num?)?.toDouble() ?? 0.0;
+      if (kraId == 'kra-I' && whatIf.extraInstructionRaw != 0) {
+        raw = cap(raw + whatIf.extraInstructionRaw, caps[kraId]);
+      }
+      var contrib = (row['weightedContribution'] as num?)?.toDouble() ?? raw * weight;
+      if (whatIf.extraInstructionRaw != 0 && kraId == 'kra-I') {
+        contrib = raw * weight;
+      }
+      if (whatIf.extraWeightedByKra.containsKey(kraId)) {
+        contrib += whatIf.extraWeightedByKra[kraId]!;
+      }
+      final incomplete = row['criterionAIncomplete'] == true;
+      final reason = row['criterionAIncompleteReason'] as String?;
+      final critRaw = (row['criteria'] as List<dynamic>?) ?? [];
+      final critLines = critRaw
+          .map(
+            (c) => CriterionBreakdownLine(
+              criterionId: (c as Map)['id'] as String? ?? '',
+              name: c['name'] as String?,
+              rawTotal: (c['rawTotal'] as num?)?.toDouble() ?? 0,
+              capMaxPoints: (c['capMaxPoints'] as num?)?.toDouble(),
+            ),
+          )
+          .where((c) => c.criterionId.isNotEmpty)
+          .toList();
+      lines.add(KraBreakdownLine(
+        kraId: kraId,
+        name: row['name'] as String? ?? names[kraId] ?? kraId,
+        rawTotal: raw,
+        rawCap: caps[kraId],
+        weight: weight,
+        weightedContribution: contrib,
+        rawIncomplete: incomplete,
+        incompleteReason: reason,
+        criteria: critLines,
+      ));
+      weighted += contrib;
+      rawSum += raw;
+    }
+
+    var authoritative = true;
+    final missing = <String>[...notes];
+    for (final line in lines) {
+      if (line.rawIncomplete && line.incompleteReason != null) {
+        missing.add(line.incompleteReason!);
+      }
+    }
+    for (final kraId in kraOrder) {
+      final row = byKra[kraId] as Map<String, dynamic>? ?? {};
+      if (row['kraCapPolicyUnresolved'] == true) {
+        authoritative = false;
+        final policyNote = row['kraCapPolicyNote'] as String?;
+        if (policyNote != null && policyNote.isNotEmpty) {
+          missing.add('Provisional KRA IV subtotal — $policyNote');
+        }
+      }
+      if (kraId == 'kra-IV' && row['coreSubtotal'] != null) {
+        final core = (row['coreSubtotal'] as num?)?.toDouble();
+        final addl = (row['additionalSubtotal'] as num?)?.toDouble();
+        if (core != null && addl != null && row['kraCapPolicyUnresolved'] == true) {
+          missing.add(
+            'KRA IV core (A+B+C): ${core.toStringAsFixed(2)} pts; D additional: ${addl.toStringAsFixed(2)} pts (provisional until envelope policy is published).',
+          );
+        }
+      }
+    }
+
+    final pending = repo.documents
+        .where((d) => d.countsAsPendingForFaculty)
+        .map((d) => d.fileName)
+        .toList();
+
+    return SimulationSnapshot(
+      weightedTotal: weighted,
+      overallRaw: rawSum,
+      kras: lines,
+      missingRequirements: missing,
+      pendingEvidence: pending,
+      scoresFromBackend: true,
+      scoringAuthoritative: authoritative,
+    );
+  }
+
+  static SimulationSnapshot _legacyCompute(MockRepository repo, {bool verified = false, WhatIfScenario whatIf = WhatIfScenario.empty}) {
     final set = computeSetSef(repo.setRatings, 'SET');
     final sef = computeSetSef(repo.sefRatings, 'SEF');
     var instructionRaw = cap(set.raw + sef.raw + whatIf.extraInstructionRaw, 60);
@@ -118,7 +389,7 @@ class SimulationEngine {
     if (missingSef > 0) missing.add('$missingSef SEF semester rating(s) not entered');
 
     final pending = repo.documents
-        .where((d) => d.reviewStatus == 'pending' || d.reviewStatus == 'correction_requested')
+        .where((d) => d.countsAsPendingForFaculty)
         .map((d) => d.fileName)
         .toList();
 
@@ -141,7 +412,18 @@ class SimulationEngine {
     required InstitutionConfig cfg,
     required String targetRank,
     required double weightedTotal,
+    bool scoringAuthoritative = true,
   }) {
+    if (!scoringAuthoritative) {
+      return RankEvaluation(
+        potentialRank: 'Provisional scoring only',
+        readinessLabel: 'Not available',
+        simulationStatus: 'Rank simulation unavailable while KRA IV envelope policy is unresolved',
+        unmetConditions: const [
+          'Weighted totals may include provisional KRA IV subtotals. Publish envelope policy before using rank simulation.',
+        ],
+      );
+    }
     if (cfg.rankMappingStatus != 'configured') {
       return RankEvaluation(
         potentialRank: 'Pending configuration',

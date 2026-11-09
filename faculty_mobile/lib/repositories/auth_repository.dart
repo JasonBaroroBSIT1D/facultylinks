@@ -1,33 +1,58 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../services/api_client.dart';
+
+class LoginResult {
+  final bool success;
+  final String? errorMessage;
+  final bool mustChangePassword;
+
+  const LoginResult.success({required this.mustChangePassword})
+      : success = true,
+        errorMessage = null;
+
+  const LoginResult.failure(this.errorMessage)
+      : success = false,
+        mustChangePassword = false;
+}
 
 class AuthRepository {
   static const _sessionKey = 'fl_mobile_session';
   static const _mustChangeKey = 'fl_must_change_password';
 
-  static Future<bool> login(String email, String password) async {
-    final res = await ApiClient.postJson('/api/auth/login', {
-      'email': email.trim(),
-      'password': password,
-    });
-    if (res.statusCode != 200) {
-      return false;
+  static Future<LoginResult> login(String email, String password) async {
+    try {
+      final res = await ApiClient.postJson('/api/auth/login', {
+        'email': email.trim(),
+        'password': password,
+      });
+      if (res.statusCode != 200) {
+        return const LoginResult.failure('Invalid email or password.');
+      }
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      final token = data['token'] as String?;
+      final mail = (data['email'] as String?)?.trim().toLowerCase() ?? email.trim().toLowerCase();
+      final user = data['user'] as Map<String, dynamic>?;
+      if (token == null || token.isEmpty) {
+        return const LoginResult.failure('Invalid email or password.');
+      }
+      await ApiClient.saveToken(token);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_sessionKey, mail);
+      final mustChange = user?['mustChangePassword'] == true;
+      await prefs.setBool(_mustChangeKey, mustChange);
+      return LoginResult.success(mustChangePassword: mustChange);
+    } on TimeoutException catch (e) {
+      return LoginResult.failure(ApiClient.describeConnectionError(e));
+    } on http.ClientException catch (e) {
+      return LoginResult.failure(ApiClient.describeConnectionError(e));
+    } catch (e) {
+      return LoginResult.failure(ApiClient.describeConnectionError(e));
     }
-    final data = jsonDecode(res.body) as Map<String, dynamic>;
-    final token = data['token'] as String?;
-    final mail = (data['email'] as String?)?.trim().toLowerCase() ?? email.trim().toLowerCase();
-    final user = data['user'] as Map<String, dynamic>?;
-    if (token == null || token.isEmpty) {
-      return false;
-    }
-    await ApiClient.saveToken(token);
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_sessionKey, mail);
-    await prefs.setBool(_mustChangeKey, user?['mustChangePassword'] == true);
-    return true;
   }
 
   static Future<bool> mustChangePassword() async {

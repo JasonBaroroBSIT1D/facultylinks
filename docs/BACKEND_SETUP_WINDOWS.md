@@ -86,9 +86,19 @@ Sign in with the **admin** account you created—not demo emails unless you crea
 
 ## 7. Flutter
 
+**Web (Chrome, fixed port for CORS):**
+
 ```powershell
 cd ..\faculty_mobile
 flutter pub get
+flutter run -d chrome --web-port=49932 --dart-define=FACULTYLINK_API_BASE=http://127.0.0.1:5000
+```
+
+Add `http://127.0.0.1:49932` and `http://localhost:49932` to `CORS_ORIGINS` in `backend/.env` (keep the existing allowlist entries; do not use `*`).
+
+**Android / emulator:**
+
+```powershell
 flutter run --dart-define=FACULTYLINK_API_BASE=http://127.0.0.1:5000
 ```
 

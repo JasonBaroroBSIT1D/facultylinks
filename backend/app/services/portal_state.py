@@ -11,7 +11,9 @@ from app.models import (
     User,
     UserRole,
 )
-from app.services.catalog import filter_config_for_non_admin, get_published_catalog_and_weights
+from app.services.catalog import filter_config_for_non_admin, get_catalog_for_assessment, get_published_catalog_and_weights
+from app.services.portal_document_enrichment import enrich_portal_documents
+from app.services.review_queue import compute_review_queue
 from app.services.scoring_engine import compute_faculty_scores
 from app.services.settings_store import (
     ASSESSMENT_CONFIG_KEY,
@@ -84,9 +86,8 @@ def _users_by_id(user_ids: set[int]) -> dict[int, User]:
     return {u.id: u for u in rows}
 
 
-def build_assessments_map(faculty_users: list[User], faculty_ids: list[int]) -> dict:
+def build_assessments_map(faculty_users: list[User], faculty_ids: list[int], *, include_score_summary: bool = True) -> dict:
     out = {}
-    catalog, weights = get_published_catalog_and_weights()
     if not faculty_ids:
         return out
     rows = FacultyAssessment.query.filter(FacultyAssessment.user_id.in_(faculty_ids)).all()
@@ -99,8 +100,10 @@ def build_assessments_map(faculty_users: list[User], faculty_ids: list[int]) -> 
         row = by_uid.get(uid)
         data = row.data if row else {"setSef": {"SET": [], "SEF": []}, "entries": {}}
         payload = {**data}
-        if catalog and weights:
-            payload["scoreSummary"] = compute_faculty_scores(data, catalog, weights)
+        if include_score_summary:
+            catalog, weights = get_catalog_for_assessment(data)
+            if catalog and weights:
+                payload["scoreSummary"] = compute_faculty_scores(data, catalog, weights, faculty_user_id=uid)
         out[u.portal_id()] = payload
     return out
 
@@ -160,14 +163,20 @@ def build_portal_state(user: User, *, lite: bool = False) -> dict:
     doc_owner_ids = {d.owner_user_id for d in doc_rows}
     owners = _users_by_id(doc_owner_ids)
 
-    documents = []
+    documents_raw = []
     for d in doc_rows:
         owner = owners.get(d.owner_user_id)
         if owner:
-            documents.append(d.to_portal_dict(owner.portal_id()))
+            documents_raw.append(d.to_portal_dict(owner.portal_id()))
 
     assessment_faculty = faculty_users if user.role == UserRole.admin else [u for u in faculty_users if u.id in owner_ids]
-    assessments = build_assessments_map(assessment_faculty, list(owner_ids) if user.role != UserRole.admin else [u.id for u in faculty_users])
+    assessments = build_assessments_map(
+        assessment_faculty,
+        list(owner_ids) if user.role != UserRole.admin else [u.id for u in faculty_users],
+        include_score_summary=not lite,
+    )
+
+    documents = enrich_portal_documents(documents_raw, assessments)
 
     if user.role == UserRole.faculty:
         notif_rows = (
@@ -208,8 +217,14 @@ def build_portal_state(user: User, *, lite: bool = False) -> dict:
     ]
 
     config_draft = None if lite else _config_draft_for_client(assessment_meta, catalog_draft_row)
-    catalog_out = None if lite else catalog_published
-    institution_out = institution_config if not lite or institution_config else None
+    # Reviewers need the published catalog on lite bootstrap (Check Documents) without a second full fetch.
+    catalog_out = catalog_published
+    institution_out = institution_config
+
+    review_queue = compute_review_queue(
+        reviewer_user_id=user.id if user.role == UserRole.reviewer else None,
+        admin=user.role == UserRole.admin,
+    )
 
     return {
         "user": user.to_public_dict(),
@@ -225,6 +240,7 @@ def build_portal_state(user: User, *, lite: bool = False) -> dict:
         "assessmentConfig": _slim_assessment_meta(assessment_meta),
         "configPublished": catalog_published.get("version") if isinstance(catalog_published, dict) else None,
         "configLite": lite,
+        "reviewQueue": review_queue,
     }
 
 

@@ -2,6 +2,7 @@ from app.extensions import db
 from app.models import ActivityLog
 
 
-def log_activity(actor_email: str, text: str) -> None:
+def log_activity(actor_email: str, text: str, *, commit: bool = True) -> None:
     db.session.add(ActivityLog(actor_email=actor_email, text=text))
-    db.session.commit()
+    if commit:
+        db.session.commit()

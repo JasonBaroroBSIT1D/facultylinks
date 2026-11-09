@@ -88,12 +88,19 @@ class _SimulationUpperSection extends StatelessWidget {
   Widget build(BuildContext context) {
     final snapshot = SimulationEngine.compute(repo, whatIf: whatIf);
     final target = SimulationEngine.nextRankOption(institutionConfig, repo.profile.rank);
-    final eval = SimulationEngine.evaluateTarget(
-      cfg: institutionConfig,
-      targetRank: target,
-      weightedTotal: snapshot.weightedTotal,
+    final eval = snapshot.usesRankTableWeights
+        ? SimulationEngine.evaluateFromSnapshot(snapshot)
+        : SimulationEngine.evaluateTarget(
+            cfg: institutionConfig,
+            targetRank: target,
+            weightedTotal: snapshot.weightedTotal,
+            scoringAuthoritative: snapshot.scoringAuthoritative,
+          );
+    final potential = SimulationPresenter.potentialRankLabel(
+      eval,
+      institutionConfig,
+      usesRankTable: snapshot.usesRankTableWeights,
     );
-    final potential = SimulationPresenter.potentialRankLabel(eval, institutionConfig);
     final rulesNote = SimulationPresenter.rankRulesNotice(institutionConfig);
     final scale = MediaQuery.textScalerOf(context);
     final width = MediaQuery.sizeOf(context).width;

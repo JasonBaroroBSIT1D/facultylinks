@@ -14,6 +14,10 @@ def load_backend_env() -> None:
     load_dotenv(_ENV_FILE, override=True)
 
 
+def apply_ocr_config_from_env(app) -> None:
+    app.config["TESSERACT_CMD"] = os.environ.get("TESSERACT_CMD", "").strip() or None
+
+
 def apply_mail_config_from_env(app) -> None:
     """Refresh SMTP settings on the running app from os.environ (after load_dotenv)."""
     app.config["SMTP_HOST"] = os.environ.get("SMTP_HOST", "").strip() or None
@@ -107,6 +111,9 @@ class Config:
     MAIL_FROM_NAME = os.environ.get("MAIL_FROM_NAME", "FacultyLink").strip()
 
     RECOVERY_HMAC_SECRET = os.environ.get("RECOVERY_HMAC_SECRET", "").strip() or None
+
+    # Windows: C:\Program Files\Tesseract-OCR\tesseract.exe when not on PATH
+    TESSERACT_CMD = os.environ.get("TESSERACT_CMD", "").strip() or None
 
 
 class DevelopmentConfig(Config):

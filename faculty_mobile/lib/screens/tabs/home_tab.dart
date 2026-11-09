@@ -22,7 +22,7 @@ class HomeTab extends StatelessWidget {
   final MockRepository repo;
   final InstitutionConfig institutionConfig;
   final WhatIfScenario whatIf;
-  final VoidCallback onRefresh;
+  final Future<void> Function() onRefresh;
   final VoidCallback onOpenSimulation;
   final VoidCallback onOpenNotifications;
 

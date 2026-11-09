@@ -1,4 +1,12 @@
-import { ASSESSMENT_CATALOG, KRA_WEIGHTS, SOURCE_CIRCULAR } from '../core/assessment-definitions.js';
+import {
+  ASSESSMENT_CATALOG,
+  DEFAULT_SPECIAL_STATUS_CATEGORIES,
+  KRA_WEIGHTS,
+  SET_SEF_DOCUMENT_INTAKE_ALIASES,
+  SOURCE_CIRCULAR,
+  isDocumentIntakeIndicator,
+  isSupportingEvidenceIndicator,
+} from '../core/assessment-definitions.js';
 
 const SOURCE_SEED_TAG = 'dbm-jc3-workbook-seed';
 
@@ -27,6 +35,71 @@ function normalizeIndicator(ind) {
 }
 
 function inferCalculation(ind) {
+  if (isSupportingEvidenceIndicator(ind)) return { kind: 'supporting_evidence' };
+  if (ind.calculation?.kind === 'supporting_evidence') return ind.calculation;
+  if (ind.id === 'kra-III-D-1' && (!ind.calculation || ind.calculation.kind === 'pending')) {
+    return {
+      kind: 'designation_matrix',
+      levelField: 'designationLevel',
+      roleField: 'designationRole',
+      matrix: {
+        institutional: {
+          president: 20,
+          vice_president: 15,
+          chancellor: 10,
+          vice_chancellor: 8,
+          campus_director: 8,
+          faculty_trustee: 8,
+          office_director: 6,
+          university_secretary: 6,
+          project_head: 4,
+          inst_committee_chair: 3,
+          inst_committee_member: 2,
+          inst_coordinator: 2,
+        },
+        college_department: {
+          dean: 6,
+          associate_dean: 5,
+          college_secretary: 3,
+          department_head: 4,
+          program_chair: 3,
+          dept_committee_chair: 2,
+          dept_committee_member: 1,
+          dept_coordinator: 1,
+        },
+      },
+    };
+  }
+  if (ind.id === 'kra-III-C-1' && ind.calculation?.kind === 'pending') {
+    return {
+      kind: 'pending',
+      requiresLinkedAchievement: { indicatorId: 'kra-III-B-2-1', linkField: 'linkedIsrProjectId' },
+    };
+  }
+  if (ind.id === 'kra-IV-B-2' && (!ind.calculation || ind.calculation.kind === 'structured_points')) {
+    return {
+      kind: 'tiered_option',
+      tierField: 'attendanceScope',
+      options: { local: 1, international: 2 },
+      aggregateCap: 10,
+    };
+  }
+  if (ind.id === 'kra-IV-D-1' && (!ind.calculation || ind.calculation.kind === 'structured_points')) {
+    return {
+      kind: 'yearly_rate',
+      roleField: 'academicServiceRole',
+      yearsField: 'serviceYears',
+      requiresNewlyAppointed: true,
+      newlyAppointedField: 'newlyAppointedEligible',
+      fractionalYearPolicy: 'unresolved',
+      rates: {
+        president: 5,
+        vp_dean_director: 4,
+        dept_program_head: 3,
+        faculty_member: 2,
+      },
+    };
+  }
   if (ind.calculation) return ind.calculation;
   if (ind.type === 'set_sef') {
     return {
@@ -34,10 +107,64 @@ function inferCalculation(ind) {
       subType: ind.subType,
       factor: ind.subType === 'SET' ? 0.36 : 0.24,
       semesterCount: 6,
+      policy: 'average_available_max_six',
     };
   }
   if (ind.matrix) return { kind: 'role_matrix', matrix: ind.matrix };
-  if (ind.points && typeof ind.points === 'object') return { kind: 'structured_points', points: ind.points };
+  if (ind.points && typeof ind.points === 'object') {
+    const keys = Object.keys(ind.points);
+    const patentKeys = keys.filter((k) => ['A', 'P', 'G'].includes(String(k).toUpperCase()));
+    if (patentKeys.length && patentKeys.length === keys.length) {
+      const stages = {};
+      for (const k of keys) stages[String(k).toUpperCase()] = ind.points[k];
+      return { kind: 'patent_stage', stages, notCumulative: true };
+    }
+    if (ind.id === 'kra-III-B-1-5' && ind.points?.local === 2 && ind.points?.international === 3) {
+      return {
+        kind: 'hourly_tier',
+        rates: { local: 2, international: 3 },
+        tierField: 'serviceScope',
+        hoursField: 'hours',
+      };
+    }
+    if (keys.includes('researchAward') || keys.includes('academicCompetition')) {
+      return {
+        kind: 'tiered_option',
+        options: {
+          research_award: ind.points.researchAward ?? ind.points.research_award,
+          academic_competition: ind.points.academicCompetition ?? ind.points.academic_competition,
+        },
+        tierField: 'judgeServiceType',
+      };
+    }
+    if (keys.includes('lead') && keys.includes('participant')) {
+      return {
+        kind: 'tiered_option',
+        options: { lead: ind.points.lead, participant: ind.points.participant },
+        tierField: 'extensionRole',
+        aggregateCap: ind.aggregateCap ?? ind.calculation?.aggregateCap,
+      };
+    }
+    if (keys.some((k) => ['local', 'international'].includes(k))) {
+      const tierField =
+        ind.id?.endsWith('B-1-1') || ind.id?.endsWith('B-1-3') ? 'serviceScope' : ind.calculation?.tierField;
+      return {
+        kind: 'tiered_option',
+        options: ind.points,
+        tierField: tierField || 'serviceScope',
+        tierCaps: ind.calculation?.tierCaps,
+      };
+    }
+    if (keys.some((k) => ['local', 'international', 'new', 'updated'].includes(k))) {
+      return {
+        kind: 'tiered_option',
+        options: ind.points,
+        tierField: ind.calculation?.tierField,
+        tierCaps: ind.calculation?.tierCaps,
+      };
+    }
+    return { kind: 'structured_points', points: ind.points };
+  }
   if (ind.pointRule === 'pending' || ind.pointRule === 'pending_external') return { kind: 'pending' };
   if (ind.maxPoints != null) return { kind: 'fixed_per_entry', maxPoints: ind.maxPoints, perService: ind.perService ?? null };
   return { kind: 'pending' };
@@ -56,13 +183,49 @@ export function buildSeedCatalog() {
   return catalog;
 }
 
+function ensureDocumentIntakeAliases(catalog, report) {
+  if (!catalog || typeof catalog !== 'object') return;
+  if (!Array.isArray(catalog.documentIntakeAliases)) catalog.documentIntakeAliases = [];
+  const existing = new Set(catalog.documentIntakeAliases.map((a) => a.id));
+  for (const alias of SET_SEF_DOCUMENT_INTAKE_ALIASES) {
+    if (existing.has(alias.id)) continue;
+    catalog.documentIntakeAliases.push(deepClone(alias));
+    report.push(`intake ${alias.id}`);
+  }
+}
+
+function shouldUpgradeIndicatorCalculation(existingInd, seedInd) {
+  const seed = seedInd.calculation?.kind;
+  if (!seed || seed === 'pending') return false;
+  const ex = existingInd.calculation?.kind;
+  if (!ex) return true;
+  if (ex === 'structured_points' && (seed === 'patent_stage' || seed === 'tiered_option' || seed === 'hourly_tier')) return true;
+  if (ex === 'structured_points' && seedInd.id?.startsWith('kra-III-B-')) return true;
+  if (ex === 'structured_points' && seedInd.id?.startsWith('kra-IV-')) return true;
+  if (ex === 'fixed_per_entry' && seedInd.id?.startsWith('kra-IV-B-3-') && seed === 'fixed_per_entry') {
+    return !seedInd.calculation?.aggregateGroup;
+  }
+  if (ex === 'pending' && seedInd.id === 'kra-III-D-1' && seed === 'designation_matrix') return true;
+  if (ex === 'pending' && seedInd.id === 'kra-III-C-1' && seed === 'pending' && seedInd.calculation?.requiresLinkedAchievement) {
+    return true;
+  }
+  if (ex === 'pending' && seed !== 'pending') return true;
+  return false;
+}
+
 function mergeIndicators(existingCrit, seedCrit, report) {
   if (!Array.isArray(existingCrit.indicators)) existingCrit.indicators = [];
   for (const seedInd of seedCrit.indicators || []) {
+    if (existingCrit.id === 'kra-I-A' && isDocumentIntakeIndicator(seedInd)) continue;
     const ex = existingCrit.indicators.find((i) => i.id === seedInd.id);
     if (!ex) {
       existingCrit.indicators.push(deepClone(normalizeIndicator(seedInd)));
       report.push(`indicator ${seedInd.id}`);
+    } else if (shouldUpgradeIndicatorCalculation(ex, seedInd)) {
+      const normalized = normalizeIndicator(seedInd);
+      ex.calculation = deepClone(normalized.calculation);
+      if (seedInd.sourceRef && !ex.sourceRef) ex.sourceRef = seedInd.sourceRef;
+      report.push(`calculation ${seedInd.id}`);
     }
   }
 }
@@ -104,12 +267,64 @@ export function mergeWorkbookReferenceIntoCatalog(catalog, report = []) {
     } else {
       if (!ex.name) ex.name = seedKra.name;
       if (ex.maxPoints == null && seedKra.maxPoints != null) ex.maxPoints = seedKra.maxPoints;
+      if (!ex.scoringPolicy && seedKra.scoringPolicy) {
+        ex.scoringPolicy = deepClone(seedKra.scoringPolicy);
+        report.push(`scoringPolicy ${seedKra.id}`);
+      }
       mergeCriteria(ex, seedKra, report);
     }
   }
   if (!catalog.version) catalog.version = seed.version;
   if (!catalog.source) catalog.source = seed.source;
+  ensureDocumentIntakeAliases(catalog, report);
+  if (reconcileSupportingEvidenceIndicators(catalog)) {
+    report.push('reconcile kra-I-A-special supporting evidence');
+  }
   return { catalog, report, changed: report.length > 0 };
+}
+
+/** Upgrade legacy “pending” special-status rows without overwriting admin edits. */
+export function reconcileSupportingEvidenceIndicator(ind) {
+  if (!ind || ind.id !== 'kra-I-A-special') return false;
+  let changed = false;
+  if (ind.role !== 'supporting_evidence') {
+    ind.role = 'supporting_evidence';
+    changed = true;
+  }
+  const kind = ind.calculation?.kind;
+  if (kind === 'pending' || ind.pointRule === 'pending' || ind.pointRule === 'pending_external' || !kind) {
+    ind.calculation = { kind: 'supporting_evidence' };
+    delete ind.pointRule;
+    ind.maxPoints = null;
+    changed = true;
+  }
+  if (!Array.isArray(ind.specialStatusCategories) || !ind.specialStatusCategories.length) {
+    ind.specialStatusCategories = [...DEFAULT_SPECIAL_STATUS_CATEGORIES];
+    changed = true;
+  }
+  if (Array.isArray(ind.conditions) && ind.conditions.some((c) => /pending configuration/i.test(c))) {
+    ind.conditions = ind.conditions.filter((c) => !/pending configuration/i.test(c));
+    if (!ind.conditions.length) {
+      ind.conditions = [
+        'Select the category that applies and upload supporting documents per Enhanced Guidelines.',
+        'Reviewer confirms status and remarks; no automatic points or SET/SEF exemptions.',
+      ];
+    }
+    changed = true;
+  }
+  return changed;
+}
+
+export function reconcileSupportingEvidenceIndicators(catalog) {
+  let changed = false;
+  for (const kra of catalog?.kras || []) {
+    for (const crit of kra.criteria || []) {
+      for (const ind of crit.indicators || []) {
+        if (reconcileSupportingEvidenceIndicator(ind)) changed = true;
+      }
+    }
+  }
+  return changed;
 }
 
 export function countOfficialKrasWithContent(catalog) {
@@ -288,25 +503,80 @@ export const ConfigRepository = {
       const pinned = store.assessments?.[facultyId]?.configVersionId;
       if (pinned) {
         const v = this.getVersion(store, pinned);
-        if (v) return { catalog: v.catalog, kraWeights: v.kraWeights, versionId: v.id, pinned: true };
+        if (v) {
+          if (v.catalog?.kras?.length) {
+            return {
+              catalog: v.catalog,
+              kraWeights: v.kraWeights || {},
+              versionId: v.id,
+              pinned: true,
+              state: 'ok',
+            };
+          }
+          return {
+            catalog: null,
+            kraWeights: v.kraWeights || {},
+            versionId: v.id,
+            pinned: true,
+            state: 'catalog_not_loaded',
+          };
+        }
       }
     }
 
     if (usePreview) {
       const draft = this.getDraft(store);
-      if (draft) return { catalog: draft.catalog, kraWeights: draft.kraWeights, versionId: draft.id, pinned: false, preview: true };
+      if (draft?.catalog?.kras?.length) {
+        return {
+          catalog: draft.catalog,
+          kraWeights: draft.kraWeights || {},
+          versionId: draft.id,
+          pinned: false,
+          preview: true,
+          state: 'ok',
+        };
+      }
+      if (draft) {
+        return {
+          catalog: null,
+          kraWeights: draft.kraWeights || {},
+          versionId: draft.id,
+          pinned: false,
+          preview: true,
+          state: 'catalog_not_loaded',
+        };
+      }
     }
 
     const pub = this.getActivePublished(store);
     if (!pub) {
-      return { catalog: { kras: [] }, kraWeights: {}, versionId: null, pinned: false };
+      return { catalog: null, kraWeights: {}, versionId: null, pinned: false, state: 'no_published' };
     }
-    return { catalog: pub.catalog, kraWeights: pub.kraWeights, versionId: pub.id, pinned: false };
+    if (!pub.catalog?.kras?.length) {
+      return {
+        catalog: null,
+        kraWeights: pub.kraWeights || {},
+        versionId: pub.id,
+        pinned: false,
+        state: 'catalog_not_loaded',
+      };
+    }
+    return {
+      catalog: pub.catalog,
+      kraWeights: pub.kraWeights || {},
+      versionId: pub.id,
+      pinned: false,
+      state: 'ok',
+    };
   },
 
   forkDraftFromActive(store, actor) {
     const ctx = this.loadContext(store);
-    if (ctx.draftId) return this.getDraft(store);
+    const existingDraft = ctx.draftId ? this.getDraft(store) : null;
+    if (existingDraft) return existingDraft;
+    if (ctx.draftId && !existingDraft) {
+      ctx.draftId = null;
+    }
     const active = this.getActivePublished(store);
     if (!active) return this.initializeDraftFromReference(store, actor);
     const draft = {
@@ -368,11 +638,6 @@ export const ConfigRepository = {
     ctx.previewDraft = false;
     store.configPublished = draft.label;
 
-  if (!store.assessments) store.assessments = {};
-  Object.keys(store.assessments).forEach((fid) => {
-    if (!store.assessments[fid].configVersionId) store.assessments[fid].configVersionId = prev?.id || draft.id;
-  });
-
     return draft;
   },
 
@@ -394,6 +659,12 @@ export function findIndicatorInCatalog(catalog, indicatorId) {
       const ind = crit.indicators.find((i) => i.id === indicatorId);
       if (ind) return { kra, crit, ind };
     }
+  }
+  const alias = (catalog.documentIntakeAliases || []).find((a) => a.id === indicatorId);
+  if (alias) {
+    const kra = catalog.kras.find((k) => k.id === (alias.kraId || 'kra-I'));
+    const crit = kra?.criteria?.find((c) => c.id === (alias.criterionId || 'kra-I-A'));
+    if (kra && crit) return { kra, crit, ind: alias, intakeOnly: true };
   }
   return null;
 }

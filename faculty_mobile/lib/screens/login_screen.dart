@@ -27,6 +27,8 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _submit() async {
+    if (_loading) return;
+
     final em = _email.text.trim();
     if (em.isEmpty || _password.text.isEmpty) {
       setState(() => _error = 'Email address and password are required.');
@@ -40,19 +42,20 @@ class _LoginScreenState extends State<LoginScreen> {
       _loading = true;
       _error = null;
     });
-    final ok = await AuthRepository.login(_email.text, _password.text);
-    if (!ok) {
+    try {
+      final result = await AuthRepository.login(_email.text, _password.text);
       if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = 'Invalid email or password.';
-      });
-      return;
+      if (!result.success) {
+        setState(() => _error = result.errorMessage ?? 'Invalid email or password.');
+        return;
+      }
+      Navigator.pushReplacementNamed(
+        context,
+        result.mustChangePassword ? '/change-password' : '/home',
+      );
+    } finally {
+      if (mounted) setState(() => _loading = false);
     }
-    if (!mounted) return;
-    final mustChange = await AuthRepository.mustChangePassword();
-    if (!mounted) return;
-    Navigator.pushReplacementNamed(context, mustChange ? '/change-password' : '/home');
   }
 
   @override

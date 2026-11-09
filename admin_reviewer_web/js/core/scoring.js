@@ -1,4 +1,4 @@
-import { ASSESSMENT_CATALOG, KRA_WEIGHTS } from './assessment-definitions.js';
+import { ASSESSMENT_CATALOG, KRA_WEIGHTS, isSupportingEvidenceIndicator } from './assessment-definitions.js';
 import { findIndicatorInCatalog } from '../repositories/config-repository.js';
 
 export function computeSetSefPoints(ratings, type, factorOverride = null) {
@@ -38,6 +38,7 @@ export function estimateEntryPoints(indicatorId, entry, catalog = ASSESSMENT_CAT
   if (!found) return 0;
   const { ind } = found;
 
+  if (isSupportingEvidenceIndicator(ind)) return 0;
   if (ind.type === 'set_sef' && entry.rating != null) return 0;
 
   const calc = ind.calculation || {};
@@ -93,13 +94,18 @@ export function computeKraSummaries(state, catalog = ASSESSMENT_CATALOG, kraWeig
         const sefFactor = sefInd?.calculation?.factor ?? 0.24;
         const setPts = computeSetSefPoints(setRatings, 'SET', setFactor).raw;
         const sefPts = computeSetSefPoints(sefRatings, 'SEF', sefFactor).raw;
-        critSum = capPoints(setPts + sefPts, critCap);
+        const hasSet = setRatings.some((r) => r != null && !Number.isNaN(r));
+        const hasSef = sefRatings.some((r) => r != null && !Number.isNaN(r));
+        if (hasSet && hasSef) critSum = capPoints(setPts + sefPts, critCap);
+        else if (hasSet) critSum = capPoints(setPts, critCap);
+        else if (hasSef) critSum = capPoints(sefPts, critCap);
         criterionTotals.push({ id: crit.id, raw: critSum, teachingEffectiveness: computeTeachingEffectiveness(setPts, sefPts, critCap) });
       } else {
         for (const ind of crit.indicators) {
           const entries = state.entries?.[ind.id] || [];
           let indSum = 0;
           if (ind.type === 'set_sef') continue;
+          if (isSupportingEvidenceIndicator(ind)) continue;
           for (const e of entries) {
             const est = e.reviewerVerifiedPoints ?? e.estimatedPoints ?? estimateEntryPoints(ind.id, e, catalog);
             indSum += est;

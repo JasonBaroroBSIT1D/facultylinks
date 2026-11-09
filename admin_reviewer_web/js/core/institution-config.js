@@ -2,6 +2,7 @@ import {
   computeEvaluationPeriodStatus,
   reviewerAvailabilityDetail,
 } from './evaluation-period-service.js';
+import { DEFAULT_RANK_LADDER, DEFAULT_RANK_SIMULATION } from './rank-simulation-config.js';
 
 /** Institution simulation & evaluation period settings (demo web localStorage; mobile uses matching local demo). */
 
@@ -12,20 +13,8 @@ export const DEFAULT_INSTITUTION_CONFIG = () => ({
     reviewerAvailableFrom: '2026-02-01',
   },
   /** Rank labels for selectors only; thresholds set in rankRequirements by admin. */
-  rankOptions: [
-    'Instructor I',
-    'Instructor II',
-    'Instructor III',
-    'Assistant Professor I',
-    'Assistant Professor II',
-    'Assistant Professor III',
-    'Associate Professor I',
-    'Associate Professor II',
-    'Associate Professor III',
-    'Professor I',
-    'Professor II',
-    'Professor III',
-  ],
+  rankOptions: DEFAULT_RANK_LADDER(),
+  rankSimulation: DEFAULT_RANK_SIMULATION(),
   /**
    * targetRank -> { minWeightedTotal?: number, notes?: string }
    * Empty until configured — no invented NBC thresholds.

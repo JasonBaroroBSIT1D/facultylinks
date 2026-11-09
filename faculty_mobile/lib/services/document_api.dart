@@ -7,6 +7,53 @@ import '../core/api_config.dart';
 import 'api_client.dart';
 
 class DocumentApi {
+  /// POST `/api/documents` returns `{ "document": { "id": "<public_uuid>", ... } }`.
+  /// The `id` field is the canonical public identifier (not the internal numeric row id).
+  static String? publicIdFromUploadResponse(Map<String, dynamic> body) {
+    final nested = body['document'];
+    if (nested is Map) {
+      final fromDoc = nested['publicId'] ?? nested['id'];
+      if (fromDoc != null) {
+        final s = fromDoc.toString().trim();
+        if (s.isNotEmpty && _isPublicDocumentId(s)) return s;
+      }
+    }
+    final top = body['publicId'] ?? body['id'];
+    if (top != null) {
+      final s = top.toString().trim();
+      if (s.isNotEmpty && _isPublicDocumentId(s)) return s;
+    }
+    return null;
+  }
+
+  static bool _isPublicDocumentId(String id) {
+    if (RegExp(r'^\d{1,9}$').hasMatch(id)) return false;
+    return true;
+  }
+
+  /// After a successful upload with a missing id in the response, match an already-stored file.
+  static Future<String?> reconcileStoredUpload({
+    required String filename,
+    required String indicatorId,
+    required int sizeBytes,
+  }) async {
+    final docs = await listMine();
+    for (final d in docs) {
+      final name = (d['fileName'] ?? d['filename'])?.toString();
+      if (name != filename) continue;
+      if ((d['indicatorId']?.toString() ?? '') != indicatorId) continue;
+      final size = (d['sizeBytes'] as num?)?.toInt();
+      if (size != null && size != sizeBytes) continue;
+      final status = d['uploadStatus']?.toString() ?? 'stored';
+      if (status != 'stored' && status != 'pending') continue;
+      final id = d['publicId'] ?? d['id'];
+      if (id == null) continue;
+      final s = id.toString().trim();
+      if (s.isNotEmpty && _isPublicDocumentId(s)) return s;
+    }
+    return null;
+  }
+
   static Future<List<Map<String, dynamic>>> listMine() async {
     final res = await ApiClient.get('/api/documents');
     if (res.statusCode != 200) {

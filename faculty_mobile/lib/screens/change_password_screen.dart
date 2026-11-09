@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 
 import '../repositories/auth_repository.dart';
 import '../services/api_client.dart';
-import '../theme/app_spacing.dart';
 import '../theme/app_theme.dart';
 import '../widgets/auth_branding.dart';
 
@@ -108,7 +107,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: FlSpacing.md),
+              const SizedBox(height: 16),
               TextField(
                 controller: _confirm,
                 obscureText: _obscure2,

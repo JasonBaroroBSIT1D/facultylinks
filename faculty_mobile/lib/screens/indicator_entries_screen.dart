@@ -7,7 +7,7 @@ class IndicatorEntriesScreen extends StatefulWidget {
   final MockRepository repo;
   final IndicatorNode indicator;
   final String kraId;
-  final VoidCallback onSave;
+  final Future<void> Function() onSave;
   const IndicatorEntriesScreen({super.key, required this.repo, required this.indicator, required this.kraId, required this.onSave});
 
   @override
@@ -61,13 +61,13 @@ class _IndicatorEntriesScreenState extends State<IndicatorEntriesScreen> {
     setState(() => items.add(entry));
     widget.repo.entries.add(entry);
     await widget.repo.save();
-    widget.onSave();
+    await widget.onSave();
   }
 
   Future<void> _submit(AssessmentEntry e) async {
     e.reviewStatus = 'submitted';
     await widget.repo.save();
-    widget.onSave();
+    await widget.onSave();
     setState(() {});
     if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Submitted for demonstration review')));
   }

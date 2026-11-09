@@ -48,6 +48,94 @@ def portal_state():
         return jsonify({"error": "Failed to load portal state."}), 500
 
 
+@bp.get("/api/portal/faculty/<faculty_portal_id>/teaching-effectiveness/criterion-a")
+@require_roles(UserRole.admin, UserRole.reviewer)
+def portal_faculty_criterion_a(faculty_portal_id: str):
+    from app.services.set_sef_aggregation import aggregate_set_sef_for_faculty, merged_slots_to_scoring_records
+    from app.services.teaching_effectiveness import compute_criterion_a_from_records
+
+    actor = current_user()
+    uid = parse_portal_user_id(faculty_portal_id)
+    if not uid:
+        return jsonify({"error": "Invalid faculty id."}), 400
+    faculty = User.query.filter_by(id=uid, role=UserRole.faculty).first()
+    if not faculty:
+        return jsonify({"error": "Not found."}), 404
+    if actor.role == UserRole.reviewer:
+        assigned = ReviewerAssignment.query.filter_by(
+            reviewer_user_id=actor.id, faculty_user_id=faculty.id
+        ).first()
+        if not assigned:
+            return jsonify({"error": "Forbidden."}), 403
+
+    from app.services.set_sef_aggregation import MAX_SEMESTER_SLOTS, apply_semester_slot_window
+
+    from app.models import FacultyAssessment
+    from app.services.catalog import get_catalog_for_assessment, scoring_window_semester_keys
+
+    assess_row = FacultyAssessment.query.get(faculty.id)
+    assessment_data = assess_row.data if assess_row else {}
+
+    slots, docs, conflicts = aggregate_set_sef_for_faculty(faculty.id)
+    selected = scoring_window_semester_keys(assessment_data)
+    scoring_slots, excluded_slots, window_findings, window_needs_selection = apply_semester_slot_window(
+        slots, selected_semester_keys=selected
+    )
+    window_blocked = bool(window_findings) and not window_needs_selection
+    if not docs:
+        return jsonify(
+            {
+                "documents": [],
+                "mergedSemesters": [],
+                "scoring": None,
+                "aggregationConflicts": [],
+                "message": "No SET/SEF PDF uploads yet (combined, SET-only, or SEF-only).",
+            }
+        )
+    config_version = docs[0].config_version if docs else None
+    catalog, _weights = get_catalog_for_assessment(assessment_data)
+    pinned_version = assessment_data.get("configVersionId")
+    proxy_records = merged_slots_to_scoring_records(scoring_slots, conflicts)
+    window_msg = window_findings[0]["message"] if window_findings else None
+    est = compute_criterion_a_from_records(
+        proxy_records,
+        verified_only=False,
+        config_version=pinned_version or config_version,
+        catalog=catalog,
+        slot_window_blocked=window_blocked,
+        window_needs_selection=window_needs_selection,
+        window_message=window_msg,
+    )
+    ver = compute_criterion_a_from_records(
+        proxy_records,
+        verified_only=True,
+        config_version=pinned_version or config_version,
+        catalog=catalog,
+        slot_window_blocked=window_blocked,
+        window_needs_selection=window_needs_selection,
+        window_message=window_msg,
+    )
+    return jsonify(
+        {
+            "documents": [d.to_dict() for d in docs],
+            "mergedSemesters": [s.to_dict() for s in slots],
+            "scoringSlots": [s.to_dict() for s in scoring_slots],
+            "excludedSemesterSlots": [s.to_dict() for s in excluded_slots],
+            "slotWindowFindings": window_findings,
+            "aggregationConflicts": [
+                {
+                    "semesterKey": c.semester_key,
+                    "field": c.field,
+                    "documentIds": c.document_ids,
+                    "explanation": c.explanation,
+                }
+                for c in conflicts
+            ],
+            "scoring": {"estimated": est, "verified": ver},
+        }
+    )
+
+
 @bp.post("/api/admin/faculty")
 @require_roles(UserRole.admin)
 def create_faculty():
@@ -268,6 +356,13 @@ def set_assignments(portal_id: str):
 def put_institution():
     actor = current_user()
     data = request.get_json(silent=True) or {}
+    rs = data.get("rankSimulation")
+    if isinstance(rs, dict):
+        from app.services.rank_simulation import validate_rank_simulation_config
+
+        errs = validate_rank_simulation_config(rs)
+        if errs:
+            return jsonify({"error": "Invalid rank simulation settings.", "details": errs}), 400
     set_json(INSTITUTION_KEY, data)
     log_activity(actor.email, "Updated evaluation period settings")
     return jsonify({"ok": True, "institutionConfig": data})
@@ -354,7 +449,14 @@ def publish_catalog():
     version = catalog.get("version") or f"v-{datetime.now(timezone.utc).strftime('%Y%m%d')}"
     meta["activePublishedId"] = version
     versions = meta.get("versions") or []
-    versions.append({"id": version, "publishedAt": datetime.now(timezone.utc).isoformat(), "catalog": catalog})
+    versions.append(
+        {
+            "id": version,
+            "status": "published",
+            "publishedAt": datetime.now(timezone.utc).isoformat(),
+            "catalog": catalog,
+        }
+    )
     meta["versions"] = versions[-20:]
     set_json(ASSESSMENT_CONFIG_KEY, meta)
     set_json(CATALOG_DRAFT_KEY, None)
@@ -362,9 +464,21 @@ def publish_catalog():
     return jsonify({"ok": True, "version": version})
 
 
+def _document_review_stats(owner_user_id: int) -> dict:
+    stats = {"pending": 0, "approved": 0, "rejected": 0, "correction_requested": 0}
+    rows = Document.query.filter_by(owner_user_id=owner_user_id, upload_status="stored").all()
+    for d in rows:
+        key = d.review_status or "pending"
+        stats[key] = stats.get(key, 0) + 1
+    return stats
+
+
 @bp.patch("/api/documents/<public_id>/review")
 @require_roles(UserRole.admin, UserRole.reviewer)
 def review_document(public_id: str):
+    import time
+
+    t0 = time.perf_counter()
     actor = current_user()
     doc = Document.query.filter_by(public_id=public_id, upload_status="stored").first()
     if not doc:
@@ -382,7 +496,6 @@ def review_document(public_id: str):
     doc.reviewed_by_user_id = actor.id
     doc.reviewed_at = datetime.now(timezone.utc)
     sync_review_to_assessment(doc)
-    db.session.commit()
 
     owner = User.query.get(doc.owner_user_id)
     if owner:
@@ -399,10 +512,19 @@ def review_document(public_id: str):
                 read=False,
             )
         )
-        db.session.commit()
+    db.session.commit()
     log_activity(actor.email, f"{status} document {doc.original_filename}")
     pid = owner.portal_id() if owner else ""
-    return jsonify({"document": doc.to_portal_dict(pid)})
+    stats = _document_review_stats(doc.owner_user_id)
+    elapsed_ms = round((time.perf_counter() - t0) * 1000, 1)
+    return jsonify(
+        {
+            "document": doc.to_portal_dict(pid, reviewer_email=actor.email),
+            "documentStats": stats,
+            "facultyId": pid,
+            "timingMs": {"total": elapsed_ms},
+        }
+    )
 
 
 @bp.patch("/api/admin/faculty/<portal_id>/status")
@@ -421,6 +543,67 @@ def patch_faculty_status(portal_id: str):
     db.session.commit()
     log_activity(actor.email, f"Faculty {'activated' if active else 'deactivated'}: {faculty.full_name}")
     return jsonify({"faculty": faculty.to_faculty_dict(reviewer_id_for(faculty.id))})
+
+
+@bp.post("/api/admin/faculty/<portal_id>/assessment/config-version")
+@require_roles(UserRole.admin)
+def reassign_faculty_config_version(portal_id: str):
+    from app.services.catalog import CatalogValidationError, reassign_assessment_config_version
+
+    actor = current_user()
+    uid = parse_portal_user_id(portal_id)
+    faculty = User.query.filter_by(id=uid, role=UserRole.faculty).first() if uid else None
+    if not faculty:
+        return jsonify({"error": "Not found."}), 404
+    body = request.get_json(silent=True) or {}
+    version_id = (body.get("configVersionId") or "").strip()
+    reason = (body.get("reason") or "").strip()
+    if not version_id:
+        return jsonify({"error": "configVersionId is required."}), 400
+    row = FacultyAssessment.query.get(faculty.id)
+    if not row:
+        row = FacultyAssessment(user_id=faculty.id, data={"setSef": {"SET": [], "SEF": []}, "entries": {}})
+        db.session.add(row)
+    data = row.data or {"setSef": {"SET": [], "SEF": []}, "entries": {}}
+    try:
+        row.data = reassign_assessment_config_version(
+            data, new_version_id=version_id, actor_email=actor.email, reason=reason
+        )
+    except CatalogValidationError as e:
+        return jsonify({"error": str(e)}), 400
+    db.session.commit()
+    log_activity(
+        actor.email,
+        f"Reassigned scoring rules for {faculty.full_name} to {version_id}"
+        + (f" ({reason})" if reason else ""),
+    )
+    return jsonify({"assessment": row.data, "facultyId": faculty.portal_id()})
+
+
+@bp.put("/api/admin/faculty/<portal_id>/assessment/scoring-window")
+@require_roles(UserRole.admin)
+def set_faculty_scoring_window(portal_id: str):
+    from app.services.catalog import CatalogValidationError, set_scoring_window_semester_keys
+
+    actor = current_user()
+    uid = parse_portal_user_id(portal_id)
+    faculty = User.query.filter_by(id=uid, role=UserRole.faculty).first() if uid else None
+    if not faculty:
+        return jsonify({"error": "Not found."}), 404
+    body = request.get_json(silent=True) or {}
+    keys = body.get("semesterKeys") or []
+    row = FacultyAssessment.query.get(faculty.id)
+    if not row:
+        row = FacultyAssessment(user_id=faculty.id, data={"setSef": {"SET": [], "SEF": []}, "entries": {}})
+        db.session.add(row)
+    data = row.data or {"setSef": {"SET": [], "SEF": []}, "entries": {}}
+    try:
+        row.data = set_scoring_window_semester_keys(data, keys, actor_email=actor.email)
+    except CatalogValidationError as e:
+        return jsonify({"error": str(e)}), 400
+    db.session.commit()
+    log_activity(actor.email, f"Updated SET/SEF scoring window for {faculty.full_name} ({len(keys)} semesters)")
+    return jsonify({"assessment": row.data, "facultyId": faculty.portal_id()})
 
 
 @bp.patch("/api/admin/reviewers/<portal_id>/status")

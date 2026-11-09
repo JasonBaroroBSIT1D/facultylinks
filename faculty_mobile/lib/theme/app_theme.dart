@@ -12,6 +12,12 @@ class AppColors {
   static const border = Color(0xFFDFE7F2);
   static const primarySoft = Color(0xFFE6EEF9);
   static const yellowSoft = Color(0xFFFFF8E1);
+  static const greenSoft = Color(0xFFE8F5E9);
+  static const greenText = Color(0xFF1B5E20);
+  static const amberSoft = Color(0xFFFFF3E0);
+  static const amberText = Color(0xFFE65100);
+  static const redSoft = Color(0xFFFFEBEE);
+  static const redText = Color(0xFFC62828);
 
   // Legacy aliases used across the app
   static const textNavy = textMain;

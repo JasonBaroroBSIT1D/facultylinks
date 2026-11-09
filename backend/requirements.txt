@@ -7,3 +7,6 @@ psycopg[binary]>=3.1,<4
 argon2-cffi>=23.1,<26
 supabase>=2.10,<3
 gunicorn>=22.0,<24
+pymupdf>=1.24,<2
+pytesseract>=0.3.10,<0.4
+Pillow>=10.0,<12

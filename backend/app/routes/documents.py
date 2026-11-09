@@ -3,10 +3,19 @@ import uuid
 from flask import Blueprint, current_app, jsonify, request
 
 from app.extensions import db
-from app.models import Document, UserRole
+from app.models import Document, FacultyAssessment, UserRole
 from app.services.auth_context import current_user, faculty_may_access_document, require_roles
 from app.services.assessment_sync import attach_upload_to_assessment, supersede_prior_documents
-from app.services.catalog import CatalogValidationError, get_published_catalog_and_weights, validate_indicator_kra
+from app.services.catalog import (
+    CatalogValidationError,
+    document_kind_for_set_sef_indicator,
+    get_catalog_for_assessment,
+    get_published_catalog_and_weights,
+    is_kra_i_achievement_indicator,
+    is_set_sef_pdf_upload,
+    validate_indicator_kra,
+)
+from app.services.set_sef_processor import enqueue_set_sef_job
 from app.services.storage import (
     StorageNotConfiguredError,
     build_object_key,
@@ -41,7 +50,11 @@ def upload_document():
 
     indicator_id = (request.form.get("indicatorId") or request.form.get("indicator_id") or "").strip() or None
     kra_id = (request.form.get("kraId") or request.form.get("kra_id") or "").strip() or None
-    catalog, _weights = get_published_catalog_and_weights()
+    row = FacultyAssessment.query.get(user.id)
+    assessment_data = row.data if row else {}
+    catalog, _weights = get_catalog_for_assessment(assessment_data)
+    if not catalog:
+        catalog, _weights = get_published_catalog_and_weights()
     if not catalog:
         return jsonify({"error": "Scoring configuration is not published yet."}), 503
     try:
@@ -49,8 +62,12 @@ def upload_document():
     except CatalogValidationError as exc:
         return jsonify({"error": str(exc)}), 400
 
+    is_set_sef_pdf = is_set_sef_pdf_upload(indicator_id, kra_id)
+    if is_set_sef_pdf and mime != "application/pdf":
+        return jsonify({"error": "SET/SEF PDF evidence must be a PDF file."}), 400
+
     est_raw = request.form.get("estimatedPoints")
-    estimated_points = float(est_raw) if est_raw not in (None, "") else None
+    estimated_points = float(est_raw) if est_raw not in (None, "") and not is_set_sef_pdf else None
     title = (request.form.get("title") or "").strip() or None
 
     doc = Document(
@@ -63,17 +80,25 @@ def upload_document():
         upload_status="pending",
         indicator_id=indicator_id,
         kra_id=kra_id,
-        review_status="pending",
+        review_status="evidence" if is_kra_i_achievement_indicator(indicator_id) else "pending",
         estimated_points=estimated_points,
+        document_kind=document_kind_for_set_sef_indicator(indicator_id or "") if is_set_sef_pdf else None,
+        ocr_status="pending" if is_set_sef_pdf else "none",
+        processing_status="queued" if is_set_sef_pdf else "none",
     )
     db.session.add(doc)
     db.session.flush()
-    supersede_prior_documents(user.id, indicator_id, doc.public_id)
+    achievement_evidence = is_kra_i_achievement_indicator(indicator_id)
+    if not achievement_evidence:
+        supersede_prior_documents(user.id, indicator_id, doc.public_id)
 
     try:
         upload_private_file(key=doc.object_key, stream=f.stream, mime_type=mime, size=size)
         doc.upload_status = "stored"
-        attach_upload_to_assessment(doc, title=title, estimated_points=estimated_points)
+        if not achievement_evidence:
+            attach_upload_to_assessment(doc, title=title, estimated_points=estimated_points)
+        if is_set_sef_pdf:
+            enqueue_set_sef_job(doc)
         db.session.commit()
     except StorageNotConfiguredError:
         db.session.rollback()
@@ -111,7 +136,28 @@ def list_documents():
                 .all()
             )
 
-    return jsonify({"documents": [d.to_dict() for d in docs]})
+    from app.services.document_achievement_display import (
+        achievement_links_for_user,
+        enrich_document_dict_for_achievements,
+    )
+
+    links_by_doc: dict[str, list] = {}
+    if user.role == UserRole.faculty:
+        links_by_doc = achievement_links_for_user(user.id)
+    owner_link_cache: dict[int, dict[str, list]] = {}
+    payload = []
+    for d in docs:
+        base = d.to_dict()
+        if user.role == UserRole.faculty:
+            links = links_by_doc.get(d.public_id, [])
+        elif user.role == UserRole.admin:
+            links = []
+        else:
+            if d.owner_user_id not in owner_link_cache:
+                owner_link_cache[d.owner_user_id] = achievement_links_for_user(d.owner_user_id)
+            links = owner_link_cache[d.owner_user_id].get(d.public_id, [])
+        payload.append(enrich_document_dict_for_achievements(base, links))
+    return jsonify({"documents": payload})
 
 
 @bp.get("/api/documents/<public_id>/view-url")
@@ -132,7 +178,14 @@ def document_view_url(public_id: str):
     except StorageNotConfiguredError:
         return jsonify({"error": "Storage not configured."}), 503
 
-    return jsonify({"url": url, "expiresInSeconds": 300, "document": doc.to_dict()})
+    from app.services.document_achievement_display import (
+        achievement_links_for_user,
+        enrich_document_dict_for_achievements,
+    )
+
+    links = achievement_links_for_user(doc.owner_user_id).get(doc.public_id, [])
+    doc_payload = enrich_document_dict_for_achievements(doc.to_dict(), links)
+    return jsonify({"url": url, "expiresInSeconds": 300, "document": doc_payload})
 
 
 @bp.delete("/api/documents/<public_id>")

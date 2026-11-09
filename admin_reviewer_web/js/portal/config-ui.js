@@ -7,6 +7,11 @@ import {
   SOURCE_CIRCULAR,
   isCatalogWorkbookComplete,
 } from '../repositories/config-repository.js';
+import {
+  isDocumentIntakeIndicator,
+  isSupportingEvidenceIndicator,
+  scoringIndicatorsForCriterion,
+} from '../core/assessment-definitions.js';
 import { KRA_HELP, SCREEN_INTRO, pageIntro } from '../core/copy.js';
 import { computeKraSummaries } from '../core/scoring.js';
 import { modalHost, bindModalShell, teardownModal, openCenteredModal, openDrawerModal } from './modal-access.js';
@@ -28,6 +33,22 @@ const _ui = {
 };
 
 const OFFICIAL_KRA_IDS = ['kra-I', 'kra-II', 'kra-III', 'kra-IV'];
+const SET_SEF_PDF_INDICATOR_IDS = [
+  'kra-I-A-setsef-eval',
+  'kra-I-A-setsef-combined',
+  'kra-I-A-set-pdf',
+  'kra-I-A-sef-pdf',
+];
+
+function catalogHasSetSefPdfIndicators(catalog) {
+  if (!catalog?.kras?.length) return false;
+  return SET_SEF_PDF_INDICATOR_IDS.every((id) => findIndicatorInCatalog(catalog, id));
+}
+
+function catalogHasSetSefIntakeSupport(catalog) {
+  if (Array.isArray(catalog?.documentIntakeAliases) && catalog.documentIntakeAliases.length > 0) return true;
+  return catalogHasSetSefPdfIndicators(catalog);
+}
 
 const KRA_TAB_LABELS = {
   'kra-I': 'KRA I · Instruction',
@@ -150,26 +171,50 @@ function effectiveWeights(weightsFromDraft) {
 }
 
 function indicatorNeedsConfig(ind) {
+  if (isSupportingEvidenceIndicator(ind)) return false;
   const k = ind.calculation?.kind;
   if (k === 'pending') return true;
   if (k === 'fixed_per_entry' && ind.maxPoints == null && ind.calculation?.maxPoints == null) return true;
+  if (k === 'patent_stage') {
+    const st = ind.calculation?.stages || ind.points;
+    if (!st || !Object.keys(st).length) return true;
+  }
+  if (k === 'tiered_option') {
+    const opts = ind.calculation?.options || ind.points;
+    if (!opts || !Object.keys(opts).length) return true;
+  }
   if (ind.pointRule === 'pending' || ind.pointRule === 'pending_external') return true;
   return false;
 }
 
 function indicatorPointsLabel(ind) {
+  if (isSupportingEvidenceIndicator(ind)) return 'Supporting evidence';
   if (indicatorNeedsConfig(ind)) return 'Needs configuration';
   const k = ind.calculation?.kind || 'fixed_per_entry';
   if (k === 'set_sef_average') {
     const f = ind.calculation.factor ?? 0.36;
-    return `${f} factor (SET/SEF avg.)`;
+    const slots = ind.calculation.semesterCount ?? 6;
+    const policy = ind.calculation.policy === 'average_available_max_six'
+      ? 'avg available'
+      : 'avg';
+    return `${f} factor · ${policy} (max ${slots} slots)`;
   }
   if (k === 'fixed_per_entry') {
     const pts = ind.maxPoints ?? ind.calculation?.maxPoints ?? '—';
     if (ind.perService) return `${pts} pts per service`;
     return `${pts} pts per output`;
   }
-  if (k === 'structured_points' || ind.points) return 'Tiered reference points';
+  if (k === 'patent_stage') {
+    const st = ind.calculation?.stages || ind.points || {};
+    return `Patent A/${st.A ?? '—'} · P/${st.P ?? '—'} · G/${st.G ?? '—'}`;
+  }
+  if (k === 'tiered_option') {
+    const opts = ind.calculation?.options || ind.points || {};
+    const keys = Object.keys(opts);
+    if (!keys.length) return 'Tiered options (needs values)';
+    return keys.map((key) => `${key}: ${opts[key]}`).join(' · ');
+  }
+  if (k === 'structured_points' || ind.points) return 'Tiered reference points (legacy — select patent/tiered type)';
   if (k === 'role_matrix' || ind.matrix) return 'Role-based points';
   if (ind.maxPoints != null) return `${ind.maxPoints} pts max`;
   return 'Reference points configured';
@@ -242,16 +287,15 @@ async function renderConfigBodyInner(root, { embedded = false } = {}) {
   let catalog = view.catalog;
   let weights = effectiveWeights(view.weights);
 
-  if (!readOnly && !isCatalogWorkbookComplete(catalog)) {
+  if (!readOnly && (!isCatalogWorkbookComplete(catalog) || !catalogHasSetSefIntakeSupport(catalog))) {
     root.innerHTML = `<p class="muted" style="padding:1rem">Loading workbook reference catalog…</p>`;
     try {
       const repair = ConfigRepository.ensureDraftCatalogComplete(store, _session?.email || 'admin');
       draft = repair.draft;
       catalog = draft.catalog;
       weights = effectiveWeights(draft.kraWeights);
-      await persistConfigDraft(store);
       if (repair.changed) {
-        toast(`Restored ${repair.report.length} missing workbook reference item(s). Review and Save Draft as needed.`);
+        toast(`Restored ${repair.report.length} missing workbook reference item(s). Use Save Draft to persist.`);
       }
     } catch (ex) {
       root.innerHTML = `<div class="card cfg-error" style="padding:1rem"><h3>Could not load scoring rules</h3>
@@ -566,7 +610,8 @@ function renderKraPanel(catalog, weights, readOnly, root = document) {
   const q = _ui.search.trim().toLowerCase();
   const criteriaHtml = kra.criteria
     .map((crit) => {
-      const indicators = crit.indicators.filter((ind) => {
+      const scoringPool = scoringIndicatorsForCriterion(crit);
+      const indicators = scoringPool.filter((ind) => {
         if (_ui.needsOnly && !indicatorNeedsConfig(ind)) return false;
         if (q && !ind.name.toLowerCase().includes(q) && !crit.name.toLowerCase().includes(q)) return false;
         return true;
@@ -574,14 +619,14 @@ function renderKraPanel(catalog, weights, readOnly, root = document) {
       if (_ui.needsOnly && !indicators.length) return '';
 
       const expanded = _ui.expanded.has(crit.id);
-      const indCount = crit.indicators.length;
+      const indCount = scoringPool.length;
       const countLabel = `${indCount} indicator${indCount === 1 ? '' : 's'}`;
 
       const indRows = indicators
         .map(
           (ind) => `<div class="cfg-ind-row">
             <span style="flex:1;min-width:10rem">${esc(ind.name)}</span>
-            <span class="cfg-ind-points ${indicatorNeedsConfig(ind) ? 'badge-required' : ''}">${esc(indicatorPointsLabel(ind))}</span>
+            <span class="cfg-ind-points ${isSupportingEvidenceIndicator(ind) ? 'badge-supporting' : indicatorNeedsConfig(ind) ? 'badge-required' : ''}">${esc(indicatorPointsLabel(ind))}</span>
             ${readOnly ? '' : `<button type="button" class="cfg-btn-ghost btn-sm" data-edit-ind="${escAttr(ind.id)}" data-crit="${escAttr(crit.id)}" data-kra="${escAttr(kra.id)}">Edit</button>`}
           </div>`
         )
@@ -610,6 +655,7 @@ function renderKraPanel(catalog, weights, readOnly, root = document) {
         <h3>${esc(kra.name)}</h3>
         <div class="cfg-kra-heading-actions">
           <span class="cfg-kra-weight" title="Weight for this KRA">Weight <strong>${esc(kraPct)}%</strong></span>
+          ${readOnly || !['kra-III', 'kra-IV'].includes(kra.id) ? '' : `<button type="button" class="cfg-btn-ghost btn-sm" id="cfgKraScoringPolicy" data-kra="${escAttr(kra.id)}">KRA scoring policy</button>`}
           ${readOnly ? '' : `<button type="button" class="cfg-btn-ghost btn-sm" id="cfgEditWeights">Edit weights</button>`}
           <span class="cfg-weight-total cfg-weight-total--sm ${ws.ok ? 'ok' : 'bad'}">${esc(ws.text)}</span>
         </div>
@@ -628,6 +674,9 @@ function renderKraPanel(catalog, weights, readOnly, root = document) {
   panel.querySelector('#cfgEditWeights')?.addEventListener('click', () => {
     const store = MockStore.load();
     openWeightsPanel(store, readOnly);
+  });
+  panel.querySelector('#cfgKraScoringPolicy')?.addEventListener('click', (e) => {
+    openKraScoringPolicyEditor(e.currentTarget.dataset.kra);
   });
 
   panel.querySelector('#cfgIndSearch')?.addEventListener('input', (e) => {
@@ -1066,6 +1115,30 @@ function openIndicatorEditor(kraId, critId, indId) {
   if (!found) return;
   const { kra, crit, ind } = found;
 
+  if (isSupportingEvidenceIndicator(ind)) {
+    openSupportingEvidenceEditor(kra, crit, ind);
+    return;
+  }
+
+  const optSource = ind.calculation?.options || ind.points || {};
+  const tierKeys = Object.keys(optSource);
+  const defaultTiers = ['local', 'international', 'new', 'updated'];
+  const tiersForForm = tierKeys.length ? tierKeys : defaultTiers;
+  const tierInputsHtml = tiersForForm
+    .map((t) => {
+      const val = optSource[t] ?? '';
+      return `<label>${esc(t)} points<input type="number" step="0.01" min="0" name="tierPts_${escAttr(t)}" value="${val}"/></label>`;
+    })
+    .join('');
+  const rateSource = ind.calculation?.rates || {};
+  const rateKeys = Object.keys(rateSource);
+  const rateInputsHtml = (rateKeys.length ? rateKeys : ['role_a', 'role_b'])
+    .map((t) => {
+      const val = rateSource[t] ?? '';
+      return `<label>${esc(t)} (pts/year)<input type="number" step="0.01" min="0" name="ratePts_${escAttr(t)}" value="${val}"/></label>`;
+    })
+    .join('');
+
   const modal = openDrawerModal({
     opener: null,
     panelHtml: `
@@ -1084,9 +1157,43 @@ function openIndicatorEditor(kraId, critId, indId) {
           </section>
           <section class="cfg-form-section"><h4>Calculation settings</h4>
             <label>Calculation type<select name="calcKind">
-              ${['fixed_per_entry', 'set_sef_average', 'role_matrix', 'structured_points', 'pending'].map((k) => `<option value="${k}" ${ind.calculation?.kind === k ? 'selected' : ''}>${labelCalcKind(k)}</option>`).join('')}
+              ${['fixed_per_entry', 'set_sef_average', 'role_matrix', 'patent_stage', 'tiered_option', 'yearly_rate', 'designation_matrix', 'income_tier', 'hourly_tier', 'structured_points', 'pending'].map((k) => `<option value="${k}" ${ind.calculation?.kind === k ? 'selected' : ''}>${labelCalcKind(k)}</option>`).join('')}
             </select></label>
             <label id="setFactorWrap">SET/SEF factor (average-based)<input type="number" step="0.01" name="setFactor" value="${ind.calculation?.factor ?? 0.36}"/></label>
+            <fieldset id="patentStageWrap" style="display:none">
+              <legend>Patent stages (A / P / G)</legend>
+              <p class="muted" style="font-size:0.85rem;margin:0 0 0.5rem">One stage per achievement; stages do not accumulate (workbook B16–B17).</p>
+              ${['A', 'P', 'G'].map((s) => {
+                const st = ind.calculation?.stages || ind.points || {};
+                const val = st[s] ?? '';
+                return `<label>Stage ${s}<input type="number" step="0.01" min="0" name="stage${s}" value="${val}"/></label>`;
+              }).join('')}
+              <label><input type="checkbox" name="notCumulative" ${ind.calculation?.notCumulative !== false ? 'checked' : ''}/> Stages are not cumulative</label>
+            </fieldset>
+            <fieldset id="tieredOptionWrap" style="display:none">
+              <legend>Tier options</legend>
+              <p class="muted" style="font-size:0.85rem;margin:0 0 0.5rem">Field name on faculty form (e.g. commercializationScope, softwareVersionType).</p>
+              <label>Tier field<input name="tierField" value="${escAttr(ind.calculation?.tierField || '')}"/></label>
+              ${tierInputsHtml}
+              <label>Local tier cap (optional)<input type="number" step="0.01" min="0" name="tierCapLocal" value="${ind.calculation?.tierCaps?.local ?? ''}"/></label>
+              <label>International tier cap (optional)<input type="number" step="0.01" min="0" name="tierCapIntl" value="${ind.calculation?.tierCaps?.international ?? ''}"/></label>
+            </fieldset>
+            <fieldset id="aggregateWrap" style="display:none">
+              <legend>Aggregate cap (workbook combined limits)</legend>
+              <label>Aggregate cap<input type="number" step="0.01" min="0" name="aggregateCap" value="${ind.calculation?.aggregateCap ?? ''}"/></label>
+              <label>Aggregate group id (shared across indicators)<input name="aggregateGroup" value="${escAttr(ind.calculation?.aggregateGroup || '')}"/></label>
+            </fieldset>
+            <fieldset id="yearlyRateWrap" style="display:none">
+              <legend>Yearly service rates (Criterion D)</legend>
+              <label>Role field<input name="roleField" value="${escAttr(ind.calculation?.roleField || 'academicServiceRole')}"/></label>
+              <label>Years field<input name="yearsField" value="${escAttr(ind.calculation?.yearsField || 'serviceYears')}"/></label>
+              <label><input type="checkbox" name="requiresNewlyAppointed" ${ind.calculation?.requiresNewlyAppointed ? 'checked' : ''}/> Requires newly-appointed attestation</label>
+              <label>Fractional-year policy<select name="fractionalYearPolicy">
+                <option value="unresolved" ${(ind.calculation?.fractionalYearPolicy || 'unresolved') === 'unresolved' ? 'selected' : ''}>Unresolved (workbook comment only)</option>
+                <option value="whole_years_only" ${ind.calculation?.fractionalYearPolicy === 'whole_years_only' ? 'selected' : ''}>Whole years only</option>
+              </select></label>
+              ${rateInputsHtml}
+            </fieldset>
           </section>
           <section class="cfg-form-section"><h4>Required documents</h4>
             <label>List one per line<textarea name="docs" rows="3">${escAttr((ind.documentaryRequirements || []).join('\n'))}</textarea></label>
@@ -1119,6 +1226,14 @@ function openIndicatorEditor(kraId, critId, indId) {
     const kind = kindSelect?.value;
     const wrap = modal.dialog?.querySelector('#setFactorWrap');
     if (wrap) wrap.style.display = kind === 'set_sef_average' ? '' : 'none';
+    const patentWrap = modal.dialog?.querySelector('#patentStageWrap');
+    if (patentWrap) patentWrap.style.display = kind === 'patent_stage' ? '' : 'none';
+    const tierWrap = modal.dialog?.querySelector('#tieredOptionWrap');
+    if (tierWrap) tierWrap.style.display = kind === 'tiered_option' ? '' : 'none';
+    const aggWrap = modal.dialog?.querySelector('#aggregateWrap');
+    if (aggWrap) aggWrap.style.display = kind === 'tiered_option' || kind === 'fixed_per_entry' ? '' : 'none';
+    const yrWrap = modal.dialog?.querySelector('#yearlyRateWrap');
+    if (yrWrap) yrWrap.style.display = kind === 'yearly_rate' ? '' : 'none';
   };
   kindSelect?.addEventListener('change', syncCalcFields);
   syncCalcFields();
@@ -1138,9 +1253,65 @@ function openIndicatorEditor(kraId, critId, indId) {
     ind.conditions = fd.get('conditions').toString().split('\n').map((s) => s.trim()).filter(Boolean);
     ind.documentaryRequirements = fd.get('docs').toString().split('\n').map((s) => s.trim()).filter(Boolean);
     const kind = fd.get('calcKind');
-    ind.calculation = { kind };
+    const prevCalc = { ...(ind.calculation || {}) };
+    ind.calculation = { ...prevCalc, kind };
     if (kind === 'set_sef_average') ind.calculation.factor = Number(fd.get('setFactor'));
-    if (kind === 'fixed_per_entry') ind.calculation.maxPoints = ind.maxPoints;
+    if (kind === 'fixed_per_entry') {
+      ind.calculation.maxPoints = ind.maxPoints;
+      const ac = fd.get('aggregateCap');
+      if (ac !== '' && ac != null) ind.calculation.aggregateCap = Number(ac);
+      else delete ind.calculation.aggregateCap;
+      const ag = fd.get('aggregateGroup')?.toString().trim();
+      if (ag) ind.calculation.aggregateGroup = ag;
+      else delete ind.calculation.aggregateGroup;
+    }
+    if (kind === 'patent_stage') {
+      ind.calculation.stages = {
+        A: Number(fd.get('stageA') || 0),
+        P: Number(fd.get('stageP') || 0),
+        G: Number(fd.get('stageG') || 0),
+      };
+      ind.calculation.notCumulative = fd.get('notCumulative') === 'on';
+      delete ind.points;
+    }
+    if (kind === 'tiered_option') {
+      const options = {};
+      for (const [k, v] of fd.entries()) {
+        if (!String(k).startsWith('tierPts_') || v === '' || v == null) continue;
+        options[String(k).slice(8)] = Number(v);
+      }
+      ind.calculation.options = options;
+      const tf = fd.get('tierField')?.toString().trim();
+      if (tf) ind.calculation.tierField = tf;
+      const caps = {};
+      const cLocal = fd.get('tierCapLocal');
+      const cIntl = fd.get('tierCapIntl');
+      if (cLocal !== '' && cLocal != null) caps.local = Number(cLocal);
+      if (cIntl !== '' && cIntl != null) caps.international = Number(cIntl);
+      if (Object.keys(caps).length) ind.calculation.tierCaps = caps;
+      else delete ind.calculation.tierCaps;
+      const ac = fd.get('aggregateCap');
+      if (ac !== '' && ac != null) ind.calculation.aggregateCap = Number(ac);
+      else delete ind.calculation.aggregateCap;
+      const ag = fd.get('aggregateGroup')?.toString().trim();
+      if (ag) ind.calculation.aggregateGroup = ag;
+      else delete ind.calculation.aggregateGroup;
+      delete ind.points;
+    }
+    if (kind === 'yearly_rate') {
+      const rates = {};
+      for (const [k, v] of fd.entries()) {
+        if (!String(k).startsWith('ratePts_') || v === '' || v == null) continue;
+        rates[String(k).slice(8)] = Number(v);
+      }
+      ind.calculation.rates = rates;
+      ind.calculation.fractionalYearPolicy = fd.get('fractionalYearPolicy') || 'unresolved';
+      ind.calculation.requiresNewlyAppointed = fd.get('requiresNewlyAppointed') === 'on';
+      const yf = fd.get('yearsField')?.toString().trim();
+      const rf = fd.get('roleField')?.toString().trim();
+      if (yf) ind.calculation.yearsField = yf;
+      if (rf) ind.calculation.roleField = rf;
+    }
     ind.contributionAllocation = { mode: fd.get('contribMode'), defaultPercent: Number(fd.get('defPct')) };
     crit.capMaxPoints = fd.get('critCap') === '' ? null : Number(fd.get('critCap'));
 
@@ -1158,12 +1329,158 @@ function openIndicatorEditor(kraId, critId, indId) {
   });
 }
 
+function openSupportingEvidenceEditor(kra, crit, ind) {
+  const store = MockStore.load();
+  const draft = requireDraft(store);
+  const categories = (ind.specialStatusCategories || []).join('\n');
+  const modal = openDrawerModal({
+    opener: null,
+    panelHtml: `
+      <aside class="cfg-side-panel" role="dialog" aria-labelledby="indEditTitle">
+        <h3 id="indEditTitle">Edit supporting evidence</h3>
+        <p class="muted">${esc(kra.name)} → ${esc(crit.name)}</p>
+        <p class="muted" style="font-size:0.85rem">This category collects supporting documents only. It does not award points or change SET/SEF scores automatically.</p>
+        <form id="indForm" class="cfg-form">
+          <section class="cfg-form-section"><h4>Basic information</h4>
+            <label>Name<input required name="name" value="${escAttr(ind.name)}"/></label>
+            <label>Description<textarea name="description" rows="3">${escAttr(ind.description || '')}</textarea></label>
+          </section>
+          <section class="cfg-form-section"><h4>Special status categories</h4>
+            <p class="muted" style="font-size:0.85rem;margin:0 0 0.5rem">One category per line. Faculty select from this list when uploading evidence.</p>
+            <label><span class="sr-only">Categories</span><textarea name="categories" rows="5">${escAttr(categories)}</textarea></label>
+          </section>
+          <section class="cfg-form-section"><h4>Guidance &amp; requirements</h4>
+            <label>Faculty guidance (one per line)<textarea name="conditions" rows="4">${escAttr((ind.conditions || []).join('\n'))}</textarea></label>
+            <label>Required supporting documents (one per line)<textarea name="docs" rows="3">${escAttr((ind.documentaryRequirements || []).join('\n'))}</textarea></label>
+          </section>
+          <section class="cfg-form-section"><h4>Source reference</h4>
+            <label>Source reference<input name="sourceRef" value="${escAttr(ind.sourceRef || '')}"/></label>
+          </section>
+          <details><summary>Technical details</summary>
+            <p class="muted" style="font-size:0.85rem">Indicator ID: ${esc(ind.id)} · Role: supporting evidence (not scored)</p>
+          </details>
+          <p id="indFormErr" class="cfg-field-error" role="alert"></p>
+          <div style="display:flex;gap:0.75rem;margin-top:1rem">
+            <button type="button" class="cfg-btn-secondary" id="closeInd">Cancel</button>
+            <button type="submit" class="cfg-btn-primary">Save changes</button>
+          </div>
+        </form>
+      </aside>`,
+  });
+  if (!modal) return;
+  modal.dialog?.querySelector('#closeInd')?.addEventListener('click', () => modal.close());
+  modal.dialog?.querySelector('#indForm')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const err = modal.dialog?.querySelector('#indFormErr');
+    if (err) err.textContent = '';
+    ind.name = fd.get('name').trim();
+    ind.description = fd.get('description').trim();
+    ind.role = 'supporting_evidence';
+    ind.maxPoints = null;
+    ind.calculation = { kind: 'supporting_evidence' };
+    delete ind.pointRule;
+    ind.specialStatusCategories = fd
+      .get('categories')
+      .toString()
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean);
+    ind.conditions = fd.get('conditions').toString().split('\n').map((s) => s.trim()).filter(Boolean);
+    ind.documentaryRequirements = fd.get('docs').toString().split('\n').map((s) => s.trim()).filter(Boolean);
+    ind.sourceRef = fd.get('sourceRef').trim();
+    try {
+      const w = readWeightsPct();
+      validateCatalog(draft.catalog, w);
+      ConfigRepository.saveDraft(store, {
+        catalog: draft.catalog,
+        kraWeights: w,
+        actor: _session.email,
+        summary: `Updated supporting evidence ${ind.id}`,
+      });
+      MockStore.save(store);
+      _savedFingerprint = fingerprintDraft(store);
+      modal.close();
+      _onRefresh?.();
+    } catch (ex) {
+      if (err) err.textContent = ex.message;
+    }
+  });
+}
+
+function openKraScoringPolicyEditor(kraId) {
+  const store = MockStore.load();
+  const draft = requireDraft(store);
+  const kra = (draft.catalog.kras || []).find((k) => k.id === kraId);
+  if (!kra) return;
+  const sp = kra.scoringPolicy || {};
+  const modal = openDrawerModal({
+    opener: null,
+    panelHtml: `
+      <aside class="cfg-side-panel" role="dialog" aria-labelledby="kraSpTitle">
+        <h3 id="kraSpTitle">KRA scoring policy</h3>
+        <p class="muted">${esc(kra.name || kraId)}</p>
+        <form id="kraSpForm" class="cfg-form">
+          <section class="cfg-form-section">
+            <p class="muted" style="font-size:0.85rem">Envelope and subtotal rules from the JC3 workbook. Do not enable envelope cap until institutional policy is confirmed.</p>
+            <label><input type="checkbox" name="applyKraEnvelopeCap" ${sp.applyKraEnvelopeCap ? 'checked' : ''}/> Apply KRA envelope cap (${sp.kraListedMax ?? kra.maxPoints ?? '—'} pts)</label>
+            <label>Unresolved policy note (shown to faculty/reviewers)<textarea name="unresolvedNote" rows="4">${escAttr(sp.unresolvedNote || '')}</textarea></label>
+            <p class="muted" style="font-size:0.85rem">Core criteria: ${esc((sp.coreCriteria || []).join(', ') || '—')}</p>
+            <p class="muted" style="font-size:0.85rem">Additional criteria: ${esc((sp.additionalCriteria || []).join(', ') || '—')}</p>
+            <p class="muted" style="font-size:0.85rem">Core max sum: ${esc(String(sp.coreMaxSum ?? '—'))} · Additional max: ${esc(String(sp.additionalMax ?? '—'))}</p>
+          </section>
+          <p id="kraSpFormErr" class="cfg-field-error" role="alert"></p>
+          <div style="display:flex;gap:0.75rem;margin-top:1rem">
+            <button type="button" class="cfg-btn-secondary" id="closeKraSp">Cancel</button>
+            <button type="submit" class="cfg-btn-primary">Save policy</button>
+          </div>
+        </form>
+      </aside>`,
+  });
+  if (!modal) return;
+  modal.dialog?.querySelector('#closeKraSp')?.addEventListener('click', () => modal.close());
+  modal.dialog?.querySelector('#kraSpForm')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const err = modal.dialog?.querySelector('#kraSpFormErr');
+    if (err) err.textContent = '';
+    kra.scoringPolicy = {
+      ...sp,
+      applyKraEnvelopeCap: fd.get('applyKraEnvelopeCap') === 'on',
+      unresolvedNote: fd.get('unresolvedNote')?.toString().trim() || sp.unresolvedNote || '',
+    };
+    try {
+      const w = readWeightsPct();
+      validateCatalog(draft.catalog, w);
+      ConfigRepository.saveDraft(store, {
+        catalog: draft.catalog,
+        kraWeights: w,
+        actor: _session.email,
+        summary: `Updated scoring policy for ${kraId}`,
+      });
+      MockStore.save(store);
+      _savedFingerprint = fingerprintDraft(store);
+      modal.close();
+      _onRefresh?.();
+    } catch (ex) {
+      if (err) err.textContent = ex.message;
+    }
+  });
+}
+
 function labelCalcKind(k) {
   const map = {
     fixed_per_entry: 'Fixed points per output',
     set_sef_average: 'SET/SEF semester average',
     role_matrix: 'Role matrix',
     structured_points: 'Structured tier points',
+    patent_stage: 'Patent stage (A / P / G)',
+    tiered_option: 'Tiered option (local/intl or new/updated)',
+    income_tier: 'Income generation tiers (lead/contributor)',
+    hourly_tier: 'Hourly rate by scope',
+    designation_matrix: 'Administrative designation matrix',
+    yearly_rate: 'Years × workbook rate (service)',
+    supporting_evidence: 'Supporting evidence (not scored)',
     pending: 'Needs configuration',
   };
   return map[k] || k;

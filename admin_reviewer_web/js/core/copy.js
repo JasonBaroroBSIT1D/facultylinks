@@ -5,6 +5,7 @@ export const KRA_HELP =
 
 export const DOC_STATUS = {
   pending: { label: 'Waiting for review', badge: 'badge-pending' },
+  evidence: { label: 'Supporting evidence', badge: 'badge-muted' },
   approved: { label: 'Approved', badge: 'badge-approved' },
   rejected: { label: 'Not accepted', badge: 'badge-rejected' },
   correction_requested: { label: 'Needs changes', badge: 'badge-correction' },

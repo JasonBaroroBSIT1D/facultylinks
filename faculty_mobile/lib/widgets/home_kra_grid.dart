@@ -45,7 +45,6 @@ class HomeKraGrid extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final snapshot = SimulationEngine.compute(repo);
-    final pointsById = {for (final k in snapshot.kras) k.kraId: k.weightedContribution};
     final scale = MediaQuery.textScalerOf(context);
     final width = MediaQuery.sizeOf(context).width;
     final singleColumn = width < 340 || scale.scale(1) > 1.15;
@@ -61,7 +60,12 @@ class HomeKraGrid extends StatelessWidget {
               spacing: 10,
               runSpacing: 10,
               children: assessmentKras.map((kra) {
-                final pts = pointsById[kra.id]?.toStringAsFixed(2) ?? '0.00';
+                final line = snapshot.kras.where((k) => k.kraId == kra.id).firstOrNull;
+                final pts = line == null
+                    ? '0.00'
+                    : line.rawIncomplete
+                        ? 'Incomplete'
+                        : line.weightedContribution.toStringAsFixed(2);
                 return SizedBox(
                   width: cardWidth,
                   child: FlSurfaceCard(

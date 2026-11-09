@@ -10,6 +10,7 @@ class SimulationTab extends StatefulWidget {
   final InstitutionConfig institutionConfig;
   final WhatIfScenario whatIf;
   final ValueChanged<WhatIfScenario> onWhatIfChanged;
+  final Future<void> Function() onRefresh;
 
   const SimulationTab({
     super.key,
@@ -17,6 +18,7 @@ class SimulationTab extends StatefulWidget {
     required this.institutionConfig,
     required this.whatIf,
     required this.onWhatIfChanged,
+    required this.onRefresh,
   });
 
   @override
@@ -25,6 +27,14 @@ class SimulationTab extends StatefulWidget {
 
 class _SimulationTabState extends State<SimulationTab> {
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      widget.onRefresh();
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return RankSimulationScreen(
       repo: widget.repo,
@@ -32,6 +42,7 @@ class _SimulationTabState extends State<SimulationTab> {
       initialWhatIf: widget.whatIf,
       onWhatIfChanged: widget.onWhatIfChanged,
       embedInTab: true,
+      onRefresh: widget.onRefresh,
     );
   }
 }

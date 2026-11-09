@@ -55,12 +55,19 @@ class SimulationResultSheet extends StatelessWidget {
     final est = SimulationEngine.compute(repo, whatIf: whatIf);
     final ver = SimulationEngine.compute(repo, verified: true, whatIf: whatIf);
     final target = SimulationEngine.nextRankOption(institutionConfig, repo.profile.rank);
-    final eval = SimulationEngine.evaluateTarget(
-      cfg: institutionConfig,
-      targetRank: target,
-      weightedTotal: est.weightedTotal,
+    final eval = est.usesRankTableWeights
+        ? SimulationEngine.evaluateFromSnapshot(est)
+        : SimulationEngine.evaluateTarget(
+            cfg: institutionConfig,
+            targetRank: target,
+            weightedTotal: est.weightedTotal,
+            scoringAuthoritative: est.scoringAuthoritative,
+          );
+    final potential = SimulationPresenter.potentialRankLabel(
+      eval,
+      institutionConfig,
+      usesRankTable: est.usesRankTableWeights,
     );
-    final potential = SimulationPresenter.potentialRankLabel(eval, institutionConfig);
     final readiness = SimulationPresenter.readinessLine(eval, institutionConfig);
     final rulesNote = SimulationPresenter.rankRulesNotice(institutionConfig);
     final scale = MediaQuery.textScalerOf(context);

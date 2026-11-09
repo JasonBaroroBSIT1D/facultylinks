@@ -3,6 +3,10 @@
  * Source: BONGCAWEL - JC3 Self Assessment.docx.xlsx (worksheet row refs in sourceRef)
  * Stable IDs shared with faculty_mobile.
  */
+import { KRA_II_CRITERIA } from './kra-ii-catalog.js';
+import { KRA_III_CRITERIA, KRA_III_SCORING_POLICY } from './kra-iii-catalog.js';
+import { KRA_IV_CRITERIA, KRA_IV_SCORING_POLICY } from './kra-iv-catalog.js';
+
 export const SOURCE_CIRCULAR =
   'Enhanced Implementing Guidelines of DBM-CHED Joint Circular No. 3, series of 2022';
 
@@ -14,6 +18,108 @@ export const KRA_WEIGHTS = {
 };
 
 export const CONFIG_VERSION = '2022-jc3-demo-1';
+
+/** PDF upload routes — not shown in the Criterion A scoring editor (intake compatibility only). */
+export const SET_SEF_DOCUMENT_INTAKE_IDS = [
+  'kra-I-A-setsef-eval',
+  'kra-I-A-setsef-combined',
+  'kra-I-A-set-pdf',
+  'kra-I-A-sef-pdf',
+];
+
+export const SET_SEF_DOCUMENT_INTAKE_ALIASES = [
+  {
+    id: 'kra-I-A-setsef-eval',
+    name: 'SET / SEF Evaluation (PDF)',
+    maxPoints: 60,
+    description:
+      'One evaluation PDF. OCR detects SET, SEF, or both from content; reviewers verify extracted semester ratings.',
+    type: 'set_sef_unified_pdf',
+    fields: ['pdf'],
+    conditions: ['PDF only; one or more semesters per file.'],
+    pointRule: 'Routes to SET and SEF scoring components (no separate Criterion A line).',
+    kraId: 'kra-I',
+    criterionId: 'kra-I-A',
+    intakeOnly: true,
+  },
+  {
+    id: 'kra-I-A-setsef-combined',
+    name: 'Combined SET–SEF PDF',
+    maxPoints: 60,
+    description: 'Legacy combined PDF upload.',
+    type: 'set_sef_combined_pdf',
+    fields: ['pdf'],
+    conditions: ['PDF only; up to six semester slots.'],
+    pointRule: 'Intake alias for existing documents.',
+    kraId: 'kra-I',
+    criterionId: 'kra-I-A',
+    intakeOnly: true,
+  },
+  {
+    id: 'kra-I-A-set-pdf',
+    name: 'SET PDF (OCR)',
+    maxPoints: 36,
+    description: 'Legacy SET-only PDF upload.',
+    type: 'set_sef_set_pdf',
+    fields: ['pdf'],
+    conditions: ['PDF only; one or more semesters per file.'],
+    pointRule: 'Intake alias for existing documents.',
+    kraId: 'kra-I',
+    criterionId: 'kra-I-A',
+    intakeOnly: true,
+  },
+  {
+    id: 'kra-I-A-sef-pdf',
+    name: 'SEF PDF (OCR)',
+    maxPoints: 24,
+    description: 'Legacy SEF-only PDF upload.',
+    type: 'set_sef_sef_pdf',
+    fields: ['pdf'],
+    conditions: ['PDF only; one or more semesters per file.'],
+    pointRule: 'Intake alias for existing documents.',
+    kraId: 'kra-I',
+    criterionId: 'kra-I-A',
+    intakeOnly: true,
+  },
+];
+
+const INTAKE_PDF_TYPES = new Set([
+  'set_sef_unified_pdf',
+  'set_sef_combined_pdf',
+  'set_sef_set_pdf',
+  'set_sef_sef_pdf',
+]);
+
+export const SUPPORTING_EVIDENCE_INDICATOR_ID = 'kra-I-A-special';
+
+export const DEFAULT_SPECIAL_STATUS_CATEGORIES = [
+  'Official Study Leave',
+  'Maternity Leave',
+  'Sabbatical Leave',
+  'Newly appointed faculty',
+  'SUC laboratory school assignment',
+];
+
+export function isDocumentIntakeIndicator(ind) {
+  if (!ind) return false;
+  if (SET_SEF_DOCUMENT_INTAKE_IDS.includes(ind.id)) return true;
+  return INTAKE_PDF_TYPES.has(ind.type);
+}
+
+/** Supporting documentation only — not independently scored. */
+export function isSupportingEvidenceIndicator(ind) {
+  if (!ind) return false;
+  if (ind.id === SUPPORTING_EVIDENCE_INDICATOR_ID) return true;
+  if (ind.role === 'supporting_evidence') return true;
+  return ind.calculation?.kind === 'supporting_evidence';
+}
+
+/** Indicators shown in the admin scoring editor for a criterion. */
+export function scoringIndicatorsForCriterion(crit) {
+  if (!crit?.indicators) return [];
+  if (crit.id !== 'kra-I-A') return crit.indicators;
+  return crit.indicators.filter((ind) => !isDocumentIntakeIndicator(ind));
+}
 
 /** @type {import('../models/types.js').AssessmentCatalog} */
 export const ASSESSMENT_CATALOG = {
@@ -39,34 +145,55 @@ export const ASSESSMENT_CATALOG = {
               name: 'Student Evaluation of Teachers (SET)',
               maxPoints: 36,
               sourceRef: 'KRA I A7 B7; formula J11 = SUM(J9:O9)/6*36%',
-              description: 'Average of six semester SET ratings across three academic years.',
+              description:
+                'Average of available eligible SET ratings (up to six shared semester slots) × SET factor.',
               type: 'set_sef',
               subType: 'SET',
               fields: ['academicYear', 'semester', 'rating'],
-              conditions: ['Six semesters across three selectable academic years.'],
-              pointRule: 'raw = (sum of 6 ratings / 6) * 0.36',
+              conditions: [
+                'Up to six distinct semester slots (shared with SEF) in the assessment window.',
+                'Average available eligible ratings; missing semesters do not force zero.',
+              ],
+              pointRule: 'avg(available SET ratings) × 0.36 (max 36 pts)',
             },
             {
               id: 'kra-I-A-sef',
               name: "Supervisor's Evaluation of Faculty (SEF)",
               maxPoints: 24,
               sourceRef: 'KRA I A8 B8; formula J12 = SUM(J10:O10)/6*24%',
-              description: 'Average of six semester SEF ratings.',
+              description:
+                'Average of available eligible SEF ratings (up to six shared semester slots) × SEF factor.',
               type: 'set_sef',
               subType: 'SEF',
               fields: ['academicYear', 'semester', 'rating'],
-              pointRule: 'raw = (sum of 6 ratings / 6) * 0.24',
+              conditions: [
+                'Up to six distinct semester slots (shared with SET) in the assessment window.',
+                'Average available eligible ratings; missing semesters do not force zero.',
+              ],
+              pointRule: 'avg(available SEF ratings) × 0.24 (max 24 pts)',
             },
             {
               id: 'kra-I-A-special',
               name: 'For Faculty with Special Status',
+              role: 'supporting_evidence',
               maxPoints: null,
               sourceRef: 'KRA I A9–A13',
               description:
-                'Official Study Leave, Maternity Leave, Sabbatical Leave, newly appointed, SUC lab schools — additional evidence per Enhanced Guidelines.',
+                'Upload supporting documents when an official special circumstance applies. Reviewer validates applicability; this does not change SET/SEF calculations automatically.',
               fields: ['specialStatus', 'notes'],
-              conditions: ['Pending configuration for automatic point substitution.'],
-              pointRule: 'pending',
+              specialStatusCategories: [
+                'Official Study Leave',
+                'Maternity Leave',
+                'Sabbatical Leave',
+                'Newly appointed faculty',
+                'SUC laboratory school assignment',
+              ],
+              conditions: [
+                'Select the category that applies and upload supporting documents per Enhanced Guidelines.',
+                'Reviewer confirms status and remarks; no automatic points or SET/SEF exemptions.',
+              ],
+              documentaryRequirements: ['Supporting documentation for the selected special status category.'],
+              calculation: { kind: 'supporting_evidence' },
             },
           ],
         },
@@ -113,59 +240,7 @@ export const ASSESSMENT_CATALOG = {
       maxPoints: 100,
       weight: KRA_WEIGHTS['kra-II'],
       scoreFormula: 'SUM(Criteria A+B+C) × 20%',
-      criteria: [
-        {
-          id: 'kra-II-A',
-          name: 'Criterion A – Research Outputs Published',
-          maxPoints: 100,
-          capNote: 'Max = 100',
-          indicators: [
-            { id: 'kra-II-A-1', name: 'Sole Author of an Academic Book', maxPoints: 100, sourceRef: 'A7 B7' },
-            { id: 'kra-II-A-2', name: 'Sole Author of Edited Academic Book Chapter', maxPoints: 35, sourceRef: 'A8 B8' },
-            { id: 'kra-II-A-3', name: 'Sole Author of a Journal Article', maxPoints: 50, sourceRef: 'A9 B9' },
-            { id: 'kra-II-A-4', name: 'Sole Author of Academic Monograph', maxPoints: 100, sourceRef: 'A10 B10' },
-            { id: 'kra-II-A-5', name: 'Research Translated Into Project, Policy, or Product', maxPoints: 35, capNote: 'Max = 70 per activity tier', sourceRef: 'A11' },
-            { id: 'kra-II-A-6', name: 'Research Publication Cited', maxPoints: 10, capNote: 'Max = 60', sourceRef: 'A12' },
-          ],
-        },
-        {
-          id: 'kra-II-B',
-          name: 'Criterion B – Inventions',
-          maxPoints: 100,
-          capNote: 'Max = 100',
-          indicators: [
-            { id: 'kra-II-B-1-1', name: 'Invention Patent (A/P/G stages)', points: { A: 10, P: 20, G: 80 }, sourceRef: 'A15–B17' },
-            { id: 'kra-II-B-1-2', name: 'Commercialized Patented Product', points: { local: 5, international: 10 }, capNote: 'Local max 20, Intl max 30', sourceRef: 'A18' },
-            { id: 'kra-II-B-2-1', name: 'Copyrighted Software', points: { new: 10, updated: 4 }, sourceRef: 'A19' },
-            { id: 'kra-II-B-2-2', name: 'New plant variety / animal breeds / microbial strains', maxPoints: 10, sourceRef: 'A20' },
-          ],
-        },
-        {
-          id: 'kra-II-C',
-          name: 'Criterion C – Creative Works',
-          maxPoints: 100,
-          capNote: 'Max = 100',
-          indicators: [
-            { id: 'kra-II-C-1-1-1', name: 'Musical Composition', maxPoints: 20, sourceRef: 'A22' },
-            { id: 'kra-II-C-1-1-2', name: 'Musical Arrangement', maxPoints: 20, sourceRef: 'A23' },
-            { id: 'kra-II-C-1-1-3', name: 'Musical Performance', maxPoints: 10, sourceRef: 'A24' },
-            { id: 'kra-II-C-1-1-4', name: 'Conducting', maxPoints: 10, sourceRef: 'A25' },
-            { id: 'kra-II-C-1-1-5', name: 'Music Production', maxPoints: 20, sourceRef: 'A26' },
-            { id: 'kra-II-C-1-2-1', name: 'Original Choreography', maxPoints: 20, sourceRef: 'A27' },
-            { id: 'kra-II-C-1-2-2', name: 'Dance Performance', maxPoints: 10, sourceRef: 'A28' },
-            { id: 'kra-II-C-1-3-1', name: 'Playwright', maxPoints: 20, sourceRef: 'A29' },
-            { id: 'kra-II-C-1-3-2', name: 'Directing (Theatre)', maxPoints: 20, sourceRef: 'A30' },
-            { id: 'kra-II-C-1-3-3', name: 'Acting', maxPoints: 20, sourceRef: 'A31' },
-            { id: 'kra-II-C-1-3-4', name: 'Production Design', maxPoints: 20, sourceRef: 'A32' },
-            { id: 'kra-II-C-1-2-visual', name: 'Visual Arts (Painting, Drawing, etc.)', maxPoints: 20, sourceRef: 'A33' },
-            { id: 'kra-II-C-1-3-film', name: 'Film (short/feature/documentary/etc.)', maxPoints: 20, sourceRef: 'A35' },
-            { id: 'kra-II-C-1-4-1', name: 'Novel', maxPoints: 20, sourceRef: 'A36' },
-            { id: 'kra-II-C-1-4-2', name: 'Short story', maxPoints: 10, sourceRef: 'A37' },
-            { id: 'kra-II-C-1-4-3', name: 'Poetry', maxPoints: 2, sourceRef: 'A38' },
-            { id: 'kra-II-C-1-4-4', name: 'Literary Essay', maxPoints: 2, sourceRef: 'A39' },
-          ],
-        },
-      ],
+      criteria: KRA_II_CRITERIA,
     },
     {
       id: 'kra-III',
@@ -173,57 +248,8 @@ export const ASSESSMENT_CATALOG = {
       maxPoints: 100,
       weight: KRA_WEIGHTS['kra-III'],
       scoreFormula: 'SUM(Criteria A+B+C+D) × 10%',
-      criteria: [
-        {
-          id: 'kra-III-A',
-          name: 'Criterion A – Service to the Institution',
-          capNote: 'Max = 30',
-          indicators: [
-            { id: 'kra-III-A-1', name: 'Linkages / networking / partnership', maxPoints: 5, sourceRef: 'A7' },
-            { id: 'kra-III-A-2', name: 'Income generation (Lead/Contributor tiers)', sourceRef: 'A8 B8 Sec.31', pointRule: 'tiered', fields: ['role', 'amount', 'tier'] },
-          ],
-        },
-        {
-          id: 'kra-III-B',
-          name: 'Criterion B – Service to the Community',
-          capNote: 'Max = 50',
-          indicators: [
-            { id: 'kra-III-B-1-1', name: 'QA accreditation/evaluation services', points: { local: 8, international: 10 }, sourceRef: 'A10' },
-            { id: 'kra-III-B-1-2', name: 'Judge/Examiner awards & competitions', sourceRef: 'A11', points: { researchAward: 2, academicCompetition: 1 } },
-            { id: 'kra-III-B-1-3', name: 'Short-term consultant/expert', points: { local: 8, international: 10 }, sourceRef: 'A12' },
-            { id: 'kra-III-B-1-4-1', name: 'Occasional newspaper column', maxPoints: 2, capNote: 'max 10', sourceRef: 'A13' },
-            { id: 'kra-III-B-1-4-2', name: 'Regular newspaper column', maxPoints: 10, sourceRef: 'A14' },
-            { id: 'kra-III-B-1-4-3', name: 'Host TV/Radio Program', maxPoints: 10, sourceRef: 'A15' },
-            { id: 'kra-III-B-1-4-4', name: 'Guest technical expert', maxPoints: 1, capNote: 'max 10', sourceRef: 'A16' },
-            { id: 'kra-III-B-1-5', name: 'Training/seminar as resource person', points: { local: 2, international: 3 }, sourceRef: 'A17' },
-            { id: 'kra-III-B-2-1', name: 'Extension Project (Lead/Participant)', points: { lead: 5, participant: 2 }, capNote: 'Max = 30 ISR', sourceRef: 'A19' },
-          ],
-        },
-        {
-          id: 'kra-III-C',
-          name: 'Criterion C – Relevance and Quality of Extension Services',
-          capNote: 'Max = 20',
-          indicators: [
-            {
-              id: 'kra-III-C-1',
-              name: 'Client Satisfaction Rating for Extension Projects',
-              maxPoints: 20,
-              sourceRef: 'A21 B21 F21',
-              conditions: ['Must be declared under ISR in Criterion B.'],
-              externalFormulaRef: '[1]Luthie!$P$21',
-              pointRule: 'pending_external',
-            },
-          ],
-        },
-        {
-          id: 'kra-III-D',
-          name: 'Criterion D – Bonus Criterion for Administrative Designations',
-          capNote: 'Max = 20',
-          indicators: [
-            { id: 'kra-III-D-1', name: 'Administrative Designation', sourceRef: 'A23 B23 Sec.36', pointRule: 'designation_table', unresolvedNote: 'CCIR Coordinator 1 or 2 points???' },
-          ],
-        },
-      ],
+      scoringPolicy: KRA_III_SCORING_POLICY,
+      criteria: KRA_III_CRITERIA,
     },
     {
       id: 'kra-IV',
@@ -231,40 +257,8 @@ export const ASSESSMENT_CATALOG = {
       maxPoints: 100,
       weight: KRA_WEIGHTS['kra-IV'],
       scoreFormula: 'SUM(Criteria A+B+C+D) × 10%',
-      criteria: [
-        {
-          id: 'kra-IV-A',
-          name: 'Criterion A – Involvement in Professional Organizations',
-          capNote: 'Max = 20',
-          indicators: [{ id: 'kra-IV-A-1', name: 'Membership in Registered Professional Organizations', maxPoints: 5, sourceRef: 'A7 B7 Sec.38' }],
-        },
-        {
-          id: 'kra-IV-B',
-          name: 'Criterion B – Continuing Development',
-          capNote: 'Max = 60',
-          indicators: [
-            { id: 'kra-IV-B-1', name: 'Educational Qualifications', points: { postMaster: 10, postDoc: 10, addtlMaster: 20, doctorate: 40 }, sourceRef: 'A9' },
-            { id: 'kra-IV-B-2', name: 'Conference/seminar attendance', points: { local: 1, international: 2 }, capNote: 'Max = 10', sourceRef: 'A10' },
-            { id: 'kra-IV-B-3-1', name: 'Paper presentation — Local', maxPoints: 3, capNote: 'Max = 10', sourceRef: 'A11' },
-            { id: 'kra-IV-B-3-2', name: 'Paper presentation — International', maxPoints: 5, sourceRef: 'A12' },
-          ],
-        },
-        {
-          id: 'kra-IV-C',
-          name: 'Criterion C – Awards and Recognition',
-          capNote: 'Max = 20',
-          indicators: [{ id: 'kra-IV-C-1', name: 'Award of distinction', points: { institutional: 2, localRegional: 3, national: 4 }, sourceRef: 'A14 Sec.43' }],
-        },
-        {
-          id: 'kra-IV-D',
-          name: 'Criterion D – Additional Points for Newly Appointed Faculty',
-          capNote: 'Max = 20',
-          indicators: [
-            { id: 'kra-IV-D-1', name: 'Prior academic service', points: { president: 5, vpDean: 4, deptHead: 3, faculty: 2 }, sourceRef: 'A16', note: 'Proportionate months pending' },
-            { id: 'kra-IV-D-2', name: 'Industry experience', points: { managerial: 4, technical: 3, support: 2 }, sourceRef: 'A17' },
-          ],
-        },
-      ],
+      scoringPolicy: KRA_IV_SCORING_POLICY,
+      criteria: KRA_IV_CRITERIA,
     },
   ],
 };

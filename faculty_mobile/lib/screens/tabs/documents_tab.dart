@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
+import '../../core/document_status.dart';
 import '../../core/ui_strings.dart';
 import '../../repositories/mock_repository.dart';
+import '../../services/faculty_refresh.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_theme.dart';
 import '../document_detail_screen.dart';
@@ -9,8 +13,8 @@ import '../upload_evidence_screen.dart';
 
 class DocumentsTab extends StatefulWidget {
   final MockRepository repo;
-  final VoidCallback onSave;
-  const DocumentsTab({super.key, required this.repo, required this.onSave});
+  final Future<void> Function({Set<FacultyRefreshScope>? scopes, bool force}) onRefresh;
+  const DocumentsTab({super.key, required this.repo, required this.onRefresh});
 
   @override
   State<DocumentsTab> createState() => _DocumentsTabState();
@@ -20,9 +24,24 @@ class _DocumentsTabState extends State<DocumentsTab> {
   String _filter = 'all';
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(widget.onRefresh(scopes: {FacultyRefreshScope.documents, FacultyRefreshScope.scores}));
+    });
+  }
+
+  Future<void> _pullRefresh() => widget.onRefresh(
+        scopes: {FacultyRefreshScope.documents, FacultyRefreshScope.scores, FacultyRefreshScope.assessment},
+        force: true,
+      );
+
+  @override
   Widget build(BuildContext context) {
     var docs = widget.repo.documents;
-    if (_filter != 'all') docs = docs.where((d) => d.reviewStatus == _filter).toList();
+    if (_filter != 'all') {
+      docs = docs.where((d) => d.filterBucket == _filter).toList();
+    }
     final scale = MediaQuery.textScalerOf(context);
 
     return Column(
@@ -55,7 +74,19 @@ class _DocumentsTabState extends State<DocumentsTab> {
               FilledButton.icon(
                 onPressed: () => Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => UploadEvidenceScreen(repo: widget.repo, onSave: widget.onSave)),
+                  MaterialPageRoute(
+                    builder: (_) => UploadEvidenceScreen(
+                      repo: widget.repo,
+                      onSave: () => widget.onRefresh(
+                        scopes: {
+                          FacultyRefreshScope.documents,
+                          FacultyRefreshScope.scores,
+                          FacultyRefreshScope.assessment,
+                        },
+                        force: true,
+                      ),
+                    ),
+                  ),
                 ),
                 icon: const Icon(Icons.add),
                 label: const Text('Add'),
@@ -65,29 +96,42 @@ class _DocumentsTabState extends State<DocumentsTab> {
         ),
         const SizedBox(height: 8),
         Expanded(
-          child: docs.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(
+          child: RefreshIndicator(
+            color: AppColors.primaryBlue,
+            onRefresh: _pullRefresh,
+            child: docs.isEmpty
+              ? ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  padding: const EdgeInsets.all(24),
+                  children: [
+                    Text(
                       UiStrings.emptyDocuments,
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: scale.scale(17), height: 1.5, color: AppColors.textMuted),
                     ),
-                  ),
+                  ],
                 )
               : ListView.builder(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   padding: const EdgeInsets.fromLTRB(18, 8, 18, 24),
                   itemCount: docs.length,
                   itemBuilder: (_, i) {
                     final d = docs[i];
-                    final status = UiStrings.docStatusLabel(d.reviewStatus);
+                    final proc = documentProcessingSummary(d);
+                    final estLine = d.isSetSefOcr ? widget.repo.criterionAEstimatedLine() : '';
+                    final verLine = d.isSetSefOcr ? widget.repo.criterionAVerifiedLine() : '';
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 10),
                       child: FlSurfaceCard(
                         onTap: () => Navigator.push(
                           context,
-                          MaterialPageRoute(builder: (_) => DocumentDetailScreen(doc: d, onSave: widget.onSave)),
+                          MaterialPageRoute(
+                            builder: (_) => DocumentDetailScreen(
+                              doc: d,
+                              repo: widget.repo,
+                              onRefresh: _pullRefresh,
+                            ),
+                          ),
                         ),
                         child: Row(
                           children: [
@@ -105,7 +149,31 @@ class _DocumentsTabState extends State<DocumentsTab> {
                                     style: TextStyle(fontSize: scale.scale(17), fontWeight: FontWeight.w700),
                                   ),
                                   const SizedBox(height: 4),
-                                  FlStatusBadge(status),
+                                  FlStatusBadge.fromFacultyDocument(d),
+                                  if (proc.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Text(
+                                        proc,
+                                        style: TextStyle(fontSize: scale.scale(13), color: AppColors.textMuted),
+                                      ),
+                                    ),
+                                  if (estLine.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Text(
+                                        estLine,
+                                        style: TextStyle(fontSize: scale.scale(13), color: AppColors.textMain),
+                                      ),
+                                    ),
+                                  if (verLine.isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 2),
+                                      child: Text(
+                                        verLine,
+                                        style: TextStyle(fontSize: scale.scale(13), color: AppColors.textMuted),
+                                      ),
+                                    ),
                                   if (d.academicYear != null)
                                     Padding(
                                       padding: const EdgeInsets.only(top: 4),
@@ -135,6 +203,7 @@ class _DocumentsTabState extends State<DocumentsTab> {
                     );
                   },
                 ),
+          ),
         ),
       ],
     );

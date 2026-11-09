@@ -7,8 +7,28 @@ import '../theme/app_theme.dart';
 class NotificationsScreen extends StatelessWidget {
   final MockRepository repo;
   final bool embedInTab;
+  final Future<void> Function()? onRefresh;
 
-  const NotificationsScreen({super.key, required this.repo, this.embedInTab = false});
+  const NotificationsScreen({super.key, required this.repo, this.embedInTab = false, this.onRefresh});
+
+  Widget _body(Widget list) {
+    if (onRefresh == null) return list;
+    return RefreshIndicator(
+      color: AppColors.primaryBlue,
+      onRefresh: onRefresh!,
+      child: list is ListView
+          ? list
+          : ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              children: [
+                SizedBox(
+                  height: 240,
+                  child: Center(child: list),
+                ),
+              ],
+            ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,6 +46,7 @@ class NotificationsScreen extends StatelessWidget {
             ),
           )
         : ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
             padding: FlLayout.pagePadding,
             children: repo.notifications
                 .map(
@@ -61,6 +82,8 @@ class NotificationsScreen extends StatelessWidget {
                 .toList(),
           );
 
+    final body = _body(list);
+
     if (embedInTab) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -69,10 +92,10 @@ class NotificationsScreen extends StatelessWidget {
             title: 'Notifications',
             subtitle: 'Messages from your reviewer about your documents.',
           ),
-          Expanded(child: list),
+          Expanded(child: body),
         ],
       );
     }
-    return Scaffold(appBar: AppBar(title: const Text('Notifications')), body: list);
+    return Scaffold(appBar: AppBar(title: const Text('Notifications')), body: body);
   }
 }

@@ -6,7 +6,7 @@ import '../../widgets/assigned_reviewer_card.dart';
 
 class ProfileTab extends StatefulWidget {
   final MockRepository repo;
-  final VoidCallback onSave;
+  final Future<void> Function() onSave;
   final VoidCallback onLogout;
   const ProfileTab({super.key, required this.repo, required this.onSave, required this.onLogout});
 
@@ -67,7 +67,7 @@ class _ProfileTabState extends State<ProfileTab> {
           onPressed: () async {
             widget.repo.profile.name = _name.text;
             await widget.repo.save();
-            widget.onSave();
+            await widget.onSave();
             if (!mounted) return;
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile saved on this device.')));
           },

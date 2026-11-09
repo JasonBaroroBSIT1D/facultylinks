@@ -2,7 +2,7 @@ import os
 
 from flask import Flask, request
 
-from app.config import apply_mail_config_from_env, config_by_name, load_backend_env
+from app.config import apply_mail_config_from_env, apply_ocr_config_from_env, config_by_name, load_backend_env
 from app.extensions import cors, db, migrate
 from app.cli import register_cli
 from app.routes.auth import bp as auth_bp
@@ -10,6 +10,7 @@ from app.routes.documents import bp as documents_bp
 from app.routes.faculty_portal import bp as faculty_portal_bp
 from app.routes.health import bp as health_bp
 from app.routes.portal import bp as portal_bp
+from app.routes.set_sef import bp as set_sef_bp
 
 
 def create_app() -> Flask:
@@ -18,6 +19,7 @@ def create_app() -> Flask:
     app = Flask(__name__)
     app.config.from_object(config_by_name.get(env, config_by_name["development"]))
     apply_mail_config_from_env(app)
+    apply_ocr_config_from_env(app)
     if not app.config.get("SQLALCHEMY_DATABASE_URI"):
         raise RuntimeError(
             "DATABASE_URL is required (Supabase PostgreSQL). Copy backend/.env.example to .env "
@@ -37,6 +39,10 @@ def create_app() -> Flask:
     app.register_blueprint(documents_bp)
     app.register_blueprint(portal_bp)
     app.register_blueprint(faculty_portal_bp)
+    app.register_blueprint(set_sef_bp)
+    from app.routes.achievements import bp as achievements_bp
+
+    app.register_blueprint(achievements_bp)
 
     register_cli(app)
 

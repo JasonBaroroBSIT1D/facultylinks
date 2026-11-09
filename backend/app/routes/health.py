@@ -4,6 +4,7 @@ from sqlalchemy import text
 from app.extensions import db
 from app.services.database_check import assert_expected_database, current_database_name
 from app.services.mail_service import smtp_configured
+from app.services.ocr_env import ocr_environment_status
 from app.services.storage import storage_configured
 
 bp = Blueprint("health", __name__)
@@ -19,6 +20,7 @@ def health():
         "storage": "configured" if storage_configured() else "not_configured",
         "storageProvider": "supabase",
         "mail": "configured" if smtp_configured() else "not_configured",
+        "ocr": ocr_environment_status(),
     }
     uri = current_app.config.get("SQLALCHEMY_DATABASE_URI")
     if not uri:

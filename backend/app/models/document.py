@@ -31,6 +31,12 @@ class Document(db.Model):
     entry_id = db.Column(db.String(64), nullable=True)
     superseded_by_public_id = db.Column(db.String(36), nullable=True)
     estimated_points = db.Column(db.Numeric(10, 2), nullable=True)
+    file_sha256 = db.Column(db.String(64), nullable=True, index=True)
+    ocr_status = db.Column(db.String(32), nullable=False, default="pending")
+    processing_status = db.Column(db.String(32), nullable=False, default="none")
+    processing_error = db.Column(db.String(500), nullable=True)
+    document_kind = db.Column(db.String(32), nullable=True)
+    config_version = db.Column(db.String(64), nullable=True)
     created_at = db.Column(
         db.DateTime(timezone=True),
         nullable=False,
@@ -43,6 +49,7 @@ class Document(db.Model):
     def to_dict(self) -> dict:
         return {
             "id": self.public_id,
+            "publicId": self.public_id,
             "filename": self.original_filename,
             "fileName": self.original_filename,
             "mimeType": self.mime_type,
@@ -55,8 +62,11 @@ class Document(db.Model):
             "verifiedPoints": float(self.verified_points) if self.verified_points is not None else None,
             "ownerUserId": self.owner_user_id,
             "uploadStatus": self.upload_status,
-            "ocrStatus": "pending",
-            "ocrText": "",
+            "ocrStatus": self.ocr_status,
+            "processingStatus": self.processing_status,
+            "processingError": self.processing_error or "",
+            "documentKind": self.document_kind or "",
+            "configVersion": self.config_version or "",
         }
 
     def to_portal_dict(self, owner_public_id: str, reviewer_email: str | None = None) -> dict:
@@ -64,13 +74,17 @@ class Document(db.Model):
             "id": self.public_id,
             "facultyId": owner_public_id,
             "fileName": self.original_filename,
+            "mimeType": self.mime_type,
+            "sizeBytes": int(self.size_bytes) if self.size_bytes is not None else None,
             "indicatorId": self.indicator_id or "",
             "kraId": self.kra_id or "",
             "reviewStatus": self.review_status,
             "remarks": self.review_remarks or "",
             "verifiedPoints": float(self.verified_points) if self.verified_points is not None else None,
-            "ocrStatus": "pending",
-            "ocrText": "",
+            "ocrStatus": self.ocr_status,
+            "processingStatus": self.processing_status,
+            "processingError": self.processing_error or "",
+            "documentKind": self.document_kind or "",
             "uploadedAt": self.created_at.isoformat() if self.created_at else None,
             "history": [],
         }

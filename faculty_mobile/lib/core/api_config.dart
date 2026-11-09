@@ -5,6 +5,9 @@ class ApiConfig {
     defaultValue: 'http://127.0.0.1:5000',
   );
 
+  /// Default HTTP timeout for auth and API calls.
+  static const Duration requestTimeout = Duration(seconds: 25);
+
   static Uri uri(String path) {
     final normalized = path.startsWith('/') ? path : '/$path';
     return Uri.parse('$baseUrl$normalized');

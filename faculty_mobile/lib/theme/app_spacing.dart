@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../repositories/mock_repository.dart';
 import 'app_theme.dart';
 
 class FlLayout {
@@ -164,20 +165,94 @@ class FlHomeSectionLabel extends StatelessWidget {
 
 class FlStatusBadge extends StatelessWidget {
   final String label;
-  const FlStatusBadge(this.label, {super.key});
+  final String reviewStatus;
+  const FlStatusBadge(this.label, {super.key, this.reviewStatus = 'pending'});
+
+  factory FlStatusBadge.fromReviewStatus(String status) {
+    return FlStatusBadge(
+      _labelFor(status),
+      reviewStatus: status,
+    );
+  }
+
+  factory FlStatusBadge.fromFacultyDocument(FacultyDocument doc) {
+    if (doc.displayStatusLabel != null && doc.displayStatus != null) {
+      return FlStatusBadge(
+        doc.displayStatusLabel!,
+        reviewStatus: _toneForDisplayStatus(doc.displayStatus!),
+      );
+    }
+    return FlStatusBadge.fromReviewStatus(doc.reviewStatus);
+  }
+
+  static String _toneForDisplayStatus(String displayStatus) {
+    switch (displayStatus) {
+      case 'part_of_approved_achievement':
+        return 'approved';
+      case 'part_of_rejected_achievement':
+        return 'rejected';
+      case 'achievement_needs_changes':
+        return 'correction_requested';
+      case 'pending_achievement_review':
+      case 'achievement_multiple_parents':
+      case 'draft_evidence':
+      default:
+        return 'pending';
+    }
+  }
+
+  static String _labelFor(String status) {
+    switch (status) {
+      case 'approved':
+        return 'Approved';
+      case 'rejected':
+        return 'Not accepted';
+      case 'correction_requested':
+        return 'Needs changes';
+      case 'pending':
+      default:
+        return 'Pending review';
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        color: AppColors.yellowSoft,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: AppColors.textMain),
+    Color bg = AppColors.amberSoft;
+    Color fg = AppColors.amberText;
+    Color border = const Color(0xFFFFCC80);
+    switch (reviewStatus) {
+      case 'approved':
+        bg = AppColors.greenSoft;
+        fg = AppColors.greenText;
+        border = const Color(0xFFA5D6A7);
+        break;
+      case 'rejected':
+        bg = AppColors.redSoft;
+        fg = AppColors.redText;
+        border = const Color(0xFFEF9A9A);
+        break;
+      case 'correction_requested':
+        bg = const Color(0xFFE3F2FD);
+        fg = const Color(0xFF1565C0);
+        border = const Color(0xFF90CAF9);
+        break;
+      case 'pending':
+      default:
+        break;
+    }
+    return Semantics(
+      label: 'Review status: $label',
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: bg,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: border),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: fg),
+        ),
       ),
     );
   }

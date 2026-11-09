@@ -13,9 +13,11 @@ void main() {
   });
   testWidgets('Assessment tab expands KRAs without Material error', (tester) async {
     final repo = await MockRepository.load();
+    repo.catalogKras = assessmentKras;
+    repo.catalogLoadedFromApi = true;
     await tester.pumpWidget(
       MaterialApp(
-        home: AssessmentTab(repo: repo, onSave: () {}),
+        home: AssessmentTab(repo: repo, onSave: () async {}),
       ),
     );
     await tester.pump();
@@ -34,6 +36,8 @@ void main() {
   for (final width in [320.0, 360.0]) {
     testWidgets('Upload evidence stepper fits ${width.toInt()}px width', (tester) async {
       final repo = await MockRepository.load();
+    repo.catalogKras = assessmentKras;
+    repo.catalogLoadedFromApi = true;
       await tester.binding.setSurfaceSize(Size(width, 740));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -41,7 +45,7 @@ void main() {
         MaterialApp(
           home: MediaQuery(
             data: MediaQueryData(size: Size(width, 740), textScaler: TextScaler.noScaling),
-            child: UploadEvidenceScreen(repo: repo, onSave: () {}),
+            child: UploadEvidenceScreen(repo: repo, onSave: () async {}),
           ),
         ),
       );

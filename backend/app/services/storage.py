@@ -56,6 +56,11 @@ def delete_private_file(key: str) -> None:
         pass
 
 
+def download_private_file(key: str) -> bytes:
+    client = _client()
+    return client.storage.from_(_bucket()).download(key)
+
+
 def presigned_get_url(key: str, *, expires_in: int = 300) -> str:
     client = _client()
     res = client.storage.from_(_bucket()).create_signed_url(key, expires_in)

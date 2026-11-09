@@ -385,6 +385,7 @@
   color: var(--fl-text-navy);
 }
 .cfg-ind-points.badge-required { color: #c62828; font-weight: 600; }
+.cfg-ind-points.badge-supporting { color: #5c6b7a; font-weight: 600; }
 
 .cfg-weight-grid--panel {
   display: grid;

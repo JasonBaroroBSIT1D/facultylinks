@@ -33,6 +33,17 @@ class UiStrings {
   static const emptyDocuments =
       'You have no documents yet. Tap Add Document to begin.';
 
-  static const uploadDemoNote =
-      'This app picks files on your device only (demonstration). Server upload comes later.';
+  static const uploadPdfServerNote =
+      'PDFs are uploaded securely for OCR and reviewer verification. Images and other files upload as usual.';
+
+  static const setSefEvalCardTitle = 'SET / SEF Evaluation';
+  static const setSefEvalCardBody =
+      'Upload your evaluation PDF. It may contain SET, SEF, or both. We read the semesters from the file.';
+
+  static const specialStatusCardTitle = 'Special Status';
+  static const specialStatusCardBody =
+      'Upload supporting documents for leave or other circumstances that apply to you.';
+
+  static const setSefUploadHint =
+      'Choose one PDF from your phone or computer. You can add a short description if you like.';
 }
