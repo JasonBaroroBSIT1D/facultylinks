@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import 'core/api_config.dart';
 import 'screens/change_password_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'screens/login_screen.dart';
@@ -9,6 +10,7 @@ import 'theme/app_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
+  ApiConfig.logResolvedBase();
   runApp(const FacultyLinkApp());
 }
 

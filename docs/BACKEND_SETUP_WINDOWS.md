@@ -96,13 +96,21 @@ flutter run -d chrome --web-port=49932 --dart-define=FACULTYLINK_API_BASE=http:/
 
 Add `http://127.0.0.1:49932` and `http://localhost:49932` to `CORS_ORIGINS` in `backend/.env` (keep the existing allowlist entries; do not use `*`).
 
-**Android / emulator:**
+**Android — physical device (same Wi‑Fi):** `run.py` listens on `0.0.0.0:5000`. Use your PC’s LAN IPv4 (`ipconfig`), not `127.0.0.1` (that is the phone itself):
 
 ```powershell
-flutter run --dart-define=FACULTYLINK_API_BASE=http://127.0.0.1:5000
+flutter run --dart-define=FACULTYLINK_DEV_LAN_HOST=192.168.1.23
 ```
 
-On a physical device, use your PC’s LAN IP instead of `127.0.0.1`, and add that origin to `CORS_ORIGINS` if needed.
+Or: `flutter run --dart-define=FACULTYLINK_API_BASE=http://192.168.1.23:5000`
+
+Native Android calls do not use browser CORS; allow port 5000 through Windows Firewall if needed.
+
+**Android emulator:**
+
+```powershell
+flutter run --dart-define=FACULTYLINK_API_BASE=http://10.0.2.2:5000
+```
 
 ## 8. Smoke tests (manual)
 

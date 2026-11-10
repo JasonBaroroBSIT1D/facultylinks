@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -31,6 +32,10 @@ class AuthRepository {
         'password': password,
       });
       if (res.statusCode != 200) {
+        if (kDebugMode) {
+          // ignore: avoid_print
+          print('[FacultyLink API] login HTTP ${res.statusCode} (server reached; not a transport failure)');
+        }
         return const LoginResult.failure('Invalid email or password.');
       }
       final data = jsonDecode(res.body) as Map<String, dynamic>;
@@ -47,11 +52,20 @@ class AuthRepository {
       await prefs.setBool(_mustChangeKey, mustChange);
       return LoginResult.success(mustChangePassword: mustChange);
     } on TimeoutException catch (e) {
-      return LoginResult.failure(ApiClient.describeConnectionError(e));
+      ApiClient.logConnectionDiagnostics(e, context: 'login');
+      return const LoginResult.failure(ApiClient.userConnectionMessage);
     } on http.ClientException catch (e) {
-      return LoginResult.failure(ApiClient.describeConnectionError(e));
+      ApiClient.logConnectionDiagnostics(e, context: 'login');
+      return const LoginResult.failure(ApiClient.userConnectionMessage);
     } catch (e) {
-      return LoginResult.failure(ApiClient.describeConnectionError(e));
+      if (ApiClient.isConnectionFailure(e)) {
+        ApiClient.logConnectionDiagnostics(e, context: 'login');
+        return const LoginResult.failure(ApiClient.userConnectionMessage);
+      }
+      if (kDebugMode) {
+        ApiClient.logConnectionDiagnostics(e, context: 'login (non-transport)');
+      }
+      return const LoginResult.failure('Invalid email or password.');
     }
   }
 

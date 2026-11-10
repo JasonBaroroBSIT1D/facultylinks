@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart' show kDebugMode, debugPrint;
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -71,24 +72,52 @@ class ApiClient {
         .timeout(timeout);
   }
 
-  /// User-facing message for CORS, offline API, and timeout failures (Flutter web/Android).
-  static String describeConnectionError(Object error) {
+  /// Shown on login and other flows when the API cannot be reached.
+  static const String userConnectionMessage =
+      'Cannot connect to the server. Check your connection and try again.';
+
+  /// True when the HTTP transport failed before a response (not wrong password / 4xx).
+  static bool isConnectionFailure(Object error) {
+    if (error is TimeoutException) return true;
+    if (error is http.ClientException) return true;
+    final name = error.runtimeType.toString();
+    return name.contains('SocketException') || name.contains('HandshakeException');
+  }
+
+  static void logConnectionDiagnostics(Object error, {String? context}) {
+    if (!kDebugMode) return;
+    final resolved = ApiConfig.resolve();
+    final category = error.runtimeType.toString();
+    final buffer = StringBuffer(
+      '[FacultyLink API] ${context ?? 'request'} failed\n'
+      'category=$category\n'
+      'resolved baseUrl=${resolved.url} source=${resolved.source}\n'
+      'error=$error',
+    );
     if (error is TimeoutException) {
-      return 'Connection timed out after ${ApiConfig.requestTimeout.inSeconds}s. '
-          'Check that the FacultyLink API is running at ${ApiConfig.baseUrl}.';
+      buffer.write('\nHint: API timeout — is Flask listening on 0.0.0.0:5000 and reachable on Wi‑Fi?');
     }
     if (error is http.ClientException) {
       final msg = error.message.toLowerCase();
-      if (msg.contains('failed to fetch') ||
-          msg.contains('xmlhttprequest') ||
-          msg.contains('connection refused') ||
-          msg.contains('network is unreachable')) {
-        return 'Cannot reach the FacultyLink API at ${ApiConfig.baseUrl}. '
-            'Verify the backend is running and that your app origin is listed in backend CORS_ORIGINS '
-            '(for Flutter web use port 49932 — see faculty_mobile/README.md).';
+      if (msg.contains('failed to fetch') || msg.contains('xmlhttprequest')) {
+        buffer.write(
+          '\nHint (Flutter web only): add your web dev origin to backend CORS_ORIGINS.',
+        );
       }
-      return 'Network error while contacting the API. (${error.message})';
+      if (msg.contains('connection refused') || msg.contains('network is unreachable')) {
+        buffer.write(
+          '\nHint (physical Android): rebuild with '
+          '--dart-define-from-file=config/dart_defines.local.json',
+        );
+      }
+      if (msg.contains('no route to host') || msg.contains('host is unreachable')) {
+        buffer.write(
+          '\nHint: Phone cannot reach the PC on Wi‑Fi — use the same LAN (not mobile data), '
+          'open http://<PC-IP>:5000/api/health in the phone browser, disable AP isolation, '
+          'or use USB: adb reverse tcp:5000 tcp:5000 then FACULTYLINK_API_BASE=http://127.0.0.1:5000',
+        );
+      }
     }
-    return 'Could not sign in due to a connection problem. Try again.';
+    debugPrint(buffer.toString());
   }
 }
