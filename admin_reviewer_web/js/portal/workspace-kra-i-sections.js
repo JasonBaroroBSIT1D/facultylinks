@@ -2,7 +2,7 @@
  * Reviewer workspace — KRA I Criterion A / B / C sections (Check Documents).
  */
 import { SUPPORTING_EVIDENCE_INDICATOR_ID } from '../core/assessment-definitions.js';
-import { formatCriterionAEstimateHtml } from '../core/criterion-a-display.js';
+import { formatCriterionAEstimateHtml, formatCriterionAVerifiedHtml } from '../core/criterion-a-display.js';
 import { statusBadgeHtml } from '../core/copy.js';
 import {
   attachmentReviewStatusHtml,
@@ -250,7 +250,7 @@ export function formatCriterionAScoresHtml(critA, loadError) {
   parts.push(breakdownBlock('Estimated', est));
   if (ver) {
     parts.push('<p class="ws-criterion-a-scoreline"><span class="ws-criterion-a-scorelabel">Reviewer-verified</span> ');
-    parts.push(formatCriterionAEstimateHtml(ver));
+    parts.push(formatCriterionAVerifiedHtml(ver));
     parts.push('</p>');
     parts.push(breakdownBlock('Reviewer-verified', ver));
     if (ver.criterionAPoints === 0 && est.criterionAPoints === 0) {

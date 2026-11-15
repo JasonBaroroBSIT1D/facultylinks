@@ -86,9 +86,16 @@ test('breadcrumbs follow Assigned Faculty → faculty → KRA I → criterion', 
     criterionId: 'kra-I-A',
     catalog: ASSESSMENT_CATALOG,
   });
+  assert.match(html, /aria-label="Breadcrumb"/);
+  assert.match(html, /<ol class="ws-breadcrumb__list">/);
   assert.match(html, /Assigned Faculty/);
   assert.match(html, /Jason Baroro/);
+  assert.match(html, /KRA I/);
   assert.match(html, /Teaching Effectiveness/);
+  assert.match(html, /data-ws-crumb="assigned"/);
+  assert.match(html, /aria-current="page"/);
+  assert.match(html, /ws-crumb--current/);
+  assert.doesNotMatch(html, /→/);
   assert.doesNotMatch(html, /wsFolderContent/);
 });
 
@@ -102,4 +109,6 @@ test('achievement review breadcrumb ends on achievement title', () => {
   assert.match(html, /My textbook/);
   assert.match(html, /aria-current="page"/);
   assert.match(html, /Instructional Materials/);
+  assert.match(html, /ws-breadcrumb__icon/);
+  assert.doesNotMatch(html, /→/);
 });

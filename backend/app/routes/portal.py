@@ -48,6 +48,27 @@ def portal_state():
         return jsonify({"error": "Failed to load portal state."}), 500
 
 
+@bp.get("/api/portal/faculty/<faculty_portal_id>/assessment-report")
+@require_roles(UserRole.admin)
+def portal_faculty_assessment_report(faculty_portal_id: str):
+    """Read-only comprehensive assessment/evidence report (admin only)."""
+    from app.services.assessment_report import build_assessment_report
+
+    actor = current_user()
+    uid = parse_portal_user_id(faculty_portal_id)
+    if not uid:
+        return jsonify({"error": "Invalid faculty id."}), 400
+    faculty = User.query.filter_by(id=uid, role=UserRole.faculty).first()
+    if not faculty:
+        return jsonify({"error": "Not found."}), 404
+    period_label = (request.args.get("periodLabel") or "").strip() or None
+    try:
+        report = build_assessment_report(faculty=faculty, actor=actor, period_label=period_label)
+    except Exception:
+        return jsonify({"error": "Failed to build assessment report."}), 500
+    return jsonify({"report": report})
+
+
 @bp.get("/api/portal/faculty/<faculty_portal_id>/teaching-effectiveness/criterion-a")
 @require_roles(UserRole.admin, UserRole.reviewer)
 def portal_faculty_criterion_a(faculty_portal_id: str):

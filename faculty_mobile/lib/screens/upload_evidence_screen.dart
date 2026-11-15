@@ -5,6 +5,7 @@ import '../core/ui_strings.dart';
 import '../data/assessment_catalog.dart';
 import '../repositories/mock_repository.dart';
 import '../services/document_api.dart';
+import '../services/selected_upload_file.dart';
 import 'kra_i_achievement_screen.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_theme.dart';
@@ -37,12 +38,16 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
   CriterionNode? _crit;
   IndicatorNode? _ind;
   _CriterionADocChoice? _criterionAChoice;
-  String? _fileName;
-  List<int>? _fileBytes;
-  String? _mimeType;
+  SelectedUploadFile? _selectedFile;
+  bool _pickingFile = false;
+  bool _uploading = false;
   final _title = TextEditingController();
   final _year = TextEditingController();
   final _sem = TextEditingController();
+  final _scrollController = ScrollController();
+
+  String? get _fileName => _selectedFile?.filename;
+  bool get _hasReadableFile => _selectedFile?.isReadable == true;
 
   /// Explicit SET/SEF shortcut from My Assessment (preselect Criterion A only).
   bool get _preselectCriterionA =>
@@ -137,10 +142,23 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _title.dispose();
     _year.dispose();
     _sem.dispose();
     super.dispose();
+  }
+
+  void _scrollActiveStepToTop() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      _scrollController.jumpTo(0);
+    });
+  }
+
+  void _goToStep(int step) {
+    setState(() => _step = step);
+    _scrollActiveStepToTop();
   }
 
   bool get _isSetSefOcrPdf {
@@ -168,11 +186,11 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
   }
 
   void _next() {
-    if (_step < _reviewStepIndex) setState(() => _step++);
+    if (_step < _reviewStepIndex) _goToStep(_step + 1);
   }
 
   void _back() {
-    if (_step > 0) setState(() => _step--);
+    if (_step > 0) _goToStep(_step - 1);
   }
 
   bool _validateStep(int step) {
@@ -198,13 +216,13 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
         return true;
       }
       if (step == fileStep) {
-        if (_fileName == null) {
+        if (!_hasReadableFile) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Choose a file to continue.')),
           );
           return false;
         }
-        if (_isSetSefOcrPdf && _mimeType != 'application/pdf') {
+        if (_isSetSefOcrPdf && _selectedFile!.mimeType != 'application/pdf') {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Please choose a PDF file.')),
           );
@@ -263,7 +281,7 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
           );
           return false;
         }
-        if (_fileName == null) {
+        if (!_hasReadableFile) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Choose a file to continue.')),
           );
@@ -290,7 +308,7 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
     if (_isTeachingCriterionA &&
         _criterionAChoice == _CriterionADocChoice.setSef &&
         _step == (_skipKraCriterionSteps ? 0 : 1)) {
-      setState(() => _step = _fileStepIndex);
+      _goToStep(_fileStepIndex);
       return;
     }
     _next();
@@ -326,9 +344,22 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
   }
 
   Future<void> _submit() async {
-    if (_ind == null || _fileName == null) {
+    if (_uploading) return;
+    if (_ind == null || _kra == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Choose a document type and add a file first.')),
+      );
+      return;
+    }
+    if (!_hasReadableFile) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _fileName == null
+                ? 'Choose a file to continue.'
+                : 'The selected file could not be read. Please select it again.',
+          ),
+        ),
       );
       return;
     }
@@ -340,28 +371,31 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
         return;
       }
     }
-    if (_fileBytes == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Choose a file to continue.')),
-      );
-      return;
-    }
+    setState(() => _uploading = true);
     try {
-      await DocumentApi.upload(
-        bytes: _fileBytes!,
-        filename: _fileName!,
-        mimeType: _mimeType ?? 'application/octet-stream',
+      final file = _selectedFile!;
+      final body = await DocumentApi.upload(
+        bytes: file.bytes,
+        filename: file.filename,
+        mimeType: file.mimeType,
         indicatorId: _ind!.id,
         kraId: _kra!.id,
-        title: _title.text.trim().isEmpty ? _fileName! : _title.text.trim(),
+        title: _title.text.trim().isEmpty ? file.filename : _title.text.trim(),
       );
+      final publicId = DocumentApi.publicIdFromUploadResponse(body);
+      if (publicId == null || publicId.isEmpty) {
+        throw Exception('Upload succeeded but no document ID was returned.');
+      }
     } catch (e) {
       if (!mounted) return;
+      setState(() => _uploading = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
       );
       return;
     }
+    // Clear only after a successful upload.
+    _selectedFile = null;
     await widget.repo.save();
     await widget.onSave();
     if (!mounted) return;
@@ -378,23 +412,62 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
   }
 
   Future<void> _pickFile() async {
+    if (_pickingFile || _uploading) return;
+    final previous = _selectedFile;
     final pdfOnly = _isSetSefOcrPdf;
-    final r = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: pdfOnly ? ['pdf'] : ['pdf', 'png', 'jpg'],
-    );
-    if (r != null && r.files.single.name.isNotEmpty) {
-      final f = r.files.single;
+    setState(() => _pickingFile = true);
+    try {
+      final r = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: pdfOnly ? ['pdf'] : ['pdf', 'png', 'jpg'],
+        withData: true,
+      );
+      if (!mounted) return;
+      // Cancel / dismiss: keep prior selection.
+      if (r == null || r.files.isEmpty) {
+        setState(() => _pickingFile = false);
+        return;
+      }
+      final picked = r.files.single;
+      final loaded = await readPlatformFileForUpload(picked);
+      if (!mounted) return;
+      if (loaded == null || !loaded.isReadable) {
+        setState(() {
+          _pickingFile = false;
+          _selectedFile = previous;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('The selected file could not be read. Please select it again.'),
+          ),
+        );
+        return;
+      }
+      if (pdfOnly && loaded.mimeType != 'application/pdf') {
+        setState(() {
+          _pickingFile = false;
+          _selectedFile = previous;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please choose a PDF file.')),
+        );
+        return;
+      }
       setState(() {
-        _fileName = f.name;
-        _fileBytes = f.bytes;
-        final ext = f.extension?.toLowerCase();
-        _mimeType = ext == 'pdf'
-            ? 'application/pdf'
-            : ext == 'png'
-                ? 'image/png'
-                : 'image/jpeg';
+        _selectedFile = loaded;
+        _pickingFile = false;
       });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _pickingFile = false;
+        _selectedFile = previous;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('The selected file could not be read. Please select it again.'),
+        ),
+      );
     }
   }
 
@@ -479,8 +552,6 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('KRA IV — choose a criterion', style: TextStyle(fontSize: textScale.scale(18), fontWeight: FontWeight.w600)),
-        const SizedBox(height: 12),
         if (a != null)
           _bigChoiceCard(
             title: 'A. Professional organizations',
@@ -546,8 +617,6 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('KRA III — choose a criterion', style: TextStyle(fontSize: textScale.scale(18), fontWeight: FontWeight.w600)),
-        const SizedBox(height: 12),
         if (a != null)
           _bigChoiceCard(
             title: 'A. Service to the Institution',
@@ -612,8 +681,6 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('KRA II — choose a criterion', style: TextStyle(fontSize: textScale.scale(18), fontWeight: FontWeight.w600)),
-        const SizedBox(height: 12),
         if (a != null)
           _bigChoiceCard(
             title: 'A. Research Outputs Published',
@@ -672,11 +739,6 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
-          'KRA I — choose a criterion',
-          style: TextStyle(fontSize: textScale.scale(18), fontWeight: FontWeight.w600),
-        ),
-        const SizedBox(height: 12),
         if (critA != null)
           _bigChoiceCard(
             title: 'A. Teaching Effectiveness',
@@ -740,65 +802,70 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
     );
   }
 
-  List<Step> _buildSteps(TextScaler textScale) {
+  String get _compactStepLabel {
     if (_isTeachingCriterionA && _skipKraCriterionSteps) {
-      return [
-        Step(
-          title: Text('Choose document type', softWrap: true),
-          isActive: _step >= 0,
-          state: _step > 0 ? StepState.complete : StepState.indexed,
-          content: _buildCriterionAChoices(textScale),
-        ),
-        _fileStep(textScale),
-        _reviewStep(textScale),
-      ];
+      switch (_step) {
+        case 0:
+          return 'Document type';
+        case 1:
+          return 'Add file';
+        default:
+          return 'Check and send';
+      }
     }
     if (_isTeachingCriterionA && !_skipKraCriterionSteps) {
-      return [
-        Step(
-          title: Text('Choose assessment area', softWrap: true),
-          isActive: _step >= 0,
-          state: _step > 0 ? StepState.complete : StepState.indexed,
-          content: _kraStepContent(textScale),
-        ),
-        Step(
-          title: Text('Teaching effectiveness — document type', softWrap: true),
-          isActive: _step >= 1,
-          state: _step > 1 ? StepState.complete : StepState.indexed,
-          content: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (_kra != null)
-                Text(
-                  _crit?.name ?? 'Criterion A – Teaching Effectiveness',
-                  style: TextStyle(fontSize: textScale.scale(16), fontWeight: FontWeight.w600),
-                ),
-              const SizedBox(height: 12),
-              _buildCriterionAChoices(textScale),
-            ],
-          ),
-        ),
-        _fileStep(textScale),
-        _reviewStep(textScale),
-      ];
+      switch (_step) {
+        case 0:
+          return 'Assessment area';
+        case 1:
+          return 'Document type';
+        case 2:
+          return 'Add file';
+        default:
+          return 'Check and send';
+      }
     }
-    return [
-      Step(
-        title: Text('Choose assessment area (KRA)', softWrap: true),
-        subtitle: Text(UiStrings.kraHelp, softWrap: true),
-        isActive: _step >= 0,
-        state: _step > 0 ? StepState.complete : StepState.indexed,
-        content: _kraStepContent(textScale),
-      ),
-      Step(
-        title: Text(_kra?.id == 'kra-I' ? 'KRA I — criterion' : 'Choose criterion and indicator', softWrap: true),
-        isActive: _step >= 1,
-        state: _step > 1 ? StepState.complete : StepState.indexed,
-        content: _criterionIndicatorStep(textScale),
-      ),
-      _fileStep(textScale),
-      _reviewStep(textScale),
-    ];
+    switch (_step) {
+      case 0:
+        return 'Assessment area';
+      case 1:
+        return 'Criterion & indicator';
+      case 2:
+        return _isAchievementCriterion ? 'Achievement' : 'Add file';
+      default:
+        return 'Check and send';
+    }
+  }
+
+  Widget _activeStepBody(TextScaler textScale) {
+    if (_isTeachingCriterionA && _skipKraCriterionSteps) {
+      if (_step == 0) return _buildCriterionAChoices(textScale);
+      if (_step == _fileStepIndex) return _fileStepContent(textScale);
+      return _reviewStepContent(textScale);
+    }
+    if (_isTeachingCriterionA && !_skipKraCriterionSteps) {
+      if (_step == 0) return _kraStepContent(textScale);
+      if (_step == 1) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_kra != null)
+              Text(
+                _crit?.name ?? 'Criterion A – Teaching Effectiveness',
+                style: TextStyle(fontSize: textScale.scale(16), fontWeight: FontWeight.w600),
+              ),
+            const SizedBox(height: 12),
+            _buildCriterionAChoices(textScale),
+          ],
+        );
+      }
+      if (_step == _fileStepIndex) return _fileStepContent(textScale);
+      return _reviewStepContent(textScale);
+    }
+    if (_step == 0) return _kraStepContent(textScale);
+    if (_step == 1) return _criterionIndicatorStep(textScale);
+    if (_step == _fileStepIndex) return _fileStepContent(textScale);
+    return _reviewStepContent(textScale);
   }
 
   Widget _kraStepContent(TextScaler textScale) {
@@ -812,12 +879,15 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
           items: widget.repo.catalogKras
               .map((k) => DropdownMenuItem(value: k, child: Text(k.shortDropdownLabel, softWrap: true)))
               .toList(),
-          onChanged: (v) => setState(() {
-            _kra = v;
-            _crit = null;
-            _ind = null;
-            _criterionAChoice = null;
-          }),
+          onChanged: (v) {
+            setState(() {
+              _kra = v;
+              _crit = null;
+              _ind = null;
+              _criterionAChoice = null;
+            });
+            _scrollActiveStepToTop();
+          },
         ),
       ],
     );
@@ -941,116 +1011,195 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
     );
   }
 
-  Step _fileStep(TextScaler textScale) {
+  Widget _fileStepContent(TextScaler textScale) {
     if (_isAchievementCriterion) {
-      return Step(
-        title: const Text('Not used for Criterion B or C achievements', softWrap: true),
-        isActive: _step >= _fileStepIndex,
-        content: Text(
-          'Instructional materials and advising use the achievement form on step 2. Tap Back, then Open achievement.',
-          style: TextStyle(fontSize: textScale.scale(16), color: AppColors.textMuted, height: 1.45),
-        ),
+      return Text(
+        'Instructional materials and advising use the achievement form on step 2. Tap Back, then Open achievement.',
+        style: TextStyle(fontSize: textScale.scale(16), color: AppColors.textMuted, height: 1.45),
       );
     }
     final pdfOnly = _isSetSefOcrPdf;
-    return Step(
-      title: Text(pdfOnly ? 'Choose your PDF' : 'Add your file', softWrap: true),
-      isActive: _step >= _fileStepIndex,
-      state: _step > _fileStepIndex ? StepState.complete : StepState.indexed,
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (_isTeachingCriterionA)
-            Text(
-              _documentCategoryLabel,
-              style: TextStyle(fontSize: textScale.scale(16), fontWeight: FontWeight.w600),
-            ),
-          const SizedBox(height: 12),
-          Semantics(
-            button: true,
-            label: 'Choose file from device',
-            child: SizedBox(
-              height: 52,
-              child: FilledButton.icon(
-                onPressed: _pickFile,
-                icon: const Icon(Icons.attach_file, size: 26),
-                label: Text(
-                  _fileName ?? (pdfOnly ? 'Tap to choose PDF' : 'Tap to choose file'),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 2,
-                ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_isTeachingCriterionA)
+          Text(
+            _documentCategoryLabel,
+            style: TextStyle(fontSize: textScale.scale(16), fontWeight: FontWeight.w600),
+          ),
+        const SizedBox(height: 12),
+        Semantics(
+          button: true,
+          label: 'Choose file from device',
+          child: SizedBox(
+            height: 52,
+            child: FilledButton.icon(
+              onPressed: (_pickingFile || _uploading) ? null : _pickFile,
+              icon: _pickingFile
+                  ? const SizedBox(
+                      width: 22,
+                      height: 22,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.attach_file, size: 26),
+              label: Text(
+                _pickingFile
+                    ? 'Reading file…'
+                    : (_fileName ?? (pdfOnly ? 'Tap to choose PDF' : 'Tap to choose file')),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
               ),
             ),
           ),
-          const SizedBox(height: 12),
+        ),
+        if (_hasReadableFile) ...[
+          const SizedBox(height: 8),
           Text(
-            pdfOnly ? UiStrings.setSefUploadHint : UiStrings.uploadPdfServerNote,
-            style: TextStyle(fontSize: textScale.scale(15), color: AppColors.textMuted, height: 1.45),
+            'Ready · ${(_selectedFile!.sizeBytes / 1024).toStringAsFixed(1)} KB',
+            style: TextStyle(fontSize: textScale.scale(14), color: AppColors.success, fontWeight: FontWeight.w600),
           ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _title,
-            decoration: const InputDecoration(
-              labelText: 'Short description (optional)',
-            ),
-          ),
-          if (_ind?.subType == 'SET' || _ind?.subType == 'SEF') ...[
-            TextField(
-              controller: _year,
-              decoration: const InputDecoration(labelText: 'Academic year (required)'),
-            ),
-            TextField(
-              controller: _sem,
-              decoration: const InputDecoration(labelText: 'Semester (example: 1st Sem)'),
-            ),
-          ],
         ],
-      ),
+        const SizedBox(height: 12),
+        Text(
+          pdfOnly ? UiStrings.setSefUploadHint : UiStrings.uploadPdfServerNote,
+          style: TextStyle(fontSize: textScale.scale(15), color: AppColors.textMuted, height: 1.45),
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _title,
+          decoration: const InputDecoration(
+            labelText: 'Short description (optional)',
+          ),
+        ),
+        if (_ind?.subType == 'SET' || _ind?.subType == 'SEF') ...[
+          TextField(
+            controller: _year,
+            decoration: const InputDecoration(labelText: 'Academic year (required)'),
+          ),
+          TextField(
+            controller: _sem,
+            decoration: const InputDecoration(labelText: 'Semester (example: 1st Sem)'),
+          ),
+        ],
+      ],
     );
   }
 
-  Step _reviewStep(TextScaler textScale) {
+  Widget _reviewStepContent(TextScaler textScale) {
     if (_isAchievementCriterion) {
-      return Step(
-        title: const Text('Self-assessment', softWrap: true),
-        isActive: _step >= _reviewStepIndex,
-        content: Text(
-          'Complete draft or submit from the achievement screen.',
-          style: TextStyle(fontSize: textScale.scale(16), color: AppColors.textMuted),
-        ),
+      return Text(
+        'Complete draft or submit from the achievement screen.',
+        style: TextStyle(fontSize: textScale.scale(16), color: AppColors.textMuted),
       );
     }
-    return Step(
-      title: Text('Check and send', softWrap: true),
-      isActive: _step >= _reviewStepIndex,
-      content: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(_breadcrumb, style: TextStyle(fontSize: textScale.scale(15), fontWeight: FontWeight.w600)),
-          const SizedBox(height: 12),
-          Text('Document type: $_documentCategoryLabel', style: TextStyle(fontSize: textScale.scale(16))),
-          const SizedBox(height: 6),
-          Text('File: ${_fileName ?? "—"}', style: TextStyle(fontSize: textScale.scale(16))),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(_breadcrumb, style: TextStyle(fontSize: textScale.scale(15), fontWeight: FontWeight.w600)),
+        const SizedBox(height: 12),
+        Text('Document type: $_documentCategoryLabel', style: TextStyle(fontSize: textScale.scale(16))),
+        const SizedBox(height: 6),
+        Text(
+          'File: ${_hasReadableFile ? _fileName! : (_fileName ?? "—")}',
+          style: TextStyle(fontSize: textScale.scale(16)),
+        ),
+        if (_hasReadableFile)
           Text(
-            'Description: ${_title.text.isEmpty ? "—" : _title.text}',
-            style: TextStyle(fontSize: textScale.scale(16)),
-          ),
-          const SizedBox(height: 12),
+            'Size: ${(_selectedFile!.sizeBytes / 1024).toStringAsFixed(1)} KB',
+            style: TextStyle(fontSize: textScale.scale(15), color: AppColors.textMuted),
+          )
+        else if (_fileName != null)
           Text(
-            _isSetSefOcrPdf
-                ? 'We will read semesters from your PDF. Your reviewer checks names and scores before they count toward your assessment.'
-                : 'Your reviewer will check this document against the published rules.',
-            style: TextStyle(fontSize: textScale.scale(15), height: 1.45, color: AppColors.textMuted),
+            'The selected file could not be read. Please select it again.',
+            style: TextStyle(fontSize: textScale.scale(15), color: AppColors.amberText, height: 1.4),
           ),
-        ],
-      ),
+        Text(
+          'Description: ${_title.text.isEmpty ? "—" : _title.text}',
+          style: TextStyle(fontSize: textScale.scale(16)),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          _isSetSefOcrPdf
+              ? 'We will read semesters from your PDF. Your reviewer checks names and scores before they count toward your assessment.'
+              : 'Your reviewer will check this document against the published rules.',
+          style: TextStyle(fontSize: textScale.scale(15), height: 1.45, color: AppColors.textMuted),
+        ),
+      ],
+    );
+  }
+
+  Widget _compactHeader(TextScaler textScale) {
+    final kraLabel = _kra?.shortDropdownLabel;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (kraLabel != null)
+          Text(
+            kraLabel,
+            style: TextStyle(
+              fontSize: textScale.scale(15),
+              fontWeight: FontWeight.w600,
+              color: AppColors.textNavy,
+            ),
+          ),
+        const SizedBox(height: 2),
+        Text(
+          'Step ${_step + 1} of $_stepCount · $_compactStepLabel',
+          style: TextStyle(
+            fontSize: textScale.scale(14),
+            fontWeight: FontWeight.w700,
+            color: AppColors.primaryBlue,
+          ),
+        ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: LinearProgressIndicator(
+            value: (_step + 1) / _stepCount,
+            minHeight: 6,
+            backgroundColor: AppColors.border,
+            color: AppColors.primaryBlue,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _stepControls() {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        if (_step > 0)
+          TextButton(onPressed: _uploading ? null : _back, child: const Text('Back')),
+        if (_step < _reviewStepIndex)
+          FilledButton(
+            onPressed: _uploading ? null : _continue,
+            child: Text(_isAchievementCriterion && _step == 1 ? 'Open achievement' : 'Continue'),
+          ),
+        if (_step == _reviewStepIndex && !_isAchievementCriterion)
+          FilledButton(
+            onPressed: (_uploading || !_hasReadableFile) ? null : _submit,
+            child: _uploading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : const Text('Send for review'),
+          ),
+      ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
     final textScale = MediaQuery.textScalerOf(context);
+    final safeBottom = MediaQuery.paddingOf(context).bottom;
+    final keyboard = MediaQuery.viewInsetsOf(context).bottom;
+
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         title: const Text('Add document'),
         leading: IconButton(
@@ -1059,68 +1208,29 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
           onPressed: () => Navigator.maybePop(context),
         ),
       ),
-      body: ListView(
-        padding: FlLayout.pagePadding,
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(
-            'Add proof for your assessment',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontSize: textScale.scale(26),
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.textNavy,
-                ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 10, 16, 8),
+            child: _compactHeader(textScale),
           ),
-          const SizedBox(height: 6),
-          Text(
-            'Your answers stay on this screen when you tap Back.',
-            style: TextStyle(fontSize: textScale.scale(17), color: AppColors.textMuted, height: 1.5),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'Step ${_step + 1} of $_stepCount',
-            style: TextStyle(
-              fontSize: textScale.scale(16),
-              fontWeight: FontWeight.w700,
-              color: AppColors.primaryBlue,
+          const Divider(height: 1),
+          Expanded(
+            child: SingleChildScrollView(
+              controller: _scrollController,
+              physics: const AlwaysScrollableScrollPhysics(),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: EdgeInsets.fromLTRB(16, 12, 16, 24 + safeBottom + keyboard),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _activeStepBody(textScale),
+                  const SizedBox(height: 20),
+                  _stepControls(),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(8),
-            child: LinearProgressIndicator(
-              value: (_step + 1) / _stepCount,
-              minHeight: 8,
-              backgroundColor: AppColors.border,
-              color: AppColors.primaryBlue,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Stepper(
-            type: StepperType.vertical,
-            currentStep: _step,
-            onStepContinue: _step < _reviewStepIndex ? _continue : null,
-            onStepCancel: _step > 0 ? _back : null,
-            controlsBuilder: (context, details) {
-              return Padding(
-                padding: const EdgeInsets.only(top: 12),
-                child: Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: [
-                    if (details.stepIndex > 0)
-                      TextButton(onPressed: details.onStepCancel, child: const Text('Back')),
-                    if (details.stepIndex < _reviewStepIndex)
-                      FilledButton(
-                        onPressed: details.onStepContinue,
-                        child: Text(_isAchievementCriterion && details.stepIndex == 1 ? 'Open achievement' : 'Next'),
-                      ),
-                    if (details.stepIndex == _reviewStepIndex && !_isAchievementCriterion)
-                      FilledButton(onPressed: _submit, child: const Text('Send for review')),
-                  ],
-                ),
-              );
-            },
-            steps: _buildSteps(textScale),
           ),
         ],
       ),

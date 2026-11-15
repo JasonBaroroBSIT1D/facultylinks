@@ -36,10 +36,15 @@ String _processingLabel(String? s) {
 
 String formatCriterionAScoring(Map<String, dynamic>? scoring) {
   if (scoring == null) return 'Not available yet';
-  if (scoring['incomplete'] == true) {
-    return 'Incomplete — ${scoring['incompleteReason'] ?? 'Not enough semester ratings.'}';
+  if (scoring['calculationUnavailable'] == true) {
+    return 'Unavailable — ${scoring['incompleteReason'] ?? 'No eligible ratings.'}';
   }
-  final total = scoring['criterionAPoints'];
-  if (total == null) return 'Not available yet';
-  return '${(total as num).toStringAsFixed(2)} / 60';
+  final setN = scoring['setCount'] ?? 0;
+  final sefN = scoring['sefCount'] ?? 0;
+  final slots = (scoring['availabilitySummary'] as String?) ??
+      'SET: $setN ratings available · SEF: $sefN ratings available';
+  final total = scoring['criterionAPoints'] ?? scoring['partialSubtotal'];
+  if (total == null) return 'Not available yet ($slots)';
+  final note = scoring['incomplete'] == true ? ' · coverage incomplete' : '';
+  return '${(total as num).toStringAsFixed(2)} / 60 ($slots)$note';
 }

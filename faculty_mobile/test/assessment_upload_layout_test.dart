@@ -33,11 +33,11 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  for (final width in [320.0, 360.0]) {
-    testWidgets('Upload evidence stepper fits ${width.toInt()}px width', (tester) async {
+  for (final width in [320.0, 360.0, 412.0]) {
+    testWidgets('Upload evidence scroll owner fits ${width.toInt()}px width', (tester) async {
       final repo = await MockRepository.load();
-    repo.catalogKras = assessmentKras;
-    repo.catalogLoadedFromApi = true;
+      repo.catalogKras = assessmentKras;
+      repo.catalogLoadedFromApi = true;
       await tester.binding.setSurfaceSize(Size(width, 740));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -51,8 +51,10 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.text('Add proof for your assessment'), findsOneWidget);
+      expect(find.textContaining('Step 1 of'), findsOneWidget);
       expect(find.byType(DropdownButtonFormField<KraNode>), findsOneWidget);
+      expect(find.byType(Stepper), findsNothing);
+      expect(find.byType(SingleChildScrollView), findsWidgets);
       expect(tester.takeException(), isNull);
 
       final overflow = find.byWidgetPredicate(
@@ -61,6 +63,50 @@ void main() {
       expect(overflow, findsNothing);
     });
   }
+
+  testWidgets('Step 2 criterion cards scroll and keep selection on Back', (tester) async {
+    final repo = await MockRepository.load();
+    repo.catalogKras = assessmentKras;
+    repo.catalogLoadedFromApi = true;
+    await tester.binding.setSurfaceSize(const Size(360, 640));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(size: Size(360, 640)),
+          child: UploadEvidenceScreen(repo: repo, onSave: () async {}),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    // Select KRA IV (4 criterion cards) then Continue to Step 2.
+    await tester.tap(find.byType(DropdownButtonFormField<KraNode>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('KRA IV · Professional Development').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('Step 2 of'), findsOneWidget);
+    expect(find.text('D. Newly appointed faculty'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('D. Newly appointed faculty'));
+    await tester.tap(find.text('D. Newly appointed faculty'));
+    await tester.pumpAndSettle();
+
+    // Scroll to bottom controls and go Back — selection must remain.
+    await tester.ensureVisible(find.text('Back'));
+    await tester.tap(find.text('Back'));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Step 1 of'), findsOneWidget);
+
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+    expect(find.text('D. Newly appointed faculty'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
 
   test('KRA short dropdown labels match spec', () {
     expect(assessmentKras[0].shortDropdownLabel, 'KRA I · Instruction');

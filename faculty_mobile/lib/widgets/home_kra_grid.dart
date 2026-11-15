@@ -42,12 +42,49 @@ class HomeKraGrid extends StatelessWidget {
     }
   }
 
+  static String _kraCode(String id) {
+    switch (id) {
+      case 'kra-I':
+        return 'KRA I';
+      case 'kra-II':
+        return 'KRA II';
+      case 'kra-III':
+        return 'KRA III';
+      case 'kra-IV':
+        return 'KRA IV';
+      default:
+        return id;
+    }
+  }
+
+  /// Short area title — never hyphenated mid-word; wraps between words only.
+  static String _areaTitle(String id) {
+    switch (id) {
+      case 'kra-I':
+        return 'Instruction';
+      case 'kra-II':
+        return 'Research';
+      case 'kra-III':
+        return 'Extension';
+      case 'kra-IV':
+        return 'Professional Development';
+      default:
+        return id;
+    }
+  }
+
+  String _scoreLabel(SimulationSnapshot snapshot, String kraId) {
+    if (!repo.scoresConfigured) return 'Est. — pts';
+    final line = snapshot.kras.where((k) => k.kraId == kraId).firstOrNull;
+    if (line == null) return 'Est. — pts';
+    if (line.rawIncomplete) return 'Est. Incomplete';
+    return 'Est. ${line.weightedContribution.toStringAsFixed(2)} pts';
+  }
+
   @override
   Widget build(BuildContext context) {
     final snapshot = SimulationEngine.compute(repo);
     final scale = MediaQuery.textScalerOf(context);
-    final width = MediaQuery.sizeOf(context).width;
-    final singleColumn = width < 340 || scale.scale(1) > 1.15;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -55,55 +92,68 @@ class HomeKraGrid extends StatelessWidget {
         const FlSectionTitle('Assessment areas'),
         LayoutBuilder(
           builder: (context, constraints) {
-            final cardWidth = singleColumn ? constraints.maxWidth : (constraints.maxWidth - 10) / 2;
+            final singleColumn = constraints.maxWidth < 340 || scale.scale(1) > 1.2;
+            final gap = 10.0;
+            final cardWidth = singleColumn ? constraints.maxWidth : (constraints.maxWidth - gap) / 2;
+
             return Wrap(
-              spacing: 10,
-              runSpacing: 10,
+              spacing: gap,
+              runSpacing: gap,
               children: assessmentKras.map((kra) {
-                final line = snapshot.kras.where((k) => k.kraId == kra.id).firstOrNull;
-                final pts = line == null
-                    ? '0.00'
-                    : line.rawIncomplete
-                        ? 'Incomplete'
-                        : line.weightedContribution.toStringAsFixed(2);
+                final color = _iconColor(kra.id);
                 return SizedBox(
                   width: cardWidth,
                   child: FlSurfaceCard(
                     onTap: onOpenAssessment,
-                    padding: const EdgeInsets.all(14),
-                    child: Row(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 12, 14),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 48,
-                          height: 48,
-                          decoration: BoxDecoration(
-                            color: _iconColor(kra.id).withValues(alpha: 0.12),
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Icon(_iconFor(kra.id), color: _iconColor(kra.id)),
+                        Row(
+                          children: [
+                            Container(
+                              width: 40,
+                              height: 40,
+                              decoration: BoxDecoration(
+                                color: color.withValues(alpha: 0.12),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Icon(_iconFor(kra.id), color: color, size: 22),
+                            ),
+                            const Spacer(),
+                            Icon(Icons.chevron_right, color: AppColors.textMuted, size: scale.scale(22)),
+                          ],
                         ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                kra.shortDropdownLabel,
-                                style: TextStyle(
-                                  fontSize: scale.scale(16),
-                                  fontWeight: FontWeight.w700,
-                                  color: AppColors.textMain,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Est. $pts pts',
-                                style: TextStyle(fontSize: scale.scale(15), color: AppColors.textMuted),
-                              ),
-                            ],
+                        const SizedBox(height: 10),
+                        Text(
+                          _kraCode(kra.id),
+                          style: TextStyle(
+                            fontSize: scale.scale(13),
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textMuted,
+                            height: 1.2,
                           ),
                         ),
-                        const Icon(Icons.chevron_right, color: AppColors.textMuted),
+                        const SizedBox(height: 4),
+                        Text(
+                          _areaTitle(kra.id),
+                          softWrap: true,
+                          style: TextStyle(
+                            fontSize: scale.scale(16),
+                            fontWeight: FontWeight.w700,
+                            color: AppColors.textMain,
+                            height: 1.3,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          _scoreLabel(snapshot, kra.id),
+                          style: TextStyle(
+                            fontSize: scale.scale(14),
+                            color: AppColors.textMuted,
+                            height: 1.3,
+                          ),
+                        ),
                       ],
                     ),
                   ),

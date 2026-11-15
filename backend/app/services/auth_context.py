@@ -3,7 +3,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 
-from flask import g, jsonify, request, session
+from flask import has_request_context, jsonify, request, session
 
 from app.extensions import db
 from app.models import User, UserRole, UserSession
@@ -79,7 +79,15 @@ _CACHED_USER = object()
 
 
 def current_user() -> User | None:
-    cached = getattr(g, "_current_user", _CACHED_USER)
+    """Resolve the authenticated user for the active request.
+
+    Cache on the request object (not flask.g). Caching on g leaks across
+    requests when an outer application context is held open (pytest app_ctx),
+    which incorrectly reuses the previous request's user and can 403 admins.
+    """
+    if not has_request_context():
+        return None
+    cached = getattr(request, "_facultylink_current_user", _CACHED_USER)
     if cached is not _CACHED_USER:
         return None if cached is False else cached
     user = _user_from_bearer()
@@ -87,10 +95,9 @@ def current_user() -> User | None:
         uid = session.get("user_id")
         if uid:
             user = db.session.get(User, uid)
-    g._current_user = user if user and user.is_active else None
-    if g._current_user is None:
-        g._current_user = False
-    return g._current_user if g._current_user is not False else None
+    resolved = user if user and user.is_active else None
+    request._facultylink_current_user = resolved if resolved is not None else False
+    return resolved
 
 
 def login_user_web(user: User) -> None:

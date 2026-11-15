@@ -1,8 +1,5 @@
 /** Plain-language labels shared across Admin / Reviewer UI */
 
-export const KRA_HELP =
-  'KRA (Key Result Area) — the four main areas used to review faculty work: Instruction, Research, Extension, and Professional Development.';
-
 export const DOC_STATUS = {
   pending: { label: 'Waiting for review', badge: 'badge-pending' },
   evidence: { label: 'Supporting evidence', badge: 'badge-muted' },
@@ -29,7 +26,7 @@ export const SCREEN_INTRO = {
   reviewers: 'Manage who can review faculty documents.',
   config: 'Set scoring rules and point values. Changes are saved as a draft until you publish.',
   simulationCfg: 'Set the official evaluation period and when reviewers may begin checking documents.',
-  reports: 'Print a simple summary of a faculty member’s progress.',
+  reports: 'Generate a detailed report of faculty evidence, reviewer feedback, and assessment progress.',
   activity: 'Recent actions in this demonstration system.',
   assigned: 'Choose a faculty member to check their documents.',
   workspace: 'Open documents by assessment area. Faculty scores stay tied to the rules version they started with.',

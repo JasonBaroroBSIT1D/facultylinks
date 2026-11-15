@@ -82,6 +82,15 @@ export const PortalApi = {
   fetchDocumentViewUrl: (documentId) => apiJson(`/api/documents/${encodeURIComponent(documentId)}/view-url`),
   fetchFacultyCriterionA: (facultyPortalId) =>
     apiJson(`/api/portal/faculty/${encodeURIComponent(facultyPortalId)}/teaching-effectiveness/criterion-a`),
+  fetchFacultyAssessmentReport: (facultyPortalId, { periodLabel } = {}) => {
+    const q = new URLSearchParams();
+    if (periodLabel) q.set('periodLabel', periodLabel);
+    const qs = q.toString();
+    return apiJson(
+      `/api/portal/faculty/${encodeURIComponent(facultyPortalId)}/assessment-report${qs ? `?${qs}` : ''}`,
+      { timeoutMs: API_TIMEOUT_MS * 2 }
+    );
+  },
   fetchFacultyAchievements: (facultyPortalId, { criterionId, submittedOnly } = {}) => {
     const q = new URLSearchParams();
     if (criterionId) q.set('criterionId', criterionId);

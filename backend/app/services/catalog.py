@@ -28,6 +28,18 @@ def filter_config_for_non_admin(cfg: dict | None) -> dict:
     }
 
 
+def with_document_intake_aliases(catalog: dict | None) -> dict | None:
+    """Ensure SET/SEF PDF intake aliases exist without mutating stored config."""
+    if not catalog or not isinstance(catalog, dict):
+        return catalog
+    import copy
+
+    from app.services.catalog_merge import merge_set_sef_pdf_indicators
+
+    merged, _ = merge_set_sef_pdf_indicators(copy.deepcopy(catalog))
+    return merged
+
+
 def get_published_catalog_and_weights() -> tuple[dict | None, dict | None]:
     cfg = get_assessment_config()
     active_id = cfg.get("activePublishedId")
@@ -42,10 +54,10 @@ def get_published_catalog_and_weights() -> tuple[dict | None, dict | None]:
                 version = v
                 break
     if version:
-        return version.get("catalog"), version.get("kraWeights")
+        return with_document_intake_aliases(version.get("catalog")), version.get("kraWeights")
     pub = get_json(CATALOG_PUBLISHED_KEY)
     if isinstance(pub, dict) and pub.get("kras"):
-        return pub, pub.get("kraWeights")
+        return with_document_intake_aliases(pub), pub.get("kraWeights")
     return None, None
 
 
@@ -202,7 +214,7 @@ def get_catalog_for_assessment(assessment_data: dict | None) -> tuple[dict | Non
     if pinned:
         rec = get_version_record(pinned)
         if rec and rec.get("status") == "published" and rec.get("catalog"):
-            return rec.get("catalog"), rec.get("kraWeights")
+            return with_document_intake_aliases(rec.get("catalog")), rec.get("kraWeights")
     return get_published_catalog_and_weights()
 
 

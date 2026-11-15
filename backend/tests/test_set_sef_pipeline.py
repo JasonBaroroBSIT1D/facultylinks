@@ -107,6 +107,7 @@ def test_incomplete_scoring():
         document_id=1,
         owner_user_id=1,
         set_rating_extracted=90,
+        set_rating_confirmed=90,
         set_verification_status="verified",
         faculty_identity_status="match",
     )

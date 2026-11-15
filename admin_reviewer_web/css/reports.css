@@ -1,0 +1,257 @@
+/* Faculty Assessment and Evidence Report */
+
+.rep-controls {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0 0 1.25rem;
+  padding: 0.85rem 1rem;
+  background: #fff;
+  border: 1px solid var(--fl-border);
+  border-radius: 12px;
+}
+.rep-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--fl-text-navy);
+}
+.rep-field select,
+.rep-field input {
+  font: inherit;
+  font-weight: 400;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--fl-border);
+  border-radius: 8px;
+}
+.rep-fac-select {
+  min-height: 10rem;
+  width: 100%;
+}
+.rep-actions-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.rep-out {
+  min-width: 0;
+}
+.rep-error {
+  padding: 1rem;
+  border: 1px solid #f5c2c7;
+  background: #fff5f5;
+  border-radius: 10px;
+}
+.rep-doc {
+  background: #fff;
+  border: 1px solid var(--fl-border);
+  border-radius: 12px;
+  padding: 1.25rem 1.35rem 2rem;
+  color: var(--fl-text-navy);
+}
+.rep-header {
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--fl-border);
+}
+.rep-brand {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--fl-primary, #1a5fb4);
+}
+.rep-header h1 {
+  margin: 0.35rem 0 0.75rem;
+  font-size: 1.45rem;
+  line-height: 1.25;
+}
+.rep-meta {
+  margin: 0.25rem 0;
+  font-size: 0.92rem;
+  color: #5a7089;
+}
+.rep-notice {
+  margin: 0.85rem 0 0;
+  padding: 0.65rem 0.75rem;
+  background: var(--fl-primary-soft, #e8f1fb);
+  border-radius: 8px;
+  font-size: 0.88rem;
+}
+.rep-section {
+  margin: 1.5rem 0;
+  break-inside: avoid;
+}
+.rep-section h2 {
+  margin: 0 0 0.65rem;
+  font-size: 1.15rem;
+}
+.rep-section h3 {
+  margin: 1rem 0 0.5rem;
+  font-size: 1.02rem;
+}
+.rep-section h4 {
+  margin: 0.85rem 0 0.4rem;
+  font-size: 0.98rem;
+}
+.rep-section h5,
+.rep-section h6 {
+  margin: 0.55rem 0 0.3rem;
+  font-size: 0.92rem;
+}
+.rep-dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.55rem 1rem;
+  margin: 0;
+}
+.rep-dl > div {
+  min-width: 0;
+}
+.rep-dl dt {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #5a7089;
+  margin: 0;
+}
+.rep-dl dd {
+  margin: 0.15rem 0 0;
+  font-weight: 600;
+}
+.rep-stats {
+  margin: 0.5rem 0;
+  padding-left: 1.15rem;
+}
+.rep-table-wrap {
+  margin: 0.5rem 0 1rem;
+}
+.rep-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.rep-table th,
+.rep-table td {
+  border: 1px solid var(--fl-border);
+  padding: 0.45rem 0.55rem;
+  vertical-align: top;
+  text-align: left;
+}
+.rep-table thead th {
+  background: #f5f9fd;
+}
+.rep-table thead {
+  display: table-header-group;
+}
+.rep-num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.rep-wrap {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+.rep-unavailable {
+  color: #9a3412;
+  font-weight: 600;
+}
+.rep-note {
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+.rep-ach {
+  margin: 0.65rem 0;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--fl-border);
+  border-radius: 8px;
+  break-inside: avoid;
+}
+.rep-linked ul,
+.rep-actions {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+}
+.rep-app-link {
+  color: var(--fl-primary, #1a5fb4);
+  text-decoration: none;
+}
+.rep-app-link:hover {
+  text-decoration: underline;
+}
+.rep-rank-bucket {
+  margin: 0.75rem 0;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid var(--fl-border);
+  border-radius: 8px;
+}
+.rep-footer {
+  display: none;
+}
+
+@media print {
+  @page {
+    size: A4;
+    margin: 14mm 12mm 18mm;
+  }
+  body.rep-print-root {
+    background: #fff;
+    margin: 0;
+    font-size: 11pt;
+  }
+  body.rep-print-root[data-report-id]::after {
+    content: "FacultyLink · " attr(data-report-id) " · page " counter(page);
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 0.35rem 0;
+    font-size: 9pt;
+    color: #5a7089;
+    border-top: 1px solid #d4e2f0;
+    background: #fff;
+  }
+  .app-shell,
+  .sidebar,
+  .topbar,
+  .no-print,
+  .rep-controls {
+    display: none !important;
+  }
+  .rep-doc {
+    border: none;
+    border-radius: 0;
+    padding: 0 0 12mm;
+    box-shadow: none;
+  }
+  .rep-section {
+    break-inside: avoid-page;
+  }
+  .rep-ach,
+  .rep-rank-bucket,
+  tr {
+    break-inside: avoid;
+  }
+  .rep-table thead {
+    display: table-header-group;
+  }
+  .rep-table th,
+  .rep-table td {
+    overflow-wrap: anywhere;
+  }
+  .rep-app-link {
+    color: inherit;
+    text-decoration: none;
+  }
+  .rep-footer {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .rep-dl {
+    grid-template-columns: 1fr;
+  }
+}

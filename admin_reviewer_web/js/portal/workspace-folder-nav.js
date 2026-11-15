@@ -263,50 +263,67 @@ export function bindWorkspaceBreadcrumbNav(root, handlers) {
   });
 }
 
+const WS_BREADCRUMB_ROOT_ICON = `<svg class="ws-breadcrumb__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
+  <path d="M3.5 7.75A2.25 2.25 0 0 1 5.75 5.5h4.1c.4 0 .78.16 1.06.44l1.06 1.06c.28.28.66.44 1.06.44h5.28A2.25 2.25 0 0 1 20.5 9.7v7.05A2.25 2.25 0 0 1 18.25 19H5.75A2.25 2.25 0 0 1 3.5 16.75V7.75Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+  <path d="M8.25 14.25c0-1.24 1.23-2.25 2.75-2.25s2.75 1.01 2.75 2.25" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+  <circle cx="11" cy="10.5" r="1.35" stroke="currentColor" stroke-width="1.6"/>
+</svg>`;
+
+const WS_BREADCRUMB_CHEVRON = `<svg class="ws-crumb-sep__svg" width="12" height="12" viewBox="0 0 12 12" fill="none" aria-hidden="true" focusable="false">
+  <path d="M4.25 2.5 7.75 6 4.25 9.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>`;
+
+function kraFolderCrumbForCriterion(criterionId) {
+  if (criterionId?.startsWith('kra-IV')) return { id: WS_FOLDER_KRA_IV, label: 'KRA IV' };
+  if (criterionId?.startsWith('kra-III')) return { id: WS_FOLDER_KRA_III, label: 'KRA III' };
+  if (criterionId?.startsWith('kra-II')) return { id: WS_FOLDER_KRA_II, label: 'KRA II' };
+  return { id: WS_FOLDER_KRA_I, label: 'KRA I' };
+}
+
+function facultyDisplayName(fac) {
+  return `${fac?.firstName || ''} ${fac?.lastName || ''}`.trim() || 'Faculty';
+}
+
+/** Shared accessible breadcrumb strip (keeps data-ws-crumb back-navigation). */
+export function renderWorkspaceBreadcrumbNav(crumbs) {
+  const items = (crumbs || []).filter((c) => c && c.label);
+  const html = items
+    .map((c, i) => {
+      const isLast = i === items.length - 1;
+      const isRoot = i === 0;
+      const label = esc(c.label);
+      const icon = isRoot ? WS_BREADCRUMB_ROOT_ICON : '';
+      const sep =
+        i === 0 ? '' : `<span class="ws-crumb-sep" aria-hidden="true">${WS_BREADCRUMB_CHEVRON}</span>`;
+      const crumb = isLast
+        ? `<span class="ws-crumb ws-crumb--current" aria-current="page">${icon}<span class="ws-crumb__text">${label}</span></span>`
+        : `<a class="ws-crumb ws-crumb--link" href="#" data-ws-crumb="${esc(c.id)}" data-ws-crit="${esc(c.criterionId || '')}">${icon}<span class="ws-crumb__text">${label}</span></a>`;
+      return `<li class="ws-breadcrumb__item">${sep}${crumb}</li>`;
+    })
+    .join('');
+  return `<nav class="ws-breadcrumb" aria-label="Breadcrumb"><ol class="ws-breadcrumb__list">${html}</ol></nav>`;
+}
+
 export function buildAchievementReviewBreadcrumb({ fac, criterionId, catalog, achievementTitle }) {
-  const crumbs = [
+  const kra = kraFolderCrumbForCriterion(criterionId);
+  return renderWorkspaceBreadcrumbNav([
     { id: 'assigned', label: 'Assigned Faculty' },
-    { id: WS_FOLDER_FACULTY, label: `${fac.firstName} ${fac.lastName}` },
-    {
-      id: criterionId?.startsWith('kra-IV')
-        ? WS_FOLDER_KRA_IV
-        : criterionId?.startsWith('kra-III')
-          ? WS_FOLDER_KRA_III
-          : criterionId?.startsWith('kra-II')
-            ? WS_FOLDER_KRA_II
-            : WS_FOLDER_KRA_I,
-      label: criterionId?.startsWith('kra-IV')
-        ? 'KRA IV'
-        : criterionId?.startsWith('kra-III')
-          ? 'KRA III'
-          : criterionId?.startsWith('kra-II')
-            ? 'KRA II'
-            : 'KRA I',
-    },
+    { id: WS_FOLDER_FACULTY, label: facultyDisplayName(fac) },
+    kra,
     {
       id: 'criterion',
       label: workspaceCriterionHeading(catalog, criterionId),
       criterionId,
     },
     { id: 'achievement', label: achievementTitle || 'Achievement' },
-  ];
-  const html = crumbs
-    .map((c, i) => {
-      const isLast = i === crumbs.length - 1;
-      const cls = isLast ? 'ws-crumb ws-crumb--current' : 'ws-crumb ws-crumb--link';
-      const attrs = isLast
-        ? `class="${cls}" aria-current="page"`
-        : `class="${cls}" href="#" data-ws-crumb="${esc(c.id)}" data-ws-crit="${esc(c.criterionId || '')}"`;
-      return isLast ? `<span ${attrs}>${esc(c.label)}</span>` : `<a ${attrs}>${esc(c.label)}</a>`;
-    })
-    .join('<span class="ws-crumb-sep" aria-hidden="true">→</span>');
-  return `<nav class="ws-breadcrumb" aria-label="Breadcrumb">${html}</nav>`;
+  ]);
 }
 
-export function buildWorkspaceBreadcrumb({ fac, folder, criterionId, catalog, onNavigate }) {
-  const crumbs = [];
-  crumbs.push({ id: 'assigned', label: 'Assigned Faculty' });
-  crumbs.push({ id: WS_FOLDER_FACULTY, label: `${fac.firstName} ${fac.lastName}` });
+export function buildWorkspaceBreadcrumb({ fac, folder, criterionId, catalog }) {
+  const crumbs = [
+    { id: 'assigned', label: 'Assigned Faculty' },
+    { id: WS_FOLDER_FACULTY, label: facultyDisplayName(fac) },
+  ];
   if (folder === WS_FOLDER_KRA_I) {
     crumbs.push({ id: WS_FOLDER_KRA_I, label: 'KRA I' });
   } else if (folder === WS_FOLDER_KRA_II) {
@@ -316,41 +333,14 @@ export function buildWorkspaceBreadcrumb({ fac, folder, criterionId, catalog, on
   } else if (folder === WS_FOLDER_KRA_IV) {
     crumbs.push({ id: WS_FOLDER_KRA_IV, label: 'KRA IV' });
   } else if (folder === WS_FOLDER_CRITERION && criterionId) {
-    crumbs.push({
-      id: criterionId.startsWith('kra-IV')
-        ? WS_FOLDER_KRA_IV
-        : criterionId.startsWith('kra-III')
-          ? WS_FOLDER_KRA_III
-          : criterionId.startsWith('kra-II')
-            ? WS_FOLDER_KRA_II
-            : WS_FOLDER_KRA_I,
-      label: criterionId.startsWith('kra-IV')
-        ? 'KRA IV'
-        : criterionId.startsWith('kra-III')
-          ? 'KRA III'
-          : criterionId.startsWith('kra-II')
-            ? 'KRA II'
-            : 'KRA I',
-    });
-  }
-  if (folder === WS_FOLDER_CRITERION && criterionId) {
+    crumbs.push(kraFolderCrumbForCriterion(criterionId));
     crumbs.push({
       id: 'criterion',
       label: workspaceCriterionHeading(catalog, criterionId),
       criterionId,
     });
   }
-  const html = crumbs
-    .map((c, i) => {
-      const isLast = i === crumbs.length - 1;
-      const cls = isLast ? 'ws-crumb ws-crumb--current' : 'ws-crumb ws-crumb--link';
-      const attrs = isLast
-        ? `class="${cls}" aria-current="page"`
-        : `class="${cls}" href="#" data-ws-crumb="${esc(c.id)}" data-ws-crit="${esc(c.criterionId || '')}"`;
-      return isLast ? `<span ${attrs}>${esc(c.label)}</span>` : `<a ${attrs}>${esc(c.label)}</a>`;
-    })
-    .join('<span class="ws-crumb-sep" aria-hidden="true">→</span>');
-  return `<nav class="ws-breadcrumb" aria-label="Breadcrumb">${html}</nav>`;
+  return renderWorkspaceBreadcrumbNav(crumbs);
 }
 
 export function buildFacultyRootFolderHtml(kraICounts, kraIICounts, kraIIICounts, kraIVCounts) {

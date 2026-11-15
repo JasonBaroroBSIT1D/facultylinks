@@ -146,12 +146,34 @@ def _parse_summary_rating_table(pdf: PdfExtractionResult) -> list[ExtractedSemes
     return records
 
 
+def _dedupe_extracted(records: list[ExtractedSemester]) -> list[ExtractedSemester]:
+    deduped: list[ExtractedSemester] = []
+    seen: set[str] = set()
+    for rec in records:
+        key = f"{rec.academic_year or '?'}|{rec.semester or '?'}"
+        if key in seen:
+            for d in deduped:
+                if f"{d.academic_year or '?'}|{d.semester or '?'}" == key:
+                    if rec.set_rating is not None and d.set_rating is None:
+                        d.set_rating = rec.set_rating
+                        d.set_scale = rec.set_scale or d.set_scale
+                    if rec.sef_rating is not None and d.sef_rating is None:
+                        d.sef_rating = rec.sef_rating
+                        d.sef_scale = rec.sef_scale or d.sef_scale
+                    if rec.faculty_name:
+                        d.faculty_name = rec.faculty_name
+            continue
+        seen.add(key)
+        deduped.append(rec)
+    return deduped
+
+
 def extract_set_sef_semesters(pdf: PdfExtractionResult) -> list[ExtractedSemester]:
     if pdf.error:
         return []
     table_records = _parse_summary_rating_table(pdf)
     if table_records:
-        return table_records
+        return _dedupe_extracted(table_records)
     text = pdf.full_text
     blocks = [b.strip() for b in BLOCK_SPLIT.split(text) if b.strip()]
     records: list[ExtractedSemester] = []
@@ -220,20 +242,4 @@ def extract_set_sef_semesters(pdf: PdfExtractionResult) -> list[ExtractedSemeste
     if current and (current.academic_year or current.semester or current.set_rating or current.sef_rating):
         records.append(current)
 
-    deduped: list[ExtractedSemester] = []
-    seen: set[str] = set()
-    for rec in records:
-        key = f"{rec.academic_year or '?'}|{rec.semester or '?'}"
-        if key in seen:
-            for d in deduped:
-                if f"{d.academic_year}|{d.semester}" == key:
-                    if rec.set_rating and not d.set_rating:
-                        d.set_rating = rec.set_rating
-                    if rec.sef_rating and not d.sef_rating:
-                        d.sef_rating = rec.sef_rating
-                    if rec.faculty_name:
-                        d.faculty_name = rec.faculty_name
-            continue
-        seen.add(key)
-        deduped.append(rec)
-    return deduped
+    return _dedupe_extracted(records)

@@ -12,7 +12,7 @@ import {
   isSupportingEvidenceIndicator,
   scoringIndicatorsForCriterion,
 } from '../core/assessment-definitions.js';
-import { KRA_HELP, SCREEN_INTRO, pageIntro } from '../core/copy.js';
+import { SCREEN_INTRO, pageIntro } from '../core/copy.js';
 import { computeKraSummaries } from '../core/scoring.js';
 import { modalHost, bindModalShell, teardownModal, openCenteredModal, openDrawerModal } from './modal-access.js';
 
@@ -67,7 +67,6 @@ const HOW_IT_WORKS = `
     <li><strong>Review &amp; Publish</strong> checks weights and catalog validation, then sets an effective date for new work.</li>
     <li><strong>Preview</strong> (inside Review &amp; Publish) runs what-if calculations only — it does not change saved faculty scores.</li>
   </ul>
-  <p>${KRA_HELP}</p>
 `;
 
 export function initConfigUi(session, onRefresh) {
@@ -1159,7 +1158,14 @@ function openIndicatorEditor(kraId, critId, indId) {
             <label>Calculation type<select name="calcKind">
               ${['fixed_per_entry', 'set_sef_average', 'role_matrix', 'patent_stage', 'tiered_option', 'yearly_rate', 'designation_matrix', 'income_tier', 'hourly_tier', 'structured_points', 'pending'].map((k) => `<option value="${k}" ${ind.calculation?.kind === k ? 'selected' : ''}>${labelCalcKind(k)}</option>`).join('')}
             </select></label>
-            <label id="setFactorWrap">SET/SEF factor (average-based)<input type="number" step="0.01" name="setFactor" value="${ind.calculation?.factor ?? 0.36}"/></label>
+            <div id="setFactorWrap">
+              <label>SET/SEF factor (average-based)<input type="number" step="0.01" name="setFactor" value="${ind.calculation?.factor ?? 0.36}"/></label>
+              <label>Max semester slots<input type="number" min="1" max="6" name="semesterCount" value="${ind.calculation?.semesterCount ?? 6}"/></label>
+              <label>Criterion A policy<select name="setSefPolicy">
+                <option value="average_available_max_six" ${(ind.calculation?.policy || 'average_available_max_six') === 'average_available_max_six' ? 'selected' : ''}>Average available ratings (max 6 slots)</option>
+                <option value="legacy_six_semester_required" ${ind.calculation?.policy === 'legacy_six_semester_required' ? 'selected' : ''}>Legacy: require six ratings (fixed ÷6)</option>
+              </select></label>
+            </div>
             <fieldset id="patentStageWrap" style="display:none">
               <legend>Patent stages (A / P / G)</legend>
               <p class="muted" style="font-size:0.85rem;margin:0 0 0.5rem">One stage per achievement; stages do not accumulate (workbook B16–B17).</p>
@@ -1255,7 +1261,12 @@ function openIndicatorEditor(kraId, critId, indId) {
     const kind = fd.get('calcKind');
     const prevCalc = { ...(ind.calculation || {}) };
     ind.calculation = { ...prevCalc, kind };
-    if (kind === 'set_sef_average') ind.calculation.factor = Number(fd.get('setFactor'));
+    if (kind === 'set_sef_average') {
+      ind.calculation.factor = Number(fd.get('setFactor'));
+      const slots = Number(fd.get('semesterCount') || 6);
+      ind.calculation.semesterCount = Number.isFinite(slots) ? Math.min(6, Math.max(1, slots)) : 6;
+      ind.calculation.policy = String(fd.get('setSefPolicy') || 'average_available_max_six');
+    }
     if (kind === 'fixed_per_entry') {
       ind.calculation.maxPoints = ind.maxPoints;
       const ac = fd.get('aggregateCap');

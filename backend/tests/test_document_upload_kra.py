@@ -80,3 +80,31 @@ def test_missing_indicator():
     with pytest.raises(CatalogValidationError) as exc:
         validate_indicator_kra(MINIMAL_KRA_III, "kra-III-B-9-9", "kra-III")
     assert "not in the published" in str(exc.value).lower() or "not in" in str(exc.value).lower()
+
+
+def test_set_sef_eval_accepted_via_intake_aliases():
+    """Pinned catalogs often lack documentIntakeAliases; merge fills them for upload."""
+    from app.services.catalog import with_document_intake_aliases
+
+    catalog = {
+        "kras": [
+            {
+                "id": "kra-I",
+                "criteria": [
+                    {
+                        "id": "kra-I-A",
+                        "indicators": [
+                            {"id": "kra-I-A-set", "subType": "SET"},
+                            {"id": "kra-I-A-sef", "subType": "SEF"},
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+    with pytest.raises(CatalogValidationError):
+        validate_indicator_kra(catalog, "kra-I-A-setsef-eval", "kra-I")
+    merged = with_document_intake_aliases(catalog)
+    found = validate_indicator_kra(merged, "kra-I-A-setsef-eval", "kra-I")
+    assert found["intakeOnly"] is True
+    assert found["kra"]["id"] == "kra-I"

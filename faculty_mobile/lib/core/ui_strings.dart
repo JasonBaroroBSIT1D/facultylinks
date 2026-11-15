@@ -1,8 +1,5 @@
 /// Plain-language labels for faculty app (readable, professional).
 class UiStrings {
-  static const kraHelp =
-      'KRA (Key Result Area) — the four areas used to review your work: Instruction, Research, Extension, and Professional Development.';
-
   static const estimatedPoints = 'Estimated points';
   static const estimatedPointsHelp = 'Your current self-assessment estimate.';
   static const verifiedPoints = 'Reviewer-verified points';

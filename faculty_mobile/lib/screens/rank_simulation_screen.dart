@@ -79,20 +79,6 @@ class _RankSimulationScreenState extends State<RankSimulationScreen> {
     return k?.shortDropdownLabel ?? kraId;
   }
 
-  String _criterionBreakdownLabel(CriterionBreakdownLine c) {
-    final fromCatalog = assessmentKras
-        .expand((k) => k.criteria)
-        .where((cr) => cr.id == c.criterionId)
-        .map((cr) => cr.name)
-        .firstOrNull;
-    final label = c.name ?? fromCatalog ?? c.criterionId;
-    final cap = c.capMaxPoints;
-    if (cap != null) {
-      return '$label: ${c.rawTotal.toStringAsFixed(2)} / ${cap.toStringAsFixed(0)} pts';
-    }
-    return '$label: ${c.rawTotal.toStringAsFixed(2)} pts';
-  }
-
   @override
   Widget build(BuildContext context) {
     final est = SimulationEngine.compute(widget.repo, whatIf: _whatIf);
@@ -126,7 +112,8 @@ class _RankSimulationScreenState extends State<RankSimulationScreen> {
     final scale = MediaQuery.textScalerOf(context);
 
     final bottomInset = MediaQuery.paddingOf(context).bottom;
-    final listPadding = const EdgeInsets.fromLTRB(18, 4, 18, 16).copyWith(bottom: 16 + bottomInset);
+    // Extra bottom space so expanded "View calculation" clears the NavigationBar.
+    final listPadding = EdgeInsets.fromLTRB(16, 4, 16, 88 + bottomInset);
 
     final scrollable = ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -163,22 +150,28 @@ class _RankSimulationScreenState extends State<RankSimulationScreen> {
           const SizedBox(height: FlLayout.sectionGap),
           FlSurfaceCard(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            child: Theme(
-              data: Theme.of(context).copyWith(dividerColor: AppColors.border),
-              child: ExpansionTile(
-                tilePadding: const EdgeInsets.symmetric(horizontal: 4),
-                childrenPadding: const EdgeInsets.fromLTRB(4, 0, 4, 12),
-                collapsedShape: const RoundedRectangleBorder(side: BorderSide.none),
-                shape: const RoundedRectangleBorder(side: BorderSide.none),
-                title: Text(
-                  'View calculation',
-                  style: TextStyle(fontSize: scale.scale(16), fontWeight: FontWeight.w600, color: AppColors.textMain),
-                ),
-                children: _viewCalculationChildren(
-                  scale: scale,
-                  active: active,
-                  rankBucket: rankBucket,
-                  eval: eval,
+            child: Material(
+              color: Colors.transparent,
+              child: Theme(
+                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  tilePadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  childrenPadding: const EdgeInsets.fromLTRB(4, 0, 4, 14),
+                  collapsedShape: const RoundedRectangleBorder(side: BorderSide.none),
+                  shape: const RoundedRectangleBorder(side: BorderSide.none),
+                  title: Text(
+                    'View calculation',
+                    style: TextStyle(fontSize: scale.scale(16), fontWeight: FontWeight.w600, color: AppColors.textMain),
+                  ),
+                  children: [
+                    _ViewCalculationPanel(
+                      scale: scale,
+                      active: active,
+                      rankBucket: rankBucket,
+                      eval: eval,
+                      kraShortLabel: _kraShort,
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -210,18 +203,14 @@ class _RankSimulationScreenState extends State<RankSimulationScreen> {
           ),
           const SizedBox(height: FlLayout.sectionGap),
           FlSectionTitle('KRA breakdown'),
-          ..._kraBreakdownCards(active, scale),
           FlSurfaceCard(
-            child: ExpansionTile(
-              tilePadding: EdgeInsets.zero,
-              title: Text('Calculation details', style: TextStyle(fontSize: scale.scale(16), fontWeight: FontWeight.w600)),
-              children: [
-                Text(
-                  'Promotion score = sum of (capped KRA raw × current-rank weight). '
-                  'Raw KRA sum ${active.overallRaw.toStringAsFixed(2)} is not the promotion score.',
-                  style: TextStyle(fontSize: scale.scale(15), height: 1.45, color: AppColors.textMuted),
-                ),
-              ],
+            child: _ViewCalculationPanel(
+              scale: scale,
+              active: active,
+              rankBucket: rankBucket,
+              eval: eval,
+              kraShortLabel: _kraShort,
+              showWeightCategory: false,
             ),
           ),
         ],
@@ -564,133 +553,242 @@ class _RankSimulationScreenState extends State<RankSimulationScreen> {
   }
 
   String subRankIncPlural(int n) => n == 1 ? '' : 's';
+}
 
-  List<Widget> _viewCalculationChildren({
-    required TextScaler scale,
-    required SimulationSnapshot active,
-    required RankSimulationBucket rankBucket,
-    required RankEvaluation eval,
-  }) {
+/// Compact, left-aligned calculation breakdown for Rank Simulation.
+class _ViewCalculationPanel extends StatelessWidget {
+  final TextScaler scale;
+  final SimulationSnapshot active;
+  final RankSimulationBucket rankBucket;
+  final RankEvaluation eval;
+  final String Function(String kraId) kraShortLabel;
+  final bool showWeightCategory;
+
+  const _ViewCalculationPanel({
+    required this.scale,
+    required this.active,
+    required this.rankBucket,
+    required this.eval,
+    required this.kraShortLabel,
+    this.showWeightCategory = true,
+  });
+
+  TextStyle get _label => TextStyle(
+        fontSize: scale.scale(13),
+        fontWeight: FontWeight.w600,
+        color: AppColors.textMuted,
+        height: 1.3,
+      );
+
+  TextStyle get _body => TextStyle(
+        fontSize: scale.scale(14),
+        color: AppColors.textMain,
+        height: 1.4,
+      );
+
+  TextStyle get _muted => TextStyle(
+        fontSize: scale.scale(13),
+        color: AppColors.textMuted,
+        height: 1.4,
+      );
+
+  List<String> get _dedupedNotes {
+    final seen = <String>{};
+    final out = <String>[];
+    void addAll(Iterable<String> items) {
+      for (final raw in items) {
+        final t = raw.trim();
+        if (t.isEmpty) continue;
+        final key = t.toLowerCase();
+        if (seen.add(key)) out.add(t);
+      }
+    }
+
+    addAll(eval.unmetConditions);
+    addAll(active.missingRequirements);
+    addAll(active.potentialRank?.notes ?? const []);
     final bracket = active.subRankBracket;
-    final muted = TextStyle(fontSize: scale.scale(15), height: 1.45, color: AppColors.textMuted);
-    final sectionTitle = TextStyle(fontSize: scale.scale(15), fontWeight: FontWeight.w700);
+    if (bracket != null &&
+        bracket.status != 'below_minimum' &&
+        bracket.unresolvedReason != null &&
+        bracket.unresolvedReason!.trim().isNotEmpty) {
+      addAll([bracket.unresolvedReason!]);
+    }
+    return out;
+  }
 
-    return [
-      if (active.rankCategoryLabel != null) ...[
-        Text('Weight category (Table 2.2)', style: sectionTitle),
-        const SizedBox(height: 6),
-        Text(active.rankCategoryLabel!, style: muted),
-        const SizedBox(height: 14),
-      ],
-      Text('Score bracket (Table 3.1)', style: sectionTitle),
-      const SizedBox(height: 6),
-      if (bracket != null) ...[
-        Text(bracket.label ?? '—', style: muted),
-        if (bracket.unresolvedReason != null) ...[
-          const SizedBox(height: 6),
-          Text('Decimal policy: ${bracket.unresolvedReason}', style: muted),
+  String _bracketSummary(SubRankBracket bracket) {
+    if (bracket.status == 'below_minimum') {
+      return 'Score is below the Table 3.1 listed range (minimum 41). No sub-rank increment.';
+    }
+    final inc = bracket.subRankIncrements ?? bracket.provisionalIncrements;
+    final base = bracket.label?.trim();
+    if (base != null && base.isNotEmpty) {
+      if (bracket.status == 'conditional' || (bracket.subRankIncrements == null && inc != null)) {
+        return '$base · Subject to confirmation of the scoring policy.';
+      }
+      return base;
+    }
+    if (inc != null) return '+$inc sub-rank increment${inc == 1 ? '' : 's'}';
+    return 'Bracket not available for this score.';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bracket = active.subRankBracket;
+    final notes = _dedupedNotes;
+    final shortNotes = notes.where((n) => n.length <= 120).toList();
+    final longNotes = notes.where((n) => n.length > 120).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (showWeightCategory && active.rankCategoryLabel != null) ...[
+          Text('Weight category', style: _label),
+          const SizedBox(height: 4),
+          Text(active.rankCategoryLabel!, style: _body),
+          Text('Table 2.2 · current-rank weights', style: _muted),
+          const SizedBox(height: 12),
+          Divider(height: 1, color: AppColors.border),
+          const SizedBox(height: 12),
         ],
-      ] else
-        Text('No bracket resolved for this score.', style: muted),
-      const SizedBox(height: 14),
-      Text('KRA weights and contributions', style: sectionTitle),
-      const SizedBox(height: 8),
-      ..._kraBreakdownCards(active, scale, compact: true),
-      const SizedBox(height: 8),
-      Text(
-        'Promotion score = sum of (capped KRA raw × current-rank weight). '
-        'Raw KRA sum ${active.overallRaw.toStringAsFixed(2)} is not the promotion score.',
-        style: muted,
-      ),
-      if (rankBucket.conditionalRankProjections.isNotEmpty) ...[
-        const SizedBox(height: 14),
-        Text('Conditional projections', style: sectionTitle),
+        Text('KRA breakdown', style: _label),
+        const SizedBox(height: 8),
+        ...active.kras.map((k) => _kraRow(k)),
         const SizedBox(height: 6),
-        ...rankBucket.conditionalRankProjections.map(
-          (c) => Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Text(
-              '${c.policyLabel ?? c.policyKey}: ${c.potentialRank?.potentialRank ?? '—'} '
-              '(+${c.subRankIncrements ?? '—'} sub-rank(s), ${c.bracketLabel ?? ''})',
-              style: muted,
+        Text(
+          'Overall weighted total: ${active.weightedTotal.toStringAsFixed(2)}'
+          '${active.scoreSourceLabel == 'verified' ? ' · reviewer-verified' : ' · estimated'}',
+          style: TextStyle(fontSize: scale.scale(14), fontWeight: FontWeight.w700, color: AppColors.textNavy),
+        ),
+        const SizedBox(height: 12),
+        Divider(height: 1, color: AppColors.border),
+        const SizedBox(height: 12),
+        Text('Score bracket', style: _label),
+        const SizedBox(height: 4),
+        if (bracket != null)
+          Text(_bracketSummary(bracket), style: _body)
+        else
+          Text('No bracket resolved for this score.', style: _body),
+        Text('Table 3.1', style: _muted),
+        if (rankBucket.conditionalRankProjections.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          ...rankBucket.conditionalRankProjections.map(
+            (c) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text(
+                '${c.policyLabel ?? c.policyKey}: ${c.potentialRank?.potentialRank ?? '—'}'
+                '${c.subRankIncrements != null ? ' (+${c.subRankIncrements})' : ''}',
+                style: _muted,
+              ),
+            ),
+          ),
+        ],
+        if (shortNotes.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Divider(height: 1, color: AppColors.border),
+          const SizedBox(height: 12),
+          Text('Notes', style: _label),
+          const SizedBox(height: 6),
+          ...shortNotes.map(
+            (n) => Padding(
+              padding: const EdgeInsets.only(bottom: 4),
+              child: Text('• $n', style: _muted),
+            ),
+          ),
+        ],
+        if (longNotes.isNotEmpty) ...[
+          const SizedBox(height: 4),
+          Material(
+            color: Colors.transparent,
+            child: Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                tilePadding: EdgeInsets.zero,
+                childrenPadding: const EdgeInsets.only(bottom: 4),
+                dense: true,
+                title: Text('More details', style: TextStyle(fontSize: scale.scale(14), fontWeight: FontWeight.w600)),
+                children: longNotes
+                    .map(
+                      (n) => Align(
+                        alignment: Alignment.centerLeft,
+                        child: Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Text(n, style: _muted),
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
+            ),
+          ),
+        ],
+        Material(
+          color: Colors.transparent,
+          child: Theme(
+            data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+            child: ExpansionTile(
+              tilePadding: EdgeInsets.zero,
+              childrenPadding: const EdgeInsets.only(bottom: 4),
+              dense: true,
+              title: Text('How this is calculated', style: TextStyle(fontSize: scale.scale(14), fontWeight: FontWeight.w600)),
+              children: [
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Promotion score = sum of (capped KRA raw × current-rank weight). '
+                    'Raw KRA sum ${active.overallRaw.toStringAsFixed(2)} is not the promotion score.',
+                    style: _muted,
+                  ),
+                ),
+              ],
             ),
           ),
         ),
       ],
-      if (eval.unmetConditions.isNotEmpty) ...[
-        const SizedBox(height: 14),
-        Text('Eligibility and policy notes', style: sectionTitle),
-        const SizedBox(height: 6),
-        ...eval.unmetConditions.map((u) => Padding(
-              padding: const EdgeInsets.only(bottom: 4),
-              child: Text(u, style: muted),
-            )),
-      ],
-    ];
+    );
   }
 
-  List<Widget> _kraBreakdownCards(SimulationSnapshot active, TextScaler scale, {bool compact = false}) {
-    return active.kras.map(
-      (k) => Padding(
-        padding: EdgeInsets.only(bottom: compact ? 8 : 10),
-        child: compact
-            ? Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _kraShort(k.kraId),
-                    style: TextStyle(fontSize: scale.scale(15), fontWeight: FontWeight.w600),
-                  ),
-                  Text(
-                    'Raw ${k.rawTotal.toStringAsFixed(2)} · '
-                    'Weight ${(k.weight * 100).toStringAsFixed(0)}% · '
-                    'Contribution ${k.weightedContribution.toStringAsFixed(2)}',
-                    style: TextStyle(fontSize: scale.scale(14), height: 1.45, color: AppColors.textMuted),
-                  ),
-                  if (k.rawIncomplete)
-                    Text(
-                      'Criterion A incomplete — ${k.incompleteReason ?? 'verify SET/SEF semester ratings.'}',
-                      style: TextStyle(fontSize: scale.scale(14), color: AppColors.amberText),
-                    ),
-                ],
-              )
-            : FlSurfaceCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(_kraShort(k.kraId), style: TextStyle(fontSize: scale.scale(17), fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 4),
-                    Text(k.name, style: TextStyle(fontSize: scale.scale(15), color: AppColors.textMuted, height: 1.4)),
-                    const SizedBox(height: 10),
-                    if (k.rawIncomplete) ...[
-                      Text(
-                        'Criterion A incomplete — ${k.incompleteReason ?? 'verify SET/SEF semester ratings.'}',
-                        style: TextStyle(fontSize: scale.scale(15), height: 1.45, color: AppColors.amberText),
-                      ),
-                      const SizedBox(height: 6),
-                    ],
-                    Text(
-                      'Raw ${k.rawTotal.toStringAsFixed(2)} · '
-                      'Weight ${(k.weight * 100).toStringAsFixed(0)}% · '
-                      'Contribution ${k.weightedContribution.toStringAsFixed(2)}',
-                      style: TextStyle(fontSize: scale.scale(15), height: 1.45),
-                    ),
-                    if (k.criteria.isNotEmpty) ...[
-                      const SizedBox(height: 8),
-                      ...k.criteria.map(
-                        (c) => Padding(
-                          padding: const EdgeInsets.only(top: 4),
-                          child: Text(
-                            _criterionBreakdownLabel(c),
-                            style: TextStyle(fontSize: scale.scale(14), height: 1.4, color: AppColors.textMuted),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
+  Widget _kraRow(KraBreakdownLine k) {
+    final name = kraShortLabel(k.kraId);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.primarySoft.withValues(alpha: 0.35),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(name, style: TextStyle(fontSize: scale.scale(14), fontWeight: FontWeight.w700, height: 1.25)),
+            const SizedBox(height: 4),
+            Wrap(
+              spacing: 10,
+              runSpacing: 4,
+              children: [
+                Text('Raw ${k.rawTotal.toStringAsFixed(2)}', style: _muted),
+                Text('Weight ${(k.weight * 100).toStringAsFixed(0)}%', style: _muted),
+                Text(
+                  'Contribution ${k.weightedContribution.toStringAsFixed(2)}',
+                  style: TextStyle(fontSize: scale.scale(13), fontWeight: FontWeight.w600, color: AppColors.textMain),
+                ),
+              ],
+            ),
+            if (k.rawIncomplete)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  'Incomplete — ${k.incompleteReason ?? 'verify SET/SEF ratings.'}',
+                  style: TextStyle(fontSize: scale.scale(12), color: AppColors.amberText, height: 1.35),
                 ),
               ),
+          ],
+        ),
       ),
-    ).toList();
+    );
   }
 }

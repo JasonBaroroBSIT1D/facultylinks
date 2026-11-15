@@ -159,10 +159,10 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> with Widget
       return 'Unavailable — ${scoring['incompleteReason'] ?? 'No eligible ratings.'}';
     }
     final max = (scoring['maxima']?['criterionA'] as num?)?.toDouble() ?? 60.0;
-    final maxSlots = scoring['maxSemesterSlots'] ?? scoring['requiredSlots'] ?? 6;
     final setN = scoring['setCount'] ?? 0;
     final sefN = scoring['sefCount'] ?? 0;
-    final slots = 'SET: $setN/$maxSlots · SEF: $sefN/$maxSlots';
+    final slots = (scoring['availabilitySummary'] as String?) ??
+        'SET: $setN ratings available · SEF: $sefN ratings available';
     var total = scoring['criterionAPoints'] as num?;
     if (total == null) total = scoring['partialSubtotal'] as num?;
     if (total == null) {

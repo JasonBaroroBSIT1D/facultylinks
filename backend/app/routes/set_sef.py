@@ -34,13 +34,39 @@ def _active_semester_records(document_id: int) -> list[SetSefSemesterRecord]:
 
 
 def _scoring_bundle(doc: Document, records: list[SetSefSemesterRecord]) -> dict:
-    scoring_est = compute_criterion_a_from_records(records, verified_only=False, config_version=doc.config_version)
-    scoring_ver = compute_criterion_a_from_records(records, verified_only=True, config_version=doc.config_version)
+    from app.models import FacultyAssessment
+    from app.services.catalog import get_catalog_for_assessment
+
+    assess = FacultyAssessment.query.get(doc.owner_user_id)
+    assessment_data = assess.data if assess else {}
+    catalog, _weights = get_catalog_for_assessment(assessment_data)
+    pinned_version = assessment_data.get("configVersionId")
+    config_version = pinned_version or doc.config_version
+    scoring_est = compute_criterion_a_from_records(
+        records,
+        verified_only=False,
+        config_version=config_version,
+        catalog=catalog,
+    )
+    scoring_ver = compute_criterion_a_from_records(
+        records,
+        verified_only=True,
+        config_version=config_version,
+        catalog=catalog,
+    )
     return {
         "scoring": {"estimated": scoring_est, "verified": scoring_ver},
         "verifyCounts": {
-            "setVerified": sum(1 for r in records if r.set_verification_status == "verified"),
-            "sefVerified": sum(1 for r in records if r.sef_verification_status == "verified"),
+            "setVerified": sum(
+                1
+                for r in records
+                if r.set_verification_status == "verified" and r.set_rating_confirmed is not None
+            ),
+            "sefVerified": sum(
+                1
+                for r in records
+                if r.sef_verification_status == "verified" and r.sef_rating_confirmed is not None
+            ),
             "total": len(records),
         },
     }
@@ -122,6 +148,9 @@ def patch_semester_record(public_id: str, record_id: int):
             return jsonify({"error": "Cannot verify SET: no rating was extracted or confirmed."}), 400
         if rec.faculty_identity_status in ("missing", "mismatch"):
             return jsonify({"error": "Cannot verify SET until faculty identity is resolved."}), 400
+        # Persist a confirmed value so verified scoring never falls back to extraction silently.
+        if rec.set_rating_confirmed is None and rec.set_rating_extracted is not None:
+            rec.set_rating_confirmed = float(rec.set_rating_extracted)
         rec.set_verification_status = "verified"
     elif "setVerificationStatus" in data:
         rec.set_verification_status = data["setVerificationStatus"]
@@ -131,6 +160,8 @@ def patch_semester_record(public_id: str, record_id: int):
             return jsonify({"error": "Cannot verify SEF: no rating was extracted or confirmed."}), 400
         if rec.faculty_identity_status in ("missing", "mismatch"):
             return jsonify({"error": "Cannot verify SEF until faculty identity is resolved."}), 400
+        if rec.sef_rating_confirmed is None and rec.sef_rating_extracted is not None:
+            rec.sef_rating_confirmed = float(rec.sef_rating_extracted)
         rec.sef_verification_status = "verified"
     elif "sefVerificationStatus" in data:
         rec.sef_verification_status = data["sefVerificationStatus"]

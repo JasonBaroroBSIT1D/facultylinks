@@ -321,28 +321,27 @@ class MockRepository {
 
   static String _formatCaLineBody(Map<String, dynamic> ca) {
     final max = (ca['maxima']?['criterionA'] as num?)?.toDouble() ?? 60.0;
-    final maxSlots = ca['maxSemesterSlots'] ?? ca['requiredSlots'] ?? 6;
     final setN = ca['setCount'] ?? 0;
     final sefN = ca['sefCount'] ?? 0;
-    final slots = 'SET: $setN/$maxSlots · SEF: $sefN/$maxSlots';
+    final coverage = (ca['coverageSummary'] as String?) ??
+        '${ca['slotCount'] ?? setN} semesters, maximum ${ca['maxSemesterSlots'] ?? ca['requiredSlots'] ?? 6}';
     if (ca['calculationUnavailable'] == true) {
       return 'Unavailable — ${ca['incompleteReason'] ?? 'No eligible ratings.'}';
     }
-  var pts = ca['criterionAPoints'] as num?;
+    var pts = ca['criterionAPoints'] as num?;
     if (pts == null) pts = ca['partialSubtotal'] as num?;
+    final setPts = ca['setPoints'];
+    final sefPts = ca['sefPoints'];
+    final components =
+        'SET: ${setPts != null ? (setPts as num).toStringAsFixed(2) : '—'} · SEF: ${sefPts != null ? (sefPts as num).toStringAsFixed(2) : '—'}';
     if (pts == null) {
-      final sp = ca['setPoints'];
-      final sefp = ca['sefPoints'];
-      if (sp != null || sefp != null) {
-        final partial = (sp as num? ?? 0) + (sefp as num? ?? 0);
-        return 'Partial ${partial.toStringAsFixed(2)} / $max ($slots)';
+      if (setPts != null || sefPts != null) {
+        final partial = (setPts as num? ?? 0) + (sefPts as num? ?? 0);
+        return 'Partial ${partial.toStringAsFixed(2)} / $max · $components · Coverage: $coverage';
       }
       return 'Not available yet';
     }
-    final coverage = ca['incomplete'] == true
-        ? ' · ${ca['coverageNote'] ?? 'Based on available semesters; may change as ratings are added.'}'
-        : '';
-    return '${pts.toStringAsFixed(2)} / $max ($slots)$coverage';
+    return '${pts.toStringAsFixed(2)} / $max · $components · Coverage: $coverage';
   }
 
   bool get hasActiveDocumentProcessing => documents.any(

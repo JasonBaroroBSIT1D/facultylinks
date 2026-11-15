@@ -29,27 +29,25 @@ def _blocks_identity(rec: SetSefSemesterRecord) -> bool:
 
 
 def _approved_set_rating(rec: SetSefSemesterRecord) -> float | None:
+    """Reviewer-verified SET uses persisted confirmed values only (never extracted fallback)."""
     if _blocks_identity(rec):
         return None
     if rec.set_verification_status != "verified":
         return None
-    if rec.set_rating_confirmed is not None:
-        return float(rec.set_rating_confirmed)
-    if rec.set_rating_extracted is not None:
-        return float(rec.set_rating_extracted)
-    return None
+    if rec.set_rating_confirmed is None:
+        return None
+    return float(rec.set_rating_confirmed)
 
 
 def _approved_sef_rating(rec: SetSefSemesterRecord) -> float | None:
+    """Reviewer-verified SEF uses persisted confirmed values only (never extracted fallback)."""
     if _blocks_identity(rec):
         return None
     if rec.sef_verification_status != "verified":
         return None
-    if rec.sef_rating_confirmed is not None:
-        return float(rec.sef_rating_confirmed)
-    if rec.sef_rating_extracted is not None:
-        return float(rec.sef_rating_extracted)
-    return None
+    if rec.sef_rating_confirmed is None:
+        return None
+    return float(rec.sef_rating_confirmed)
 
 
 def _estimated_set(rec: SetSefSemesterRecord) -> float | None:
@@ -257,6 +255,10 @@ def compute_criterion_a_from_records(
     )
 
 
+def _availability_summary(set_count: int, sef_count: int) -> str:
+    return f"SET: {set_count} ratings available · SEF: {sef_count} ratings available"
+
+
 def _build_flexible_result(
     *,
     policy,
@@ -272,8 +274,11 @@ def _build_flexible_result(
     config_version,
     catalog,
 ) -> dict[str, Any]:
-    set_points, set_avg = _flexible_component_score(set_available, set_factor, set_max)
-    sef_points, sef_avg = _flexible_component_score(sef_available, sef_factor, sef_max)
+    # Six is a maximum window, not a fixed divisor.
+    set_vals = list(set_available[:max_slots])
+    sef_vals = list(sef_available[:max_slots])
+    set_points, set_avg = _flexible_component_score(set_vals, set_factor, set_max)
+    sef_points, sef_avg = _flexible_component_score(sef_vals, sef_factor, sef_max)
 
     combined_complete = set_points is not None and sef_points is not None
     criterion_a_points = None
@@ -286,28 +291,30 @@ def _build_flexible_result(
         partial_subtotal = sef_points
 
     coverage_complete = distinct_slots >= max_slots
+    # Coverage short of max slots must not block calculation under this policy.
     calculation_available = set_points is not None or sef_points is not None
+    availability = _availability_summary(len(set_vals), len(sef_vals))
+    coverage_summary = f"{distinct_slots} semesters, maximum {max_slots}"
 
-    coverage_parts = []
-    if not coverage_complete:
-        coverage_parts.append(f"{distinct_slots} of {max_slots} semester slots in window")
-    if not combined_complete and calculation_available:
+    reason_parts: list[str] = []
+    if not calculation_available:
+        reason_parts.append("No eligible ratings for calculation")
+    elif not combined_complete:
         if set_points is None:
-            coverage_parts.append("SEF component unavailable for combined total")
+            reason_parts.append("Missing SET component for combined total")
         if sef_points is None:
-            coverage_parts.append("SET component unavailable for combined total")
-
-    incomplete_reason = "; ".join(coverage_parts) if coverage_parts else None
+            reason_parts.append("Missing SEF component for combined total")
+    incomplete_reason = "; ".join(reason_parts) if reason_parts else None
 
     return {
         "configVersion": config_version or (catalog or {}).get("version") or "",
         "calculationPolicy": policy,
         "maxSemesterSlots": max_slots,
         "slotCount": distinct_slots,
-        "setCount": len(set_available),
-        "sefCount": len(sef_available),
-        "setDenominator": len(set_available),
-        "sefDenominator": len(sef_available),
+        "setCount": len(set_vals),
+        "sefCount": len(sef_vals),
+        "setDenominator": len(set_vals),
+        "sefDenominator": len(sef_vals),
         "requiredSlots": max_slots,
         "setComplete": set_points is not None,
         "sefComplete": sef_points is not None,
@@ -321,11 +328,13 @@ def _build_flexible_result(
         "criterionAPoints": criterion_a_points,
         "incomplete": not coverage_complete,
         "calculationUnavailable": not calculation_available,
+        "availabilitySummary": availability,
+        "coverageSummary": coverage_summary,
         "incompleteReason": incomplete_reason,
         "coverageNote": (
-            "Based on available semesters; may change as ratings are added."
+            f"Coverage: {coverage_summary}. Based on available semesters; may change as ratings are added."
             if calculation_available and not coverage_complete
-            else None
+            else (f"Coverage: {coverage_summary}" if calculation_available else None)
         ),
         "formula": _flexible_formula(set_factor, sef_factor, crit_max),
         "maxima": {"set": set_max, "sef": sef_max, "criterionA": crit_max},
@@ -389,6 +398,8 @@ def _build_legacy_result(
         "criterionAPoints": criterion_a_points,
         "incomplete": not coverage_complete,
         "calculationUnavailable": not calculation_available,
+        "availabilitySummary": _availability_summary(len(set_available), len(sef_available)),
+        "coverageSummary": f"{distinct_slots} semesters, maximum {max_slots}",
         "incompleteReason": incomplete_reason,
         "coverageNote": None,
         "formula": _legacy_formula(set_factor, sef_factor, crit_max, max_slots),

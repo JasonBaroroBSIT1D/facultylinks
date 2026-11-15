@@ -12,7 +12,7 @@ import {
 } from '../repositories/mock-store.js';
 import { PortalApi } from '../services/portal-api.js';
 import { computeKraSummaries } from '../core/scoring.js';
-import { formatCriterionAEstimateHtml } from '../core/criterion-a-display.js';
+import { formatCriterionAEstimateHtml, formatCriterionAVerifiedHtml } from '../core/criterion-a-display.js';
 import {
   buildCriterionADocumentsHtml,
   buildWorkspaceRecoveryHtml,
@@ -77,7 +77,8 @@ import {
   reviewerAvailabilityDetail,
   statusBadgeClass,
 } from '../core/evaluation-period-service.js';
-import { KRA_HELP, SCREEN_INTRO, pageIntro, statusBadgeHtml } from '../core/copy.js';
+import { SCREEN_INTRO, pageIntro, statusBadgeHtml } from '../core/copy.js';
+import { renderReportsPage } from './reports.js';
 import { iconForNav, navIcon } from '../core/icons.js';
 import { initSidebarLayout, applySidebarLayout, closeMobileDrawer, isMobileViewport } from './sidebar-layout.js';
 import {
@@ -935,37 +936,8 @@ function renderEvaluationPeriod(root, title, { embedded = false, readOnly = fals
 }
 
 function renderReports(root, title) {
-  title.textContent = 'Reports';
   const store = MockStore.load();
-  root.innerHTML = `
-    ${pageIntro(SCREEN_INTRO.reports)}
-    <div class="toolbar"><select id="repFac">${store.faculty.map((f) => `<option value="${f.id}">${f.firstName} ${f.lastName}</option>`).join('')}</select>
-    <button class="btn-primary-sm btn-sm" id="printRep">Print preview</button></div>
-    <div id="repOut" class="card"></div>`;
-  const update = () => {
-    const fid = document.getElementById('repFac').value;
-    const ass = store.assessments[fid] || { entries: {}, setSef: { SET: [], SEF: [] } };
-    const rules = rulesForFaculty(store, fid);
-    if (!rules.catalog?.kras?.length) {
-      document.getElementById('repOut').innerHTML =
-        '<p class="muted">Open any page that loads the full portal state, or refresh after login, to load the published catalog for KRA summaries.</p>';
-      return;
-    }
-    const sum = computeKraSummaries(ass, rules.catalog, rules.kraWeights);
-    const pinnedNote = rules.pinned ? ` (config version ${rules.versionId} pinned)` : '';
-    document.getElementById('repOut').innerHTML = `<h3>Faculty assessment summary</h3>
-      ${Object.values(sum.byKra)
-        .map((k) => `<p><strong>${k.name}</strong> raw ${k.rawTotal.toFixed(2)} · weighted ${k.weightedContribution.toFixed(2)}</p>`)
-        .join('')}
-      <p><strong>Overall weighted total:</strong> ${sum.overallWeighted.toFixed(2)}</p>
-      <h4>Documents</h4><ul>${store.documents
-        .filter((d) => d.facultyId === fid)
-        .map((d) => `<li>${d.fileName} — ${statusBadge(d.reviewStatus)}</li>`)
-        .join('')}</ul>`;
-  };
-  update();
-  document.getElementById('repFac').onchange = update;
-  document.getElementById('printRep').onclick = () => window.print();
+  renderReportsPage(root, title, { store, PortalApi, bootstrapPortal });
 }
 
 function renderActivity(root, title) {
@@ -1114,11 +1086,23 @@ function formatSemesterRating(v) {
   return Number.isFinite(n) ? n.toFixed(2) : String(v);
 }
 
-function verifyStatusShort(s) {
-  if (s === 'verified') return 'Verified';
+function verifyStatusShort(s, { confirmed } = {}) {
+  if (s === 'verified') {
+    // Verified badge requires a persisted confirmed rating; otherwise extraction-only.
+    if (confirmed === null || confirmed === undefined || confirmed === '') return 'Extracted';
+    return 'Verified';
+  }
   if (s === 'needs_review') return 'Needs review';
   if (s === 'rejected') return 'Rejected';
   return s ? String(s).replace(/_/g, ' ') : 'Pending';
+}
+
+function recordComponentVerified(record, kind) {
+  if (!record) return false;
+  if (kind === 'set') {
+    return record.setVerificationStatus === 'verified' && record.setRatingConfirmed != null;
+  }
+  return record.sefVerificationStatus === 'verified' && record.sefRatingConfirmed != null;
 }
 
 function identitySummaryFromRecords(records) {
@@ -1156,14 +1140,17 @@ function verifyControlButton(kind, recordId, isVerified) {
   </button>`;
 }
 
-function formatScoringVerifiedHtml(scoringVer) {
+function formatScoringVerifiedHtml(scoringVer, verifyCounts) {
   if (!scoringVer) return '—';
-  return formatCriterionAEstimateHtml(scoringVer);
+  return formatCriterionAVerifiedHtml(scoringVer, { pendingCounts: verifyCounts });
 }
 
-function formatScoringVerifiedReadonly(scoringVer) {
+function formatScoringVerifiedReadonly(scoringVer, verifyCounts) {
   if (!scoringVer) return '—';
-  return formatCriterionAEstimateHtml(scoringVer).replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  return formatCriterionAVerifiedHtml(scoringVer, { pendingCounts: verifyCounts })
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function verifyRowKey(recordId, kind) {
@@ -1264,13 +1251,15 @@ function applyVerifiedBadgeFromServer(pageRoot, record, kind) {
   const recordId = record.id;
   const kindKey = kind === 'set' ? 'set' : 'sef';
   const status = kind === 'set' ? record.setVerificationStatus : record.sefVerificationStatus;
+  const confirmed = kind === 'set' ? record.setRatingConfirmed : record.sefRatingConfirmed;
+  const fullyVerified = recordComponentVerified(record, kind);
   const badgeLabel = kind === 'set' ? 'SET' : 'SEF';
   pageRoot.querySelectorAll(`[data-record-badge="${recordId}-${kindKey}"]`).forEach((badge) => {
     badge.classList.remove('doc-verify-badge--syncing');
-    badge.dataset.v = status || 'pending';
-    badge.textContent = `${badgeLabel} · ${verifyStatusShort(status)}`;
+    badge.dataset.v = fullyVerified ? 'verified' : status || 'pending';
+    badge.textContent = `${badgeLabel} · ${verifyStatusShort(status, { confirmed })}`;
   });
-  if (status === 'verified') {
+  if (fullyVerified) {
     pageRoot.querySelectorAll(`[data-verify-${kindKey}="${recordId}"]`).forEach((b) => {
       b.remove();
     });
@@ -1281,17 +1270,24 @@ function applyVerifiedBadgeFromServer(pageRoot, record, kind) {
 function applyScoringSummaryFromServer(pageRoot, payload) {
   if (!payload) return;
   const ver = payload.scoring?.verified;
-  const verDd = pageRoot.querySelector('#docScoreVerified');
-  if (verDd && ver) verDd.innerHTML = formatScoringVerifiedHtml(ver);
+  const est = payload.scoring?.estimated;
   const counts = payload.verifyCounts;
+  const estDd = pageRoot.querySelector('#docScoreEstimated');
+  if (estDd && est) estDd.innerHTML = formatCriterionAEstimateHtml(est);
+  const verDd = pageRoot.querySelector('#docScoreVerified');
+  if (verDd && ver) verDd.innerHTML = formatScoringVerifiedHtml(ver, counts);
   const countsEl = pageRoot.querySelector('#docVerifyCounts');
   if (countsEl && counts) {
-    countsEl.innerHTML = `SET <strong>${counts.setVerified}/${counts.total}</strong> · SEF <strong>${counts.sefVerified}/${counts.total}</strong>`;
+    countsEl.innerHTML = `SET <strong>${counts.setVerified}/${counts.total}</strong> · SEF <strong>${counts.sefVerified}/${counts.total}</strong> confirmed`;
   }
   const verDisplay = pageRoot.querySelector('#docVerPtsDisplay');
-  if (verDisplay && ver) verDisplay.textContent = formatScoringVerifiedReadonly(ver);
+  if (verDisplay && ver) verDisplay.innerHTML = formatScoringVerifiedHtml(ver, counts);
   const verPts = pageRoot.querySelector('#verPts');
-  if (verPts && ver && !ver.incomplete) verPts.value = String(Number(ver.criterionAPoints ?? ''));
+  if (verPts && ver && ver.criterionAPoints != null) {
+    verPts.value = String(Number(ver.criterionAPoints));
+  } else if (verPts && ver?.calculationUnavailable) {
+    verPts.value = '';
+  }
 }
 
 function beginVerifyInflight(pageRoot) {
@@ -1851,7 +1847,6 @@ async function renderWorkspace(root, title) {
   root.innerHTML = `
     <div class="workspace-page" data-ws-scroll>
     ${pageIntro(SCREEN_INTRO.workspace)}
-    <p class="muted" style="font-size:0.9rem">${KRA_HELP}</p>
     ${breadcrumb}
     <motion class="toolbar ws-faculty-toolbar"><label class="visually-hidden" for="wsFac">Faculty</label><select id="wsFac">${storeFresh.faculty.map((f) => `<option value="${f.id}" ${f.id === facId ? 'selected' : ''}>${f.firstName} ${f.lastName}</option>`).join('')}</select></motion>
     ${catalogBanner || ''}
@@ -2048,9 +2043,18 @@ async function renderDocumentReview(root, title) {
   const scoringVer = setSefPayload?.scoring?.verified;
   const semesterRecords = setSefPayload?.semesterRecords || [];
   const identityInfo = identitySummaryFromRecords(semesterRecords);
-  const setVerifiedCount = semesterRecords.filter((r) => r.setVerificationStatus === 'verified').length;
-  const sefVerifiedCount = semesterRecords.filter((r) => r.sefVerificationStatus === 'verified').length;
   const semTotal = semesterRecords.length;
+  const setVerifiedCount = semesterRecords.filter(
+    (r) => r.setVerificationStatus === 'verified' && r.setRatingConfirmed != null
+  ).length;
+  const sefVerifiedCount = semesterRecords.filter(
+    (r) => r.sefVerificationStatus === 'verified' && r.sefRatingConfirmed != null
+  ).length;
+  const apiVerifyCounts = setSefPayload?.verifyCounts || {
+    setVerified: setVerifiedCount,
+    sefVerified: sefVerifiedCount,
+    total: semTotal,
+  };
 
   const facultyMember = storeFresh.faculty.find((f) => f.id === docFresh.facultyId);
   const facultyDisplay = facultyMember
@@ -2074,12 +2078,12 @@ async function renderDocumentReview(root, title) {
       <td class="doc-sem-num">${formatSemesterRating(r.sefRatingConfirmed ?? r.sefRatingExtracted)}</td>
       <td class="doc-sem-verify-col">${rowIdentity}
         <div class="doc-sem-verify">
-          <span class="doc-verify-badge" data-record-badge="${r.id}-set" data-v="${r.setVerificationStatus || 'pending'}">SET · ${verifyStatusShort(r.setVerificationStatus)}</span>
-          ${verifyControlButton('set', r.id, r.setVerificationStatus === 'verified')}
+          <span class="doc-verify-badge" data-record-badge="${r.id}-set" data-v="${recordComponentVerified(r, 'set') ? 'verified' : r.setVerificationStatus || 'pending'}">SET · ${verifyStatusShort(r.setVerificationStatus, { confirmed: r.setRatingConfirmed })}</span>
+          ${verifyControlButton('set', r.id, recordComponentVerified(r, 'set'))}
         </div>
         <div class="doc-sem-verify">
-          <span class="doc-verify-badge" data-record-badge="${r.id}-sef" data-v="${r.sefVerificationStatus || 'pending'}">SEF · ${verifyStatusShort(r.sefVerificationStatus)}</span>
-          ${verifyControlButton('sef', r.id, r.sefVerificationStatus === 'verified')}
+          <span class="doc-verify-badge" data-record-badge="${r.id}-sef" data-v="${recordComponentVerified(r, 'sef') ? 'verified' : r.sefVerificationStatus || 'pending'}">SEF · ${verifyStatusShort(r.sefVerificationStatus, { confirmed: r.sefRatingConfirmed })}</span>
+          ${verifyControlButton('sef', r.id, recordComponentVerified(r, 'sef'))}
         </div>
       </td>
       <td class="doc-sem-pages">${formatSourcePages(r)}</td>
@@ -2102,14 +2106,16 @@ async function renderDocumentReview(root, title) {
       </dl>
       ${rowIdentity}
       <div class="doc-sem-card__actions">
-        <span class="doc-verify-badge" data-record-badge="${r.id}-set" data-v="${r.setVerificationStatus || 'pending'}">SET · ${verifyStatusShort(r.setVerificationStatus)}</span>
-        ${verifyControlButton('set', r.id, r.setVerificationStatus === 'verified')}
-        <span class="doc-verify-badge" data-record-badge="${r.id}-sef" data-v="${r.sefVerificationStatus || 'pending'}">SEF · ${verifyStatusShort(r.sefVerificationStatus)}</span>
-        ${verifyControlButton('sef', r.id, r.sefVerificationStatus === 'verified')}
+        <span class="doc-verify-badge" data-record-badge="${r.id}-set" data-v="${recordComponentVerified(r, 'set') ? 'verified' : r.setVerificationStatus || 'pending'}">SET · ${verifyStatusShort(r.setVerificationStatus, { confirmed: r.setRatingConfirmed })}</span>
+        ${verifyControlButton('set', r.id, recordComponentVerified(r, 'set'))}
+        <span class="doc-verify-badge" data-record-badge="${r.id}-sef" data-v="${recordComponentVerified(r, 'sef') ? 'verified' : r.sefVerificationStatus || 'pending'}">SEF · ${verifyStatusShort(r.sefVerificationStatus, { confirmed: r.sefRatingConfirmed })}</span>
+        ${verifyControlButton('sef', r.id, recordComponentVerified(r, 'sef'))}
       </div>
     </article>`;
   };
 
+  const ocrRawEarly = docFresh.ocrStatus || setSefPayload?.document?.ocrStatus;
+  const procRawEarly = docFresh.processingStatus || setSefPayload?.document?.processingStatus;
   const extractionBlock = isSetSefPdf
     ? semesterRecords.length
       ? `<div class="doc-semester-table-wrap">
@@ -2128,7 +2134,13 @@ async function renderDocumentReview(root, title) {
                 .join('')}</ul>`
             : ''
         }`
-      : '<p class="muted">No semester records yet. OCR may still be processing.</p>'
+      : `<p class="muted">${
+          (ocrRawEarly === 'failed' || procRawEarly === 'failed')
+            ? 'Extraction failed — no semester rows were persisted. Use Retry OCR after fixing the file or OCR tools.'
+            : (ocrRawEarly === 'pending' || ocrRawEarly === 'processing' || procRawEarly === 'queued' || procRawEarly === 'processing')
+              ? 'No semester records yet. OCR is still queued or processing — keep the SET/SEF worker running.'
+              : 'No eligible semester records. Extraction may have found none, or all rows are outside the selected scoring window.'
+        }</p>`
     : '';
 
   const scoringBlock =
@@ -2137,28 +2149,18 @@ async function renderDocumentReview(root, title) {
           <h4 class="doc-review-section__title" id="docScoreHeading">Criterion A scoring</h4>
           <dl class="doc-score-dl">
             <div>
-              <dt>Estimated points</dt>
-              <dd>${
-                scoringEst?.incomplete
-                  ? `<span class="doc-score-incomplete">Incomplete</span> <span class="muted">${scoringEst.incompleteReason || ''}</span>`
-                  : `${Number(scoringEst?.criterionAPoints ?? 0).toFixed(2)} <span class="muted">/ 60</span>`
-              }</dd>
+              <dt>Estimated Criterion A</dt>
+              <dd id="docScoreEstimated">${formatCriterionAEstimateHtml(scoringEst)}</dd>
             </div>
             <div>
-              <dt>Reviewer-verified points</dt>
-              <dd id="docScoreVerified">${
-                !scoringVer
-                  ? '—'
-                  : scoringVer.incomplete
-                    ? `<span class="doc-score-incomplete">Incomplete</span> <span class="muted">${scoringVer.incompleteReason || ''}</span>`
-                    : `${Number(scoringVer.criterionAPoints ?? 0).toFixed(2)} <span class="muted">/ 60</span>`
-              }</dd>
+              <dt>Reviewer-verified Criterion A</dt>
+              <dd id="docScoreVerified">${scoringVer ? formatScoringVerifiedHtml(scoringVer, apiVerifyCounts) : '—'}</dd>
             </div>
             ${
               semTotal
                 ? `<div class="doc-score-dl__verify">
                     <dt>Semester verification</dt>
-                    <dd id="docVerifyCounts">SET <strong>${setVerifiedCount}/${semTotal}</strong> · SEF <strong>${sefVerifiedCount}/${semTotal}</strong></dd>
+                    <dd id="docVerifyCounts">SET <strong>${setVerifiedCount}/${semTotal}</strong> · SEF <strong>${sefVerifiedCount}/${semTotal}</strong> confirmed</dd>
                   </div>`
                 : ''
             }
@@ -2182,14 +2184,14 @@ async function renderDocumentReview(root, title) {
 
   const verifiedPointsUi = isSetSefPdf
     ? `<div class="doc-review-field">
-        <span class="doc-review-field__label" id="verPtsLabel">Reviewer-verified points (Criterion A)</span>
-        <p class="doc-review-readonly" id="docVerPtsDisplay" aria-labelledby="verPtsLabel">${
-          scoringVer?.incomplete
-            ? `Incomplete — ${scoringVer.incompleteReason || 'Verify all required semester ratings.'}`
-            : `${Number(scoringVer?.criterionAPoints ?? 0).toFixed(2)} / 60`
-        }</p>
-        <p class="doc-review-field__hint">Computed from per-semester SET/SEF verification (server authority).</p>
-        <input type="hidden" id="verPts" value="${scoringVer?.incomplete ? '' : Number(scoringVer?.criterionAPoints ?? '')}" />
+        <span class="doc-review-field__label" id="verPtsLabel">Reviewer-verified Criterion A</span>
+        <div class="doc-review-readonly" id="docVerPtsDisplay" aria-labelledby="verPtsLabel">${
+          scoringVer ? formatScoringVerifiedHtml(scoringVer, apiVerifyCounts) : '—'
+        }</div>
+        <p class="doc-review-field__hint">Estimated uses eligible extracted ratings. Verified uses only persisted reviewer-confirmed ratings (Verify copies extracted → confirmed).</p>
+        <input type="hidden" id="verPts" value="${
+          scoringVer?.criterionAPoints != null ? Number(scoringVer.criterionAPoints) : ''
+        }" />
       </div>`
   : bcReviewViaAchievement
     ? ''
