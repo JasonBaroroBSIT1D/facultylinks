@@ -66,5 +66,9 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>FacultyLink uses the camera so you can photograph documents for upload and OCR.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>FacultyLink may access photos if you choose an existing image as evidence.</string>
 </dict>
 </plist>

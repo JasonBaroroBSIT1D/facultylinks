@@ -79,6 +79,23 @@ export const PortalApi = {
   resendReviewerCredentials: (portalId) =>
     apiJson(`/api/admin/reviewers/${encodeURIComponent(portalId)}/resend-credentials`, { method: 'POST', body: '{}' }),
   fetchSetSefExtraction: (documentId) => apiJson(`/api/documents/${encodeURIComponent(documentId)}/set-sef`),
+  fetchDocumentValidation: (documentId) =>
+    apiJson(`/api/documents/${encodeURIComponent(documentId)}/validation`),
+  retryDocumentValidationOcr: (documentId) =>
+    apiJson(`/api/documents/${encodeURIComponent(documentId)}/validation/retry-ocr`, {
+      method: 'POST',
+      body: '{}',
+    }),
+  patchDocumentValidationField: (documentId, fieldId, body) =>
+    apiJson(`/api/documents/${encodeURIComponent(documentId)}/validation/fields/${fieldId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+  retrySetSefOcr: (documentId) =>
+    apiJson(`/api/documents/${encodeURIComponent(documentId)}/set-sef/retry-ocr`, {
+      method: 'POST',
+      body: '{}',
+    }),
   fetchDocumentViewUrl: (documentId) => apiJson(`/api/documents/${encodeURIComponent(documentId)}/view-url`),
   fetchFacultyCriterionA: (facultyPortalId) =>
     apiJson(`/api/portal/faculty/${encodeURIComponent(facultyPortalId)}/teaching-effectiveness/criterion-a`),

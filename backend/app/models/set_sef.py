@@ -95,6 +95,12 @@ class DocumentValidationFinding(db.Model):
     affected_field = db.Column(db.String(64), nullable=True)
     semester_key = db.Column(db.String(64), nullable=True)
     explanation = db.Column(db.Text, nullable=False)
+    # general | set_sef — shared findings table for both pipelines
+    pipeline = db.Column(db.String(32), nullable=False, default="set_sef")
+    rule_version = db.Column(db.String(32), nullable=True)
+    severity = db.Column(db.String(32), nullable=True)
+    excerpt = db.Column(db.Text, nullable=True)
+    source_pages = db.Column(db.JSON, nullable=True)
     created_at = db.Column(
         db.DateTime(timezone=True),
         nullable=False,
@@ -108,4 +114,9 @@ class DocumentValidationFinding(db.Model):
             "affectedField": self.affected_field or "",
             "semesterKey": self.semester_key or "",
             "explanation": self.explanation,
+            "pipeline": self.pipeline or "set_sef",
+            "ruleVersion": self.rule_version or "",
+            "severity": self.severity or "",
+            "excerpt": self.excerpt or "",
+            "sourcePages": self.source_pages or [],
         }

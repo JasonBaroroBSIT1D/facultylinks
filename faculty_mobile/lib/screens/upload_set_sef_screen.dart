@@ -101,6 +101,12 @@ class _UploadSetSefScreenState extends State<UploadSetSefScreen> {
               'and Supervisor’s Evaluation of Faculty (SEF). Processing runs in the background.',
               style: TextStyle(color: AppColors.textMuted, height: 1.4),
             ),
+            const SizedBox(height: 8),
+            const Text(
+              'Camera photos and other images are not supported here. The SET / SEF pipeline only '
+              'reads PDF text through its specialized extractor — use Choose file / Upload PDF.',
+              style: TextStyle(color: AppColors.textMuted, height: 1.4),
+            ),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: _loading ? null : _pickAndUpload,

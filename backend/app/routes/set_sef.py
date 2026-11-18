@@ -99,13 +99,15 @@ def get_set_sef_extraction(public_id: str):
 
 
 @bp.post("/api/documents/<public_id>/set-sef/retry-ocr")
-@require_roles(UserRole.faculty, UserRole.admin)
+@require_roles(UserRole.faculty, UserRole.admin, UserRole.reviewer)
 def retry_ocr(public_id: str):
     user = current_user()
     doc = _load_set_sef_doc(public_id) or Document.query.filter_by(public_id=public_id).first()
     if not doc:
         return jsonify({"error": "Not found."}), 404
     if user.role == UserRole.faculty and doc.owner_user_id != user.id:
+        return jsonify({"error": "Forbidden."}), 403
+    if user.role == UserRole.reviewer and not faculty_may_access_document(user, doc.owner_user_id):
         return jsonify({"error": "Forbidden."}), 403
     if not is_set_sef_document(doc):
         return jsonify({"error": "Not a SET/SEF OCR document."}), 400

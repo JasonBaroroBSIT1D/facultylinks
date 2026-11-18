@@ -153,6 +153,25 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> with Widget
     }
   }
 
+  Future<void> _retryGeneralOcr() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      await DocumentApi.retryValidationOcr(widget.doc.id);
+      await widget.onRefresh?.call();
+      if (mounted) setState(() => _loading = false);
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = e.toString().replaceFirst('Exception: ', '');
+        });
+      }
+    }
+  }
+
   static String _formatScoring(Map<String, dynamic>? scoring) {
     if (scoring == null) return 'No processed data yet.';
     if (scoring['calculationUnavailable'] == true) {
@@ -268,6 +287,50 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> with Widget
                 style: TextStyle(fontSize: 15),
               ),
             ),
+          if (!doc.isSetSefOcr &&
+              doc.ocrStatus.isNotEmpty &&
+              doc.ocrStatus != 'none') ...[
+            const SizedBox(height: 20),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text('Document text check', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const SizedBox(height: 8),
+                    Text(documentProcessingFacultyMessage(doc), style: const TextStyle(fontSize: 15)),
+                    const SizedBox(height: 6),
+                    Text(documentProcessingSummary(doc), style: const TextStyle(fontSize: 13, color: Colors.black54)),
+                    if (_shouldPoll(doc.processingStatus))
+                      const Padding(
+                        padding: EdgeInsets.only(top: 8),
+                        child: Row(
+                          children: [
+                            SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                            SizedBox(width: 10),
+                            Expanded(child: Text('Processing your file. This screen updates when you refresh.')),
+                          ],
+                        ),
+                      ),
+                    if (doc.processingStatus == 'failed' || doc.ocrStatus == 'failed') ...[
+                      const SizedBox(height: 12),
+                      OutlinedButton.icon(
+                        onPressed: _loading ? null : _retryGeneralOcr,
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('Retry text check'),
+                      ),
+                    ],
+                    if (_error != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(_error!, style: const TextStyle(color: Colors.red)),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           if (doc.isSetSefOcr) ...[
             const SizedBox(height: 20),
             Card(
@@ -278,7 +341,9 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> with Widget
                   children: [
                     const Text('OCR processing', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     const SizedBox(height: 8),
-                    Text(documentProcessingSummary(doc), style: const TextStyle(fontSize: 15)),
+                    Text(documentProcessingFacultyMessage(doc), style: const TextStyle(fontSize: 15)),
+                    const SizedBox(height: 4),
+                    Text(documentProcessingSummary(doc), style: const TextStyle(fontSize: 13, color: Colors.black54)),
                     if (_shouldPoll(doc.processingStatus))
                       const Padding(
                         padding: EdgeInsets.only(top: 8),
@@ -291,11 +356,6 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> with Widget
                         ),
                       ),
                     if (doc.processingStatus == 'failed' || doc.ocrStatus == 'failed') ...[
-                      if (doc.processingError != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8),
-                          child: Text(doc.processingError!, style: const TextStyle(color: Colors.red)),
-                        ),
                       const SizedBox(height: 12),
                       OutlinedButton.icon(
                         onPressed: _loading ? null : _retryOcr,

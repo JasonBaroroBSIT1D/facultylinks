@@ -14,7 +14,9 @@ From `backend/` with the virtual environment active:
 python -m app.worker
 ```
 
-The worker polls `document_processing_jobs` every 5 seconds and runs SET/SEF OCR for `job_type = set_sef_ocr`.
+The worker polls `document_processing_jobs` every 5 seconds and runs:
+- SET/SEF OCR for `job_type = set_sef_ocr`
+- General document OCR/validation for `job_type = general_ocr` (see `docs/GENERAL_DOCUMENT_OCR.md`)
 
 Keep Flask (`python run.py`) and the worker running in separate terminals during development.
 

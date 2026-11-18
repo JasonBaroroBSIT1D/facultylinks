@@ -2,12 +2,34 @@ import '../repositories/mock_repository.dart';
 
 /// Readable OCR / processing line without duplicate labels (e.g. "completed · completed").
 String documentProcessingSummary(FacultyDocument doc) {
-  if (!doc.isSetSefOcr) return '';
-  final ocr = _ocrLabel(doc.ocrStatus);
-  final proc = _processingLabel(doc.processingStatus);
+  final ocrRaw = doc.ocrStatus;
+  final procRaw = doc.processingStatus;
+  if ((ocrRaw.isEmpty || ocrRaw == 'none') && (procRaw.isEmpty || procRaw == 'none')) {
+    return '';
+  }
+  final ocr = _ocrLabel(ocrRaw);
+  final proc = _processingLabel(procRaw);
   if (proc == 'Not started') return 'OCR: $ocr';
   if (ocr.toLowerCase() == proc.toLowerCase()) return 'Processing: $ocr';
   return 'OCR: $ocr · $proc';
+}
+
+/// Faculty-facing status without raw engine errors.
+String documentProcessingFacultyMessage(FacultyDocument doc) {
+  switch (doc.ocrStatus) {
+    case 'failed':
+      return 'We could not read text from this file. Try a clearer scan or PDF.';
+    case 'review_required':
+      return 'Text was extracted for reviewer checks.';
+    case 'completed':
+      return 'Text extraction completed.';
+    case 'pending':
+    case 'processing':
+    case 'queued':
+      return 'Document text is still being processed.';
+    default:
+      return documentProcessingSummary(doc);
+  }
 }
 
 String _ocrLabel(String? s) {

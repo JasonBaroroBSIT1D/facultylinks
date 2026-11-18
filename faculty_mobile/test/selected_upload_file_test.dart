@@ -30,4 +30,16 @@ void main() {
     final file = PlatformFile(name: '  ', size: 0, bytes: Uint8List.fromList([1]));
     expect(await readPlatformFileForUpload(file), isNull);
   });
+
+  test('readPlatformFileForUpload marks source as filePicker', () async {
+    final file = PlatformFile(
+      name: 'photo.jpg',
+      size: 3,
+      bytes: Uint8List.fromList([1, 2, 3]),
+    );
+    final loaded = await readPlatformFileForUpload(file);
+    expect(loaded!.source, UploadFileSource.filePicker);
+    expect(loaded.mimeType, 'image/jpeg');
+    expect(loaded.isImage, isTrue);
+  });
 }

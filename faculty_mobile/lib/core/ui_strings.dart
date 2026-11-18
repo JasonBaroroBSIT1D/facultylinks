@@ -31,7 +31,15 @@ class UiStrings {
       'You have no documents yet. Tap Add Document to begin.';
 
   static const uploadPdfServerNote =
-      'PDFs are uploaded securely for OCR and reviewer verification. Images and other files upload as usual.';
+      'PDFs and photos are uploaded securely for OCR and reviewer verification. '
+      'Take photo uses your camera to capture an image — it is not an automatic document scan with edge detection or crop.';
+
+  static const takePhotoLabel = 'Take photo';
+  static const chooseFileLabel = 'Choose file';
+  static const cameraPermissionDenied =
+      'Camera permission is required to take a photo. Enable it in system settings, then try again.';
+  static const setSefCameraNotSupported =
+      'SET / SEF evaluation uses a specialized PDF reader. Photos and other images are not supported for this document type — choose a PDF instead.';
 
   static const setSefEvalCardTitle = 'SET / SEF Evaluation';
   static const setSefEvalCardBody =
@@ -42,5 +50,5 @@ class UiStrings {
       'Upload supporting documents for leave or other circumstances that apply to you.';
 
   static const setSefUploadHint =
-      'Choose one PDF from your phone or computer. You can add a short description if you like.';
+      'Choose one PDF from your phone or computer. Camera photos are not accepted for SET / SEF because that pipeline only reads PDF text. You can add a short description if you like.';
 }

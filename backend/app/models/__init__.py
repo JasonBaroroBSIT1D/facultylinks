@@ -8,6 +8,7 @@ from app.models.user import User, UserRole
 from app.models.user_session import UserSession
 from app.models.password_recovery import PasswordRecoveryChallenge, PasswordResetGrant
 from app.models.set_sef import DocumentProcessingJob, DocumentValidationFinding, SetSefSemesterRecord
+from app.models.document_ocr import DocumentClassification, DocumentExtractedField, DocumentExtraction
 
 __all__ = [
     "User",
@@ -24,4 +25,7 @@ __all__ = [
     "DocumentProcessingJob",
     "SetSefSemesterRecord",
     "DocumentValidationFinding",
+    "DocumentExtraction",
+    "DocumentClassification",
+    "DocumentExtractedField",
 ]

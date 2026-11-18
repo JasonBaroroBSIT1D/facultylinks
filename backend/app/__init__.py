@@ -41,8 +41,10 @@ def create_app() -> Flask:
     app.register_blueprint(faculty_portal_bp)
     app.register_blueprint(set_sef_bp)
     from app.routes.achievements import bp as achievements_bp
+    from app.routes.document_validation import bp as document_validation_bp
 
     app.register_blueprint(achievements_bp)
+    app.register_blueprint(document_validation_bp)
 
     register_cli(app)
 

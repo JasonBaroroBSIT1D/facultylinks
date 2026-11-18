@@ -104,4 +104,21 @@ class DocumentApi {
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     return data['url'] as String;
   }
+
+  static Future<Map<String, dynamic>> fetchValidation(String documentId) async {
+    final res = await ApiClient.get('/api/documents/$documentId/validation');
+    if (res.statusCode != 200) {
+      final err = jsonDecode(res.body) as Map<String, dynamic>?;
+      throw Exception(err?['error'] ?? 'Could not load document validation.');
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  static Future<void> retryValidationOcr(String documentId) async {
+    final res = await ApiClient.postJson('/api/documents/$documentId/validation/retry-ocr', {});
+    if (res.statusCode != 200 && res.statusCode != 201 && res.statusCode != 202) {
+      final err = jsonDecode(res.body) as Map<String, dynamic>?;
+      throw Exception(err?['error'] ?? 'Could not retry text check.');
+    }
+  }
 }

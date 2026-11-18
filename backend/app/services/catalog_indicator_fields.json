@@ -1,0 +1,906 @@
+{
+  "version": "workbook-fields-1.0",
+  "generatedFrom": "admin_reviewer_web/js/core/*-catalog.js",
+  "indicators": {
+    "kra-II-A-1": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-A",
+      "name": "Sole Author of an Academic Book",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "authorRole",
+        "publicationIdentifier"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-A-2": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-A",
+      "name": "Sole Author of Edited Academic Book Chapter",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "authorRole",
+        "publicationIdentifier"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-A-3": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-A",
+      "name": "Sole Author of a Journal Article",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "authorRole",
+        "publicationIdentifier"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-A-4": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-A",
+      "name": "Sole Author of Academic Monograph",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "authorRole",
+        "publicationIdentifier"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-A-5": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-A",
+      "name": "Research Outputs Translated Into Project, Policy, or Product",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "translationOutcome"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-A-6": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-A",
+      "name": "Research Publication Cited",
+      "fields": [
+        "title",
+        "achievementDate",
+        "citingWork",
+        "citationContext"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-B-1-1": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-B",
+      "name": "Invention Patent (per highest patenting stage claimed)",
+      "fields": [
+        "title",
+        "patentStage",
+        "patentNumber",
+        "achievementDate"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "patent_stage",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-B-1-2": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-B",
+      "name": "Commercialized Patented Product",
+      "fields": [
+        "title",
+        "commercializationScope",
+        "achievementDate",
+        "productName"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "tiered_option",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-B-2-1": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-B",
+      "name": "Copyrighted and Utilized Software",
+      "fields": [
+        "title",
+        "softwareVersionType",
+        "achievementDate",
+        "softwareTitle"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "tiered_option",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-B-2-2": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-B",
+      "name": "New plant variety / animal breed / microbial strain",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "authorRole",
+        "publicationIdentifier"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-C-1-1-1": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-C",
+      "name": "Musical Composition",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "authorRole",
+        "publicationIdentifier"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-C-1-1-2": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-C",
+      "name": "Musical Arrangement",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "authorRole",
+        "publicationIdentifier"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-C-1-1-3": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-C",
+      "name": "Musical Performance",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "authorRole",
+        "publicationIdentifier"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-C-1-1-4": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-C",
+      "name": "Conducting",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "authorRole",
+        "publicationIdentifier"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-C-1-1-5": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-C",
+      "name": "Music Production",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "authorRole",
+        "publicationIdentifier"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-C-1-2-1": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-C",
+      "name": "Original Choreography",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "authorRole",
+        "publicationIdentifier"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-C-1-2-2": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-C",
+      "name": "Dance Performance",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "authorRole",
+        "publicationIdentifier"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-C-1-3-1": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-C",
+      "name": "Playwright",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "authorRole",
+        "publicationIdentifier"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-C-1-3-2": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-C",
+      "name": "Directing (Theatre)",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "authorRole",
+        "publicationIdentifier"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-C-1-3-3": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-C",
+      "name": "Acting",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "authorRole",
+        "publicationIdentifier"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-C-1-3-4": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-C",
+      "name": "Production Design",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "authorRole",
+        "publicationIdentifier"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-C-1-2-visual": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-C",
+      "name": "Visual Arts (painting, drawing, mixed media, sculpture, photography, digital art)",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "authorRole",
+        "publicationIdentifier"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-C-1-2-design": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-C",
+      "name": "Architectural / Engineering / Interior Design",
+      "fields": [
+        "title",
+        "achievementDate",
+        "designType",
+        "description"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "pending",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-C-1-3-film": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-C",
+      "name": "Film (short, feature, documentary, experimental video, animation)",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "authorRole",
+        "publicationIdentifier"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-C-1-4-1": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-C",
+      "name": "Novel",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "authorRole",
+        "publicationIdentifier"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-C-1-4-2": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-C",
+      "name": "Short story",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "authorRole",
+        "publicationIdentifier"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-C-1-4-3": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-C",
+      "name": "Poetry",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "authorRole",
+        "publicationIdentifier"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-II-C-1-4-4": {
+      "kraId": "kra-II",
+      "criterionId": "kra-II-C",
+      "name": "Literary Essay",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "authorRole",
+        "publicationIdentifier"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-III-A-1": {
+      "kraId": "kra-III",
+      "criterionId": "kra-III-A",
+      "name": "Linkages / networking / partnership activity",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-III-A-2": {
+      "kraId": "kra-III",
+      "criterionId": "kra-III-A",
+      "name": "Income generation (Lead / Contributor tiers)",
+      "fields": [
+        "title",
+        "achievementDate",
+        "incomeRole",
+        "incomeAmount",
+        "incomeTier",
+        "description"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "income_tier",
+      "source": "workbook_catalog_js"
+    },
+    "kra-III-B-1-1": {
+      "kraId": "kra-III",
+      "criterionId": "kra-III-B",
+      "name": "Accreditation / evaluation / educational QA services",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "serviceScope"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "tiered_option",
+      "source": "workbook_catalog_js"
+    },
+    "kra-III-B-1-2": {
+      "kraId": "kra-III",
+      "criterionId": "kra-III-B",
+      "name": "Judge / examiner for research awards and academic competitions",
+      "fields": [
+        "title",
+        "achievementDate",
+        "judgeServiceType",
+        "description"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "tiered_option",
+      "source": "workbook_catalog_js"
+    },
+    "kra-III-B-1-3": {
+      "kraId": "kra-III",
+      "criterionId": "kra-III-B",
+      "name": "Short-term consultant / expert",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "serviceScope"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "tiered_option",
+      "source": "workbook_catalog_js"
+    },
+    "kra-III-B-1-4-1": {
+      "kraId": "kra-III",
+      "criterionId": "kra-III-B",
+      "name": "Occasional newspaper column",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-III-B-1-4-2": {
+      "kraId": "kra-III",
+      "criterionId": "kra-III-B",
+      "name": "Regular newspaper column",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-III-B-1-4-3": {
+      "kraId": "kra-III",
+      "criterionId": "kra-III-B",
+      "name": "Host of TV/Radio program",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-III-B-1-4-4": {
+      "kraId": "kra-III",
+      "criterionId": "kra-III-B",
+      "name": "Guest technical expert (media)",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-III-B-1-5": {
+      "kraId": "kra-III",
+      "criterionId": "kra-III-B",
+      "name": "Training / seminar / workshop conducted (resource person)",
+      "fields": [
+        "title",
+        "achievementDate",
+        "serviceScope",
+        "hours",
+        "description"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "hourly_tier",
+      "source": "workbook_catalog_js"
+    },
+    "kra-III-B-2-1": {
+      "kraId": "kra-III",
+      "criterionId": "kra-III-B",
+      "name": "Institutional Social Responsibility — extension project activity",
+      "fields": [
+        "title",
+        "achievementDate",
+        "extensionRole",
+        "description",
+        "projectPeriod"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "tiered_option",
+      "source": "workbook_catalog_js"
+    },
+    "kra-III-C-1": {
+      "kraId": "kra-III",
+      "criterionId": "kra-III-C",
+      "name": "Client Satisfaction Rating for Extension Projects",
+      "fields": [
+        "title",
+        "achievementDate",
+        "linkedIsrProjectId",
+        "clientSatisfactionRating",
+        "description"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "pending",
+      "source": "workbook_catalog_js"
+    },
+    "kra-III-D-1": {
+      "kraId": "kra-III",
+      "criterionId": "kra-III-D",
+      "name": "Administrative designation",
+      "fields": [
+        "title",
+        "achievementDate",
+        "designationLevel",
+        "designationRole",
+        "description"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "designation_matrix",
+      "source": "workbook_catalog_js"
+    },
+    "kra-IV-A-1": {
+      "kraId": "kra-IV",
+      "criterionId": "kra-IV-A",
+      "name": "Membership and participation in registered professional organizations",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-IV-B-1": {
+      "kraId": "kra-IV",
+      "criterionId": "kra-IV-B",
+      "name": "Educational qualifications",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "qualificationType"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "tiered_option",
+      "source": "workbook_catalog_js"
+    },
+    "kra-IV-B-2": {
+      "kraId": "kra-IV",
+      "criterionId": "kra-IV-B",
+      "name": "Conference, seminar, workshop, or industry immersion attendance",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "attendanceScope"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "tiered_option",
+      "source": "workbook_catalog_js"
+    },
+    "kra-IV-B-3-1": {
+      "kraId": "kra-IV",
+      "criterionId": "kra-IV-B",
+      "name": "Paper presentation — local",
+      "fields": [
+        "title",
+        "achievementDate",
+        "presentationScope",
+        "description"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-IV-B-3-2": {
+      "kraId": "kra-IV",
+      "criterionId": "kra-IV-B",
+      "name": "Paper presentation — international",
+      "fields": [
+        "title",
+        "achievementDate",
+        "presentationScope",
+        "description"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "fixed_per_entry",
+      "source": "workbook_catalog_js"
+    },
+    "kra-IV-C-1": {
+      "kraId": "kra-IV",
+      "criterionId": "kra-IV-C",
+      "name": "Award of distinction",
+      "fields": [
+        "title",
+        "achievementDate",
+        "description",
+        "awardLevel"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "tiered_option",
+      "source": "workbook_catalog_js"
+    },
+    "kra-IV-D-1": {
+      "kraId": "kra-IV",
+      "criterionId": "kra-IV-D",
+      "name": "Full-time academic service in higher education",
+      "fields": [
+        "title",
+        "achievementDate",
+        "newlyAppointedEligible",
+        "academicServiceRole",
+        "serviceYears",
+        "description"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "yearly_rate",
+      "source": "workbook_catalog_js"
+    },
+    "kra-IV-D-2": {
+      "kraId": "kra-IV",
+      "criterionId": "kra-IV-D",
+      "name": "Industry experience (non-academic organization)",
+      "fields": [
+        "title",
+        "achievementDate",
+        "newlyAppointedEligible",
+        "industryCategory",
+        "serviceYears",
+        "description"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "yearly_rate",
+      "source": "workbook_catalog_js"
+    },
+    "kra-I-A-set": {
+      "kraId": "kra-I",
+      "criterionId": "kra-I-A",
+      "name": "Student Evaluation of Teachers (SET)",
+      "fields": [
+        "academicYear",
+        "semester",
+        "rating"
+      ],
+      "type": "set_sef",
+      "role": "",
+      "calculationKind": "",
+      "source": "workbook_catalog_js"
+    },
+    "kra-I-A-sef": {
+      "kraId": "kra-I",
+      "criterionId": "kra-I-A",
+      "name": "Supervisor's Evaluation of Faculty (SEF)",
+      "fields": [
+        "academicYear",
+        "semester",
+        "rating"
+      ],
+      "type": "set_sef",
+      "role": "",
+      "calculationKind": "",
+      "source": "workbook_catalog_js"
+    },
+    "kra-I-A-special": {
+      "kraId": "kra-I",
+      "criterionId": "kra-I-A",
+      "name": "For Faculty with Special Status",
+      "fields": [
+        "specialStatus",
+        "notes"
+      ],
+      "type": "",
+      "role": "supporting_evidence",
+      "calculationKind": "supporting_evidence",
+      "source": "workbook_catalog_js"
+    },
+    "kra-I-B-1-1": {
+      "kraId": "kra-I",
+      "criterionId": "kra-I-B",
+      "name": "Sole Author of a Textbook",
+      "fields": [
+        "title",
+        "date",
+        "role",
+        "authorship"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "",
+      "source": "workbook_catalog_js"
+    },
+    "kra-I-B-1-2": {
+      "kraId": "kra-I",
+      "criterionId": "kra-I-B",
+      "name": "Sole Author of a Module",
+      "fields": [
+        "title",
+        "date"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "",
+      "source": "workbook_catalog_js"
+    },
+    "kra-I-B-1-3": {
+      "kraId": "kra-I",
+      "criterionId": "kra-I-B",
+      "name": "Sole Author of Instructional Manual",
+      "fields": [
+        "title",
+        "date"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "",
+      "source": "workbook_catalog_js"
+    },
+    "kra-I-B-1-4": {
+      "kraId": "kra-I",
+      "criterionId": "kra-I-B",
+      "name": "Sole Author of Multimedia Teaching Materials",
+      "fields": [
+        "title",
+        "date"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "",
+      "source": "workbook_catalog_js"
+    },
+    "kra-I-B-2": {
+      "kraId": "kra-I",
+      "criterionId": "kra-I-B",
+      "name": "Academic Programs Developed/Revised (Lead / Contributor)",
+      "fields": [
+        "title",
+        "role",
+        "date"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "",
+      "source": "workbook_catalog_js"
+    },
+    "kra-I-C-1": {
+      "kraId": "kra-I",
+      "criterionId": "kra-I-C",
+      "name": "Research-Related Services (Adviser / Panel)",
+      "fields": [
+        "thesisType",
+        "role",
+        "title",
+        "quantity",
+        "date"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "",
+      "source": "workbook_catalog_js"
+    },
+    "kra-I-C-2": {
+      "kraId": "kra-I",
+      "criterionId": "kra-I-C",
+      "name": "Mentorship Services",
+      "fields": [
+        "title",
+        "duration",
+        "date"
+      ],
+      "type": "",
+      "role": "",
+      "calculationKind": "",
+      "source": "workbook_catalog_js"
+    }
+  }
+}

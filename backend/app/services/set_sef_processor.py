@@ -81,7 +81,14 @@ def process_set_sef_document(document_id: int, job_id: int) -> None:
             r.semester_key or semester_key(r.academic_year, r.semester): r
             for r in SetSefSemesterRecord.query.filter_by(document_id=doc.id, superseded_by_id=None).all()
         }
-        DocumentValidationFinding.query.filter_by(document_id=doc.id).delete()
+        DocumentValidationFinding.query.filter_by(document_id=doc.id, pipeline="set_sef").delete(
+            synchronize_session=False
+        )
+        # Legacy rows (pre-pipeline column) — remove unscoped findings for this document.
+        DocumentValidationFinding.query.filter(
+            DocumentValidationFinding.document_id == doc.id,
+            DocumentValidationFinding.pipeline.is_(None),
+        ).delete(synchronize_session=False)
 
         extracted = extract_set_sef_semesters(pdf)
         catalog, _ = get_published_catalog_and_weights()
@@ -150,6 +157,8 @@ def process_set_sef_document(document_id: int, job_id: int) -> None:
                     affected_field=f.affected_field,
                     semester_key=f.semester_key,
                     explanation=f.explanation,
+                    pipeline="set_sef",
+                    severity=f.outcome,
                 )
             )
 

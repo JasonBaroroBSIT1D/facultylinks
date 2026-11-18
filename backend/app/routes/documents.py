@@ -15,6 +15,8 @@ from app.services.catalog import (
     is_set_sef_pdf_upload,
     validate_indicator_kra,
 )
+from app.services.document_ocr_processor import enqueue_general_ocr_job
+from app.services.document_text import supports_general_ocr
 from app.services.set_sef_processor import enqueue_set_sef_job
 from app.services.storage import (
     StorageNotConfiguredError,
@@ -83,8 +85,16 @@ def upload_document():
         review_status="evidence" if is_kra_i_achievement_indicator(indicator_id) else "pending",
         estimated_points=estimated_points,
         document_kind=document_kind_for_set_sef_indicator(indicator_id or "") if is_set_sef_pdf else None,
-        ocr_status="pending" if is_set_sef_pdf else "none",
-        processing_status="queued" if is_set_sef_pdf else "none",
+        ocr_status=(
+            "pending"
+            if is_set_sef_pdf or supports_general_ocr(mime)
+            else "none"
+        ),
+        processing_status=(
+            "queued"
+            if is_set_sef_pdf or supports_general_ocr(mime)
+            else "none"
+        ),
     )
     db.session.add(doc)
     db.session.flush()
@@ -99,6 +109,8 @@ def upload_document():
             attach_upload_to_assessment(doc, title=title, estimated_points=estimated_points)
         if is_set_sef_pdf:
             enqueue_set_sef_job(doc)
+        else:
+            enqueue_general_ocr_job(doc)
         db.session.commit()
     except StorageNotConfiguredError:
         db.session.rollback()

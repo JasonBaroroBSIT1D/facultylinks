@@ -114,4 +114,71 @@ void main() {
     expect(assessmentKras[2].shortDropdownLabel, 'KRA III · Extension');
     expect(assessmentKras[3].shortDropdownLabel, 'KRA IV · Professional Development');
   });
+
+  testWidgets('File step shows Choose file and Take photo for Special Status', (tester) async {
+    final repo = await MockRepository.load();
+    repo.catalogKras = assessmentKras;
+    repo.catalogLoadedFromApi = true;
+    await tester.binding.setSurfaceSize(const Size(400, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(size: Size(400, 900), textScaler: TextScaler.noScaling),
+          child: UploadEvidenceScreen(
+            repo: repo,
+            onSave: () async {},
+            initialKraId: 'kra-I',
+            initialCriterionId: 'kra-I-A',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Step 0 (preselect Criterion A): pick Special Status, then Continue to file step.
+    await tester.ensureVisible(find.text('Special Status'));
+    await tester.tap(find.text('Special Status'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Choose file'), findsOneWidget);
+    expect(find.text('Take photo'), findsOneWidget);
+    expect(find.textContaining('not an automatic document scan'), findsOneWidget);
+  });
+
+  testWidgets('SET/SEF file step hides Take photo and explains PDF-only', (tester) async {
+    final repo = await MockRepository.load();
+    repo.catalogKras = assessmentKras;
+    repo.catalogLoadedFromApi = true;
+    await tester.binding.setSurfaceSize(const Size(400, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: MediaQuery(
+          data: const MediaQueryData(size: Size(400, 900), textScaler: TextScaler.noScaling),
+          child: UploadEvidenceScreen(
+            repo: repo,
+            onSave: () async {},
+            initialKraId: 'kra-I',
+            initialCriterionId: 'kra-I-A',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.text('SET / SEF Evaluation'));
+    await tester.tap(find.text('SET / SEF Evaluation'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continue'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Take photo'), findsNothing);
+    expect(find.textContaining('Photos and other images are not supported'), findsOneWidget);
+    expect(find.text('Choose PDF'), findsOneWidget);
+  });
 }

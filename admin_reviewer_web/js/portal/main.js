@@ -2022,11 +2022,18 @@ async function renderDocumentReview(root, title) {
   }
   const isSetSefPdf = isSetSefTeachingDoc(docFresh);
   let setSefPayload = null;
+  let generalValidation = null;
   if (isSetSefPdf) {
     try {
       setSefPayload = await PortalApi.fetchSetSefExtraction(docFresh.id);
     } catch {
       setSefPayload = null;
+    }
+  } else if ((docFresh.ocrStatus && docFresh.ocrStatus !== 'none') || (docFresh.processingStatus && docFresh.processingStatus !== 'none')) {
+    try {
+      generalValidation = await PortalApi.fetchDocumentValidation(docFresh.id);
+    } catch {
+      generalValidation = null;
     }
   }
   if (!reviewRenderActive(renderSeq)) return;
@@ -2116,6 +2123,60 @@ async function renderDocumentReview(root, title) {
 
   const ocrRawEarly = docFresh.ocrStatus || setSefPayload?.document?.ocrStatus;
   const procRawEarly = docFresh.processingStatus || setSefPayload?.document?.processingStatus;
+  const generalFindings = generalValidation?.validationFindings || [];
+  const generalFields = generalValidation?.fields || [];
+  const generalClass = generalValidation?.classification;
+  const generalFindingsHtml = `<ul class="doc-findings-list">${
+    generalFindings.length
+      ? generalFindings
+          .map(
+            (f) =>
+              `<li><strong>${f.ruleId}</strong> (${f.outcome}${f.severity ? ` · ${f.severity}` : ''}): ${f.explanation}${
+                f.excerpt ? ` <span class="muted">“${String(f.excerpt).slice(0, 120)}”</span>` : ''
+              }${
+                (f.sourcePages || []).length
+                  ? ` · pp. ${(f.sourcePages || []).join(', ')}`
+                  : ''
+              }</li>`
+          )
+          .join('')
+      : '<li class="muted">No validation findings recorded for this extraction.</li>'
+  }</ul>`;
+  const generalFieldsHtml = generalFields.length
+    ? `<div class="table-wrap"><table class="doc-semester-table"><thead><tr><th>Field</th><th>Extracted</th><th>Confirmed</th><th>Status</th><th>Pages</th></tr></thead><tbody>${generalFields
+        .map(
+          (f) => `<tr>
+            <td>${f.fieldName}</td>
+            <td class="rep-wrap">${f.valueExtracted || '—'}</td>
+            <td><input class="doc-review-input gen-field-confirm" data-field-id="${f.id}" value="${f.valueConfirmed ?? ''}" placeholder="Reviewer correction" /></td>
+            <td>${f.fieldStatus}</td>
+            <td>${(f.sourcePages || []).join(', ') || '—'}</td>
+          </tr>`
+        )
+        .join('')}</tbody></table></div>
+        <button type="button" class="btn-ghost btn-sm" id="saveGenFields">Save field corrections</button>`
+    : '<p class="muted">No structured fields extracted (rules may be unconfigured for this indicator).</p>';
+  const coverage = generalValidation?.coverage;
+  const coverageHtml = coverage
+    ? `<dl class="doc-review-meta">
+        <div><dt>Coverage</dt><dd>${coverage.status || '—'}</dd></div>
+        <div><dt>Document type</dt><dd>${coverage.documentType || '—'}</dd></div>
+        <div><dt>OCR fields</dt><dd>${(coverage.ocrFields || []).join(', ') || '—'}</dd></div>
+        <div><dt>Form-only fields</dt><dd class="rep-wrap">${(coverage.formOnlyFields || []).join(', ') || '—'}</dd></div>
+        <div><dt>Rules version</dt><dd>${coverage.rulesVersion || generalValidation?.extraction?.rulesVersion || '—'}</dd></div>
+      </dl>
+      <p class="muted rep-wrap">${coverage.reason || ''}</p>`
+    : '';
+  const generalClassHtml = generalClass
+    ? `<dl class="doc-review-meta">
+        <div><dt>Selected KRA</dt><dd>${generalClass.selectedKraId || '—'}</dd></div>
+        <div><dt>Suggested KRA</dt><dd>${generalClass.suggestedKraId || '—'}</dd></div>
+        <div><dt>Classification</dt><dd>${generalClass.outcome || '—'}</dd></div>
+        <div><dt>Notes</dt><dd class="rep-wrap">${generalClass.ambiguityNotes || '—'}</dd></div>
+      </dl>
+      <p class="muted">Suggestions use project keyword heuristics and do not move the file or change the selected KRA.</p>`
+    : '<p class="muted">No classification result yet.</p>';
+
   const extractionBlock = isSetSefPdf
     ? semesterRecords.length
       ? `<div class="doc-semester-table-wrap">
@@ -2132,16 +2193,45 @@ async function renderDocumentReview(root, title) {
             ? `<ul class="doc-findings-list">${(setSefPayload.validationFindings || [])
                 .map((f) => `<li><strong>${f.ruleId}</strong> (${f.outcome}): ${f.explanation}</li>`)
                 .join('')}</ul>`
-            : ''
+            : '<ul class="doc-findings-list"><li class="muted">No SET/SEF validation findings.</li></ul>'
         }`
       : `<p class="muted">${
           (ocrRawEarly === 'failed' || procRawEarly === 'failed')
             ? 'Extraction failed — no semester rows were persisted. Use Retry OCR after fixing the file or OCR tools.'
             : (ocrRawEarly === 'pending' || ocrRawEarly === 'processing' || procRawEarly === 'queued' || procRawEarly === 'processing')
-              ? 'No semester records yet. OCR is still queued or processing — keep the SET/SEF worker running.'
+              ? 'No semester records yet. OCR is still queued or processing — keep the OCR worker running.'
               : 'No eligible semester records. Extraction may have found none, or all rows are outside the selected scoring window.'
-        }</p>`
-    : '';
+        }</p>
+        ${
+          (setSefPayload?.validationFindings || []).length
+            ? `<ul class="doc-findings-list">${(setSefPayload.validationFindings || [])
+                .map((f) => `<li><strong>${f.ruleId}</strong> (${f.outcome}): ${f.explanation}</li>`)
+                .join('')}</ul>`
+            : ''
+        }`
+    : generalValidation
+      ? `<div class="doc-general-ocr">
+          <p class="muted">General OCR assists review only — it does not award points, approve evidence, or verify authenticity.</p>
+          <h5>Rule coverage</h5>
+          ${coverageHtml || '<p class="muted">Coverage metadata unavailable.</p>'}
+          <h5>Suggested vs selected KRA</h5>
+          ${generalClassHtml}
+          <h5>Extracted fields</h5>
+          ${generalFieldsHtml}
+          <h5>Validation findings</h5>
+          ${generalFindingsHtml}
+          <p class="muted">Method: ${generalValidation.extraction?.extractionMethod || '—'} · Rules: ${
+            generalValidation.extraction?.rulesVersion || '—'
+          }</p>
+          <button type="button" class="btn-ghost btn-sm" id="retryGenOcr">Retry OCR</button>
+        </div>`
+      : `<p class="muted">${
+          (ocrRawEarly === 'failed' || procRawEarly === 'failed')
+            ? 'Extraction failed. Findings may still be listed after Retry OCR.'
+            : (ocrRawEarly && ocrRawEarly !== 'none') || (procRawEarly && procRawEarly !== 'none')
+              ? 'OCR is queued or unavailable. Keep the document OCR worker running, then refresh.'
+              : 'No OCR validation payload for this document yet.'
+        }</p>`;
 
   const scoringBlock =
     scoringEst || scoringVer
@@ -2244,10 +2334,17 @@ async function renderDocumentReview(root, title) {
               ${docFresh.processingError ? `<p class="doc-review-error">${docFresh.processingError}</p>` : ''}
             </section>
             ${
-              isSetSefPdf
+              isSetSefPdf || generalValidation || (ocrRaw && ocrRaw !== 'none')
                 ? `<section class="doc-review-section" aria-labelledby="docExtractHeading">
-                    <h4 class="doc-review-section__title" id="docExtractHeading">SET/SEF extraction</h4>
+                    <h4 class="doc-review-section__title" id="docExtractHeading">${
+                      isSetSefPdf ? 'SET/SEF extraction' : 'Document OCR & validation'
+                    }</h4>
                     ${extractionBlock}
+                    ${
+                      isSetSefPdf
+                        ? `<button type="button" class="btn-ghost btn-sm" id="retrySetSefOcr">Retry OCR</button>`
+                        : ''
+                    }
                   </section>`
                 : ''
             }
@@ -2370,6 +2467,57 @@ async function renderDocumentReview(root, title) {
     reviewPage._verifyScoringSeq = 0;
   }
   ensureSetSefVerificationDelegation();
+
+  document.getElementById('retryGenOcr')?.addEventListener('click', async () => {
+    const revErr = document.getElementById('revErr');
+    const revOk = document.getElementById('revOk');
+    try {
+      await PortalApi.retryDocumentValidationOcr(docFresh.id);
+      if (revErr) revErr.textContent = '';
+      if (revOk) {
+        revOk.hidden = false;
+        revOk.textContent = 'OCR requeued. Keep the worker running, then refresh.';
+      }
+      navigate('review', { docId: docFresh.id });
+    } catch (e) {
+      if (revErr) revErr.textContent = e.message || 'Could not retry OCR.';
+    }
+  });
+  document.getElementById('retrySetSefOcr')?.addEventListener('click', async () => {
+    const revErr = document.getElementById('revErr');
+    const revOk = document.getElementById('revOk');
+    try {
+      await PortalApi.retrySetSefOcr(docFresh.id);
+      if (revOk) {
+        revOk.hidden = false;
+        revOk.textContent = 'SET/SEF OCR requeued. Keep the worker running, then refresh.';
+      }
+      navigate('review', { docId: docFresh.id });
+    } catch (e) {
+      if (revErr) revErr.textContent = e.message || 'Could not retry OCR.';
+    }
+  });
+  document.getElementById('saveGenFields')?.addEventListener('click', async () => {
+    const revErr = document.getElementById('revErr');
+    const revOk = document.getElementById('revOk');
+    try {
+      const inputs = [...root.querySelectorAll('.gen-field-confirm')];
+      for (const inp of inputs) {
+        const fieldId = Number(inp.dataset.fieldId);
+        if (!fieldId) continue;
+        await PortalApi.patchDocumentValidationField(docFresh.id, fieldId, {
+          valueConfirmed: inp.value.trim() === '' ? null : inp.value.trim(),
+        });
+      }
+      if (revOk) {
+        revOk.hidden = false;
+        revOk.textContent = 'Field corrections saved.';
+      }
+      navigate('review', { docId: docFresh.id });
+    } catch (e) {
+      if (revErr) revErr.textContent = e.message || 'Could not save field corrections.';
+    }
+  });
 
   let reviewSaveInflight = false;
 

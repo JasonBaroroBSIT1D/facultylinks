@@ -1,9 +1,12 @@
+import 'dart:typed_data';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 
 import '../core/ui_strings.dart';
 import '../data/assessment_catalog.dart';
 import '../repositories/mock_repository.dart';
+import '../services/camera_document_capture.dart';
 import '../services/document_api.dart';
 import '../services/selected_upload_file.dart';
 import 'kra_i_achievement_screen.dart';
@@ -40,7 +43,9 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
   _CriterionADocChoice? _criterionAChoice;
   SelectedUploadFile? _selectedFile;
   bool _pickingFile = false;
+  bool _capturingPhoto = false;
   bool _uploading = false;
+  final _cameraCapture = CameraDocumentCapture();
   final _title = TextEditingController();
   final _year = TextEditingController();
   final _sem = TextEditingController();
@@ -412,14 +417,14 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
   }
 
   Future<void> _pickFile() async {
-    if (_pickingFile || _uploading) return;
+    if (_pickingFile || _capturingPhoto || _uploading) return;
     final previous = _selectedFile;
     final pdfOnly = _isSetSefOcrPdf;
     setState(() => _pickingFile = true);
     try {
       final r = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: pdfOnly ? ['pdf'] : ['pdf', 'png', 'jpg'],
+        allowedExtensions: pdfOnly ? ['pdf'] : ['pdf', 'png', 'jpg', 'jpeg', 'webp'],
         withData: true,
       );
       if (!mounted) return;
@@ -449,7 +454,7 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
           _selectedFile = previous;
         });
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please choose a PDF file.')),
+          const SnackBar(content: Text(UiStrings.setSefCameraNotSupported)),
         );
         return;
       }
@@ -467,6 +472,70 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
         const SnackBar(
           content: Text('The selected file could not be read. Please select it again.'),
         ),
+      );
+    }
+  }
+
+  Future<void> _takePhoto() async {
+    if (_pickingFile || _capturingPhoto || _uploading) return;
+    if (_isSetSefOcrPdf) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text(UiStrings.setSefCameraNotSupported)),
+      );
+      return;
+    }
+    final previous = _selectedFile;
+    setState(() => _capturingPhoto = true);
+    try {
+      while (mounted) {
+        final captured = await _cameraCapture.captureDocumentPhoto();
+        if (!mounted) return;
+        // Cancel: keep prior selection through submit/retry.
+        if (captured == null) {
+          setState(() {
+            _capturingPhoto = false;
+            _selectedFile = previous;
+          });
+          return;
+        }
+        final keep = await showCapturedPhotoPreview(
+          context,
+          bytes: Uint8List.fromList(captured.bytes),
+          filename: captured.filename,
+        );
+        if (!mounted) return;
+        if (keep == true) {
+          setState(() {
+            _selectedFile = captured;
+            _capturingPhoto = false;
+          });
+          return;
+        }
+        // Retake or dialog dismiss without Use photo: loop camera again
+        // but still preserve [previous] until a photo is accepted.
+        if (keep == null) {
+          setState(() {
+            _capturingPhoto = false;
+            _selectedFile = previous;
+          });
+          return;
+        }
+      }
+    } on CameraCaptureException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _capturingPhoto = false;
+        _selectedFile = previous;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _capturingPhoto = false;
+        _selectedFile = previous;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not capture a photo. Please try again.')),
       );
     }
   }
@@ -1019,6 +1088,7 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
       );
     }
     final pdfOnly = _isSetSefOcrPdf;
+    final busy = _pickingFile || _capturingPhoto || _uploading;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -1028,34 +1098,87 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
             style: TextStyle(fontSize: textScale.scale(16), fontWeight: FontWeight.w600),
           ),
         const SizedBox(height: 12),
-        Semantics(
-          button: true,
-          label: 'Choose file from device',
-          child: SizedBox(
-            height: 52,
-            child: FilledButton.icon(
-              onPressed: (_pickingFile || _uploading) ? null : _pickFile,
-              icon: _pickingFile
-                  ? const SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Icon(Icons.attach_file, size: 26),
-              label: Text(
-                _pickingFile
-                    ? 'Reading file…'
-                    : (_fileName ?? (pdfOnly ? 'Tap to choose PDF' : 'Tap to choose file')),
-                overflow: TextOverflow.ellipsis,
-                maxLines: 2,
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            Semantics(
+              button: true,
+              label: 'Choose file from device',
+              child: SizedBox(
+                height: 52,
+                child: FilledButton.icon(
+                  onPressed: busy ? null : _pickFile,
+                  icon: _pickingFile
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Icon(Icons.attach_file, size: 26),
+                  label: Text(
+                    _pickingFile
+                        ? 'Reading file…'
+                        : (_fileName != null && !_selectedFile!.fromCamera
+                            ? _fileName!
+                            : (pdfOnly ? 'Choose PDF' : UiStrings.chooseFileLabel)),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
+                  ),
+                ),
               ),
             ),
-          ),
+            if (!pdfOnly)
+              Semantics(
+                button: true,
+                label: 'Take photo with camera',
+                child: SizedBox(
+                  height: 52,
+                  child: OutlinedButton.icon(
+                    onPressed: busy ? null : _takePhoto,
+                    icon: _capturingPhoto
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.photo_camera_outlined, size: 26),
+                    label: Text(
+                      _capturingPhoto
+                          ? 'Opening camera…'
+                          : (_selectedFile?.fromCamera == true ? (_fileName ?? UiStrings.takePhotoLabel) : UiStrings.takePhotoLabel),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 2,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
-        if (_hasReadableFile) ...[
+        if (pdfOnly) ...[
           const SizedBox(height: 8),
           Text(
-            'Ready · ${(_selectedFile!.sizeBytes / 1024).toStringAsFixed(1)} KB',
+            UiStrings.setSefCameraNotSupported,
+            style: TextStyle(fontSize: textScale.scale(14), color: AppColors.textMuted, height: 1.4),
+          ),
+        ],
+        if (_hasReadableFile) ...[
+          const SizedBox(height: 8),
+          if (_selectedFile!.isImage)
+            ClipRRect(
+              borderRadius: BorderRadius.circular(8),
+              child: Image.memory(
+                Uint8List.fromList(_selectedFile!.bytes),
+                height: 140,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
+              ),
+            ),
+          const SizedBox(height: 8),
+          Text(
+            '${_selectedFile!.fromCamera ? 'Photo ready' : 'Ready'} · '
+            '${(_selectedFile!.sizeBytes / 1024).toStringAsFixed(1)} KB'
+            '${_fileName != null ? ' · $_fileName' : ''}',
             style: TextStyle(fontSize: textScale.scale(14), color: AppColors.success, fontWeight: FontWeight.w600),
           ),
         ],
@@ -1100,7 +1223,8 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
         Text('Document type: $_documentCategoryLabel', style: TextStyle(fontSize: textScale.scale(16))),
         const SizedBox(height: 6),
         Text(
-          'File: ${_hasReadableFile ? _fileName! : (_fileName ?? "—")}',
+          'File: ${_hasReadableFile ? _fileName! : (_fileName ?? "—")}'
+          '${_selectedFile?.fromCamera == true ? ' (camera photo)' : ''}',
           style: TextStyle(fontSize: textScale.scale(16)),
         ),
         if (_hasReadableFile)
