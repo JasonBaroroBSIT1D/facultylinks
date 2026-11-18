@@ -83,7 +83,6 @@ import {
   countFacultyForReviewer,
   showAppToast,
 } from './account-modals.js';
-import { openFacultyScoringRulesModal } from './scoring-rules-modal.js';
 import { brandCompactHtml } from '../core/brand-markup.js';
 import { openCenteredModal } from './modal-access.js';
 import { mountDocumentPdfViewer } from './document-pdf-viewer.js?v=3';
@@ -435,7 +434,6 @@ function renderFacultyList(root, title, preservedQuery = '') {
           <td>${statusBadge(f.status)}</td>
           <td class="fl-account-card-actions">
             <button type="button" class="btn-ghost btn-sm" data-edit="${f.id}" title="Edit faculty">Edit</button>
-            <button type="button" class="btn-ghost btn-sm" data-rules="${f.id}" title="Pinned scoring rules version">Scoring rules</button>
             <button type="button" class="btn-ghost btn-sm" data-resend="${f.id}" title="Resend sign-in credentials">Resend credentials</button>
             <button type="button" class="btn-ghost btn-sm" data-toggle="${f.id}" title="${f.status === 'active' ? 'Deactivate faculty' : 'Activate faculty'}">${f.status === 'active' ? 'Deactivate' : 'Activate'}</button>
           </td></tr>`;
@@ -452,7 +450,6 @@ function renderFacultyList(root, title, preservedQuery = '') {
           <p>${statusBadge(f.status)}</p>
           <div class="fl-account-card-actions">
             <button type="button" class="btn-ghost btn-sm" data-edit="${f.id}">Edit</button>
-            <button type="button" class="btn-ghost btn-sm" data-rules="${f.id}">Scoring rules</button>
             <button type="button" class="btn-ghost btn-sm" data-resend="${f.id}">Resend credentials</button>
             <button type="button" class="btn-ghost btn-sm" data-toggle="${f.id}">${f.status === 'active' ? 'Deactivate' : 'Activate'}</button>
           </div>
@@ -464,12 +461,6 @@ function renderFacultyList(root, title, preservedQuery = '') {
         openFacultyForm(b.dataset.edit, {
           opener: b,
           onSaved: () => renderFacultyList(root, title, searchEl.value),
-        });
-    });
-    root.querySelectorAll('[data-rules]').forEach((b) => {
-      b.onclick = () =>
-        openFacultyScoringRulesModal(b.dataset.rules, {
-          onApplied: () => renderFacultyList(root, title, searchEl.value),
         });
     });
     root.querySelectorAll('[data-resend]').forEach((b) => {

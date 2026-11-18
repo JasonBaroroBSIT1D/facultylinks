@@ -147,6 +147,13 @@
 .fl-account-card-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-top: 0.75rem;
+  align-items: center;
+  gap: 0.4rem;
+}
+.fl-account-card .fl-account-card-actions {
+  margin-top: 0.65rem;
+}
+td.fl-account-card-actions {
+  white-space: normal;
+  min-width: 12rem;
 }
