@@ -3,6 +3,9 @@
  * Stored at `institutionConfig.preparationPeriod` in the demo (name kept for backward-compatible JSON).
  */
 
+/** Institution calendar used for period status (matches Manila formatting elsewhere in the portal). */
+export const EVALUATION_PERIOD_TIMEZONE = 'Asia/Manila';
+
 export const EVALUATION_PERIOD_CONTRACT = {
   version: 1,
   /** JSON path under institution config */
@@ -13,55 +16,116 @@ export const EVALUATION_PERIOD_CONTRACT = {
     reviewerAvailableFrom: { type: 'date', required: false, label: 'Reviewer Available From' },
   },
   statusValues: ['Upcoming', 'Open', 'Closed'],
+  timeZone: EVALUATION_PERIOD_TIMEZONE,
 };
+
+/** Calendar YYYY-MM-DD in the configured institution timezone. */
+export function calendarDateInTimeZone(date = new Date(), timeZone = EVALUATION_PERIOD_TIMEZONE) {
+  try {
+    return new Intl.DateTimeFormat('en-CA', {
+      timeZone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    }).format(date);
+  } catch {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, '0');
+    const d = String(date.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  }
+}
 
 export function parsePeriodDate(iso) {
   if (!iso) return null;
-  return new Date(`${iso}T12:00:00`);
+  const day = String(iso).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  // Noon Manila avoids DST edge cases for date-only fields.
+  return new Date(`${day}T12:00:00+08:00`);
 }
 
 export function formatEvaluationDate(iso) {
   if (!iso) return '—';
   const d = parsePeriodDate(iso);
-  return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+  if (!d || Number.isNaN(d.getTime())) return '—';
+  try {
+    return new Intl.DateTimeFormat('en-PH', {
+      timeZone: EVALUATION_PERIOD_TIMEZONE,
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    }).format(d);
+  } catch {
+    return d.toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+  }
+}
+
+export function formatEvaluationDateRange(start, end) {
+  if (!start && !end) return '—';
+  return `${formatEvaluationDate(start)} – ${formatEvaluationDate(end)}`;
 }
 
 /** @param {{ start: string, end: string, reviewerAvailableFrom?: string }} period */
 export function computeEvaluationPeriodStatus(period, now = new Date()) {
-  const s = parsePeriodDate(period?.start);
-  const e = parsePeriodDate(period?.end);
-  if (!s || !e) return 'Upcoming';
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startDay = new Date(s.getFullYear(), s.getMonth(), s.getDate());
-  const endDay = new Date(e.getFullYear(), e.getMonth(), e.getDate());
-  if (today < startDay) return 'Upcoming';
-  if (today > endDay) return 'Closed';
+  const start = period?.start ? String(period.start).slice(0, 10) : '';
+  const end = period?.end ? String(period.end).slice(0, 10) : '';
+  if (!start || !end) return 'Upcoming';
+  const today = calendarDateInTimeZone(now);
+  if (today < start) return 'Upcoming';
+  if (today > end) return 'Closed';
   return 'Open';
 }
 
 export function validateEvaluationPeriodDates({ start, end }) {
   if (!start || !end) return 'Start and end dates are required.';
-  const s = parsePeriodDate(start);
-  const e = parsePeriodDate(end);
+  const s = String(start).slice(0, 10);
+  const e = String(end).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s) || !/^\d{4}-\d{2}-\d{2}$/.test(e)) {
+    return 'Enter valid start and end dates.';
+  }
   if (e < s) return 'End date cannot be before the start date.';
+  return null;
+}
+
+/**
+ * Reviewer start after evaluation end is permitted by the current workflow
+ * (client and API only require end ≥ start). Surface it as guidance, not an error.
+ */
+export function reviewerScheduleNote(period) {
+  const end = period?.end ? String(period.end).slice(0, 10) : '';
+  const ra = period?.reviewerAvailableFrom ? String(period.reviewerAvailableFrom).slice(0, 10) : '';
+  if (!end || !ra) return null;
+  if (ra > end) {
+    return `Reviewers can start after the evaluation period ends (${formatEvaluationDate(ra)}). Checking of submitted evidence begins then.`;
+  }
   return null;
 }
 
 /** @param {{ start: string, end: string, reviewerAvailableFrom?: string }} period */
 export function reviewerAvailabilityDetail(period, now = new Date()) {
-  const ra = period?.reviewerAvailableFrom;
+  const ra = period?.reviewerAvailableFrom ? String(period.reviewerAvailableFrom).slice(0, 10) : '';
   if (!ra) {
-    return { available: false, shortLabel: 'Not configured', scheduleLine: 'Not configured' };
+    return {
+      available: false,
+      configured: false,
+      statusLabel: 'Not configured',
+      shortLabel: 'Not configured',
+      scheduleLine: 'Reviewer access is not configured.',
+      startDateLabel: null,
+    };
   }
-  const from = parsePeriodDate(ra);
-  const available = now >= from;
+  const today = calendarDateInTimeZone(now);
+  const available = today >= ra;
   const readable = formatEvaluationDate(ra);
   return {
     available,
-    shortLabel: available ? `From ${readable}` : `Opens ${readable}`,
+    configured: true,
+    statusLabel: available ? 'Available now' : 'Not yet open',
+    shortLabel: available ? `Available now · from ${readable}` : `Opens ${readable}`,
     scheduleLine: available
       ? `Reviewers may check documents from ${readable}`
-      : `Reviewer queue opens ${readable}`,
+      : `Reviewer access opens ${readable}`,
+    startDateLabel: readable,
   };
 }
 
@@ -71,10 +135,15 @@ export function statusBadgeClass(status) {
   return 'badge-correction';
 }
 
+export function reviewerAccessBadgeClass(detail) {
+  if (!detail?.configured) return 'badge-pending';
+  return detail.available ? 'badge-approved' : 'badge-pending';
+}
+
 export function evaluationPeriodCardHtml(period, { compact = false } = {}) {
   const status = computeEvaluationPeriodStatus(period);
   const rev = reviewerAvailabilityDetail(period);
-  const range = `${formatEvaluationDate(period.start)} – ${formatEvaluationDate(period.end)}`;
+  const range = formatEvaluationDateRange(period.start, period.end);
 
   return `
     <div class="card fl-eval-period-card${compact ? ' fl-eval-period-card--compact' : ''}" aria-labelledby="eval-period-heading">

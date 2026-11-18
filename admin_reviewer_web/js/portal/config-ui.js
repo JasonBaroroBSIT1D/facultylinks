@@ -64,8 +64,9 @@ const HOW_IT_WORKS = `
   <p>Set reference points and caps for each indicator under DBM–CHED JC No. 3, s. 2022. Faculty who already started an assessment keep the rule version they began with.</p>
   <ul>
     <li><strong>Save Draft</strong> stores draft rules on the server without affecting published rules.</li>
-    <li><strong>Review &amp; Publish</strong> checks weights and catalog validation, then sets an effective date for new work.</li>
+    <li><strong>Review &amp; Publish</strong> checks catalog validation (including stored KRA weight totals), then sets an effective date for new work.</li>
     <li><strong>Preview</strong> (inside Review &amp; Publish) runs what-if calculations only — it does not change saved faculty scores.</li>
+    <li>Assessment weights by current faculty rank are managed under <strong>Evaluation Settings → Rank simulation</strong>.</li>
   </ul>
 `;
 
@@ -85,10 +86,6 @@ function decimalToPct(d) {
   return Number.isInteger(pct) ? String(pct) : pct.toFixed(1);
 }
 
-function pctToDecimal(p) {
-  return Number(p) / 100;
-}
-
 function formatDate(d) {
   if (!d) return '—';
   try {
@@ -106,10 +103,7 @@ function fingerprintDraft(store) {
 }
 
 function syncWeightsFromDom() {
-  if (document.querySelector('[data-kw-pct]')) {
-    _pendingWeights = readWeightsPctFromDomOrEmpty();
-    refreshDirtyFlag();
-  }
+  // Weight editors were moved to Rank simulation settings; nothing to sync from Scoring Rules DOM.
 }
 
 function refreshDirtyFlag() {
@@ -391,25 +385,8 @@ function kraTabLabel(kra) {
   return kra.name.replace(/^KRA [IVX]+ –\s*/i, '') || kra.name;
 }
 
-function weightStatusLabel(weights) {
-  const w = weights || {};
-  const total = Object.values(w).reduce((a, b) => a + Number(b), 0);
-  const pct = Math.round(total * 10000) / 100;
-  const ok = Math.abs(total - 1) <= 0.001;
-  return { text: ok ? `Weights total ${pct}%` : `Weights ${pct}% — need 100%`, ok };
-}
-
-function readWeightsPctFromDomOrEmpty() {
-  const w = {};
-  document.querySelectorAll('[data-kw-pct]').forEach((inp) => {
-    w[inp.dataset.kwPct] = pctToDecimal(inp.value);
-  });
-  return w;
-}
-
 function readWeightsPct() {
-  const fromDom = readWeightsPctFromDomOrEmpty();
-  if (Object.keys(fromDom).length) return fromDom;
+  // Scoring Rules no longer edits KRA weights in the UI. Preserve stored draft/published weights.
   if (_pendingWeights) return { ..._pendingWeights };
   const store = MockStore.load();
   const d = ConfigRepository.getDraft(store);
@@ -490,103 +467,6 @@ function renderKraNav(navigable) {
   });
 }
 
-function readModalWeightPct() {
-  const w = {};
-  modalHost()?.querySelectorAll('[data-kw-pct]').forEach((inp) => {
-    w[inp.dataset.kwPct] = pctToDecimal(inp.value);
-  });
-  return w;
-}
-
-function validateWeightPercentsFromModal() {
-  const host = modalHost();
-  const problems = [];
-  let total = 0;
-  for (const id of OFFICIAL_KRA_IDS) {
-    const inp = host?.querySelector(`[data-kw-pct="${id}"]`);
-    const num = Number(inp?.value);
-    if (!Number.isFinite(num) || num < 0 || num > 100) {
-      problems.push(`${KRA_TAB_LABELS[id]} must be between 0 and 100.`);
-      continue;
-    }
-    total += num / 100;
-  }
-  const pct = Math.round(total * 10000) / 100;
-  if (Math.abs(total - 1) > 0.001) problems.push(`Combined weight must equal 100% (currently ${pct}%).`);
-  return { ok: problems.length === 0, problems, pct };
-}
-
-function openWeightsPanel(store, readOnly) {
-  const opener = document.getElementById('cfgEditWeights');
-  const weightsAtOpen = { ...readWeightsPct() };
-
-  const fieldsHtml = OFFICIAL_KRA_IDS.map((id) => {
-    const v = weightsAtOpen[id] ?? 0;
-    return `<label class="fl-weight-field" for="kw-modal-${escAttr(id)}">${esc(KRA_TAB_LABELS[id])}
-      <span><input type="number" step="0.1" min="0" max="100" inputmode="decimal" id="kw-modal-${escAttr(id)}"
-        data-kw-pct="${escAttr(id)}" value="${escAttr(decimalToPct(v))}" ${readOnly ? 'disabled' : ''} ${id === 'kra-I' ? 'data-autofocus' : ''}/> <span class="fl-weight-suffix">%</span></span>
-    </label>`;
-  }).join('');
-
-  const footerHtml = readOnly
-    ? `<button type="button" class="cfg-btn-secondary" data-fl-modal-cancel>Close</button>`
-    : `<p id="cfgWeightsErr" class="fl-modal-footer-err" role="alert" aria-live="polite"></p>
-       <button type="button" class="cfg-btn-secondary" data-fl-modal-cancel>Cancel</button>
-       <button type="button" class="cfg-btn-primary" id="cfgWeightsApply" disabled>Apply Changes</button>`;
-
-  const modal = openCenteredModal({
-    title: 'Edit KRA Weights',
-    lede: 'Set each area’s share of the total score.',
-    size: 'md',
-    bodyHtml: `
-      <div class="fl-weight-fields">${fieldsHtml}</div>
-      <p id="cfgWeightCombined" class="fl-weight-combined" aria-live="polite"></p>
-    `,
-    footerHtml,
-    opener,
-  });
-  if (!modal) return;
-
-  const combinedEl = modal.dialog.querySelector('#cfgWeightCombined');
-  const applyBtn = modal.dialog.querySelector('#cfgWeightsApply');
-  const errEl = modal.dialog.querySelector('#cfgWeightsErr');
-
-  const refreshState = () => {
-    const v = validateWeightPercentsFromModal();
-    if (combinedEl) {
-      combinedEl.textContent = v.ok
-        ? `Combined weight: ${v.pct}% (equals 100%)`
-        : `Combined weight: ${v.pct}% — must equal 100%`;
-      combinedEl.className = `fl-weight-combined ${v.ok ? 'ok' : 'bad'}`;
-    }
-    if (errEl) errEl.textContent = v.problems.join(' ');
-    if (applyBtn) applyBtn.disabled = !v.ok || readOnly;
-  };
-
-  modal.dialog.querySelectorAll('[data-kw-pct]').forEach((inp) => {
-    inp.addEventListener('input', refreshState);
-  });
-  refreshState();
-
-  applyBtn?.addEventListener('click', () => {
-    const v = validateWeightPercentsFromModal();
-    if (!v.ok) {
-      if (errEl) errEl.textContent = v.problems.join(' ');
-      return;
-    }
-    _pendingWeights = readModalWeightPct();
-    _ui.dirty = true;
-    refreshDirtyFlag();
-    updateDirtyChip();
-    modal.close();
-    const activePub = ConfigRepository.getActivePublished(store);
-    const draft2 = ConfigRepository.getDraft(store);
-    const catalog2 = draft2?.catalog || activePub.catalog;
-    renderKraPanel(catalog2, _pendingWeights, false);
-    toast('Weights updated in draft. Use Save Draft to persist.');
-  });
-}
-
 function renderKraPanel(catalog, weights, readOnly, root = document) {
   const navigable = getNavigableKras(catalog);
   const entry = navigable[_ui.kraTab];
@@ -604,8 +484,6 @@ function renderKraPanel(catalog, weights, readOnly, root = document) {
   }
 
   ensureKraExpansion(kra);
-  const kraPct = decimalToPct(weights[kra.id] ?? 0);
-  const ws = weightStatusLabel(weights);
   const q = _ui.search.trim().toLowerCase();
   const criteriaHtml = kra.criteria
     .map((crit) => {
@@ -647,18 +525,21 @@ function renderKraPanel(catalog, weights, readOnly, root = document) {
     .filter(Boolean)
     .join('');
 
+  const policyBtn =
+    readOnly || !['kra-III', 'kra-IV'].includes(kra.id)
+      ? ''
+      : `<button type="button" class="cfg-btn-ghost btn-sm" id="cfgKraScoringPolicy" data-kra="${escAttr(kra.id)}">KRA scoring policy</button>`;
+
   panel.innerHTML = `
     <div class="cfg-kra-workspace">
       <div class="cfg-kra-nav-slot" id="cfgKraNavHost"></div>
       <div class="cfg-kra-heading">
         <h3>${esc(kra.name)}</h3>
         <div class="cfg-kra-heading-actions">
-          <span class="cfg-kra-weight" title="Weight for this KRA">Weight <strong>${esc(kraPct)}%</strong></span>
-          ${readOnly || !['kra-III', 'kra-IV'].includes(kra.id) ? '' : `<button type="button" class="cfg-btn-ghost btn-sm" id="cfgKraScoringPolicy" data-kra="${escAttr(kra.id)}">KRA scoring policy</button>`}
-          ${readOnly ? '' : `<button type="button" class="cfg-btn-ghost btn-sm" id="cfgEditWeights">Edit weights</button>`}
-          <span class="cfg-weight-total cfg-weight-total--sm ${ws.ok ? 'ok' : 'bad'}">${esc(ws.text)}</span>
+          ${policyBtn}
         </div>
       </div>
+      <p class="muted cfg-kra-weight-hint">Assessment weights by current faculty rank are set in Rank simulation.</p>
       <div class="cfg-ind-toolbar">
         <input type="search" id="cfgIndSearch" class="cfg-search" placeholder="Search indicators" value="${escAttr(_ui.search)}" aria-label="Search indicators"/>
         <label class="cfg-filter-check"><input type="checkbox" id="cfgNeedsFilter" ${_ui.needsOnly ? 'checked' : ''}/> Needs configuration</label>
@@ -670,10 +551,6 @@ function renderKraPanel(catalog, weights, readOnly, root = document) {
 
   renderKraNav(navigable);
 
-  panel.querySelector('#cfgEditWeights')?.addEventListener('click', () => {
-    const store = MockStore.load();
-    openWeightsPanel(store, readOnly);
-  });
   panel.querySelector('#cfgKraScoringPolicy')?.addEventListener('click', (e) => {
     openKraScoringPolicyEditor(e.currentTarget.dataset.kra);
   });
@@ -839,41 +716,206 @@ function openAddKraForm(store) {
   });
 }
 
+function slugCriterionId(name) {
+  const base = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 28);
+  return `crit-${base || 'item'}-${Date.now().toString(36).slice(-5)}`;
+}
+
+function slugIndicatorId(name) {
+  const base = name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 28);
+  return `ind-${base || 'item'}-${Date.now().toString(36).slice(-5)}`;
+}
+
+/**
+ * Temporary creation form — nothing is written to the draft until Save.
+ * Cancel / dismiss leaves no placeholder criterion.
+ */
 function addCriterion(kraId) {
   const store = MockStore.load();
   const d = requireDraft(store);
   const kra = d.catalog.kras.find((k) => k.id === kraId);
   if (!kra) return toast('KRA not found.', true);
-  const id = `crit-${Date.now()}`;
-  kra.criteria.push({ id, name: 'New criterion', capMaxPoints: null, indicators: [] });
-  _ui.expanded.add(id);
-    persistDraftSafe(store).then(() => {
-      const w = readWeightsPct();
-      renderKraPanel(d.catalog, w, false);
-      toast('Criterion added.');
-    });
+
+  const opener = document.querySelector(`#addCrit[data-kra="${CSS.escape(kraId)}"]`) || document.getElementById('addCrit');
+  const modal = openCenteredModal({
+    title: 'Add criterion',
+    lede: 'Saved only when you confirm. Cancel leaves the draft unchanged.',
+    size: 'md',
+    bodyHtml: `
+      <form id="addCritForm" class="cfg-form">
+        <label>Criterion name
+          <input name="name" required minlength="3" maxlength="160" data-autofocus
+            placeholder="e.g. Criterion D – …" autocomplete="off" />
+        </label>
+        <label>Maximum points (optional)
+          <input type="number" name="cap" min="0" step="0.01" />
+        </label>
+        <p id="addCritErr" class="cfg-field-error" role="alert"></p>
+      </form>`,
+    footerHtml: `
+      <button type="button" class="cfg-btn-secondary" data-fl-modal-cancel>Cancel</button>
+      <button type="submit" form="addCritForm" class="cfg-btn-primary" id="addCritSave">Save criterion</button>`,
+    opener,
+  });
+  if (!modal) return;
+
+  let saving = false;
+  const form = modal.dialog.querySelector('#addCritForm');
+  form?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (saving) return;
+    const err = modal.dialog.querySelector('#addCritErr');
+    const saveBtn = modal.dialog.querySelector('#addCritSave');
+    err.textContent = '';
+    const fd = new FormData(e.target);
+    const name = String(fd.get('name') || '').trim();
+    if (name.length < 3) {
+      err.textContent = 'Enter a criterion name (at least 3 characters).';
+      return;
+    }
+    if (/^new criterion$/i.test(name)) {
+      err.textContent = 'Choose a specific criterion name — placeholders are not saved.';
+      return;
+    }
+    if ((kra.criteria || []).some((c) => (c.name || '').trim().toLowerCase() === name.toLowerCase())) {
+      err.textContent = 'A criterion with this name already exists in this KRA.';
+      return;
+    }
+    const capRaw = String(fd.get('cap') || '').trim();
+    const capMaxPoints = capRaw === '' ? null : Number(capRaw);
+    if (capRaw !== '' && (!Number.isFinite(capMaxPoints) || capMaxPoints < 0)) {
+      err.textContent = 'Maximum points must be a number ≥ 0.';
+      return;
+    }
+    let id = slugCriterionId(name);
+    if ((kra.criteria || []).some((c) => c.id === id)) {
+      id = `crit-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    }
+    saving = true;
+    if (saveBtn) saveBtn.disabled = true;
+    kra.criteria = kra.criteria || [];
+    kra.criteria.push({ id, name, capMaxPoints, indicators: [] });
+    _ui.expanded.add(id);
+    persistDraftSafe(store)
+      .then(() => {
+        modal.close();
+        const w = readWeightsPct();
+        renderKraPanel(d.catalog, w, false);
+        toast('Criterion saved to draft.');
+        _ui.dirty = true;
+        updateDirtyChip();
+      })
+      .catch((ex) => {
+        // Roll back in-memory insert if server persist failed.
+        kra.criteria = kra.criteria.filter((c) => c.id !== id);
+        _ui.expanded.delete(id);
+        saving = false;
+        if (saveBtn) saveBtn.disabled = false;
+        err.textContent = ex?.message || 'Could not save criterion.';
+      });
+  });
 }
 
+/**
+ * Temporary creation form — Cancel leaves no saved indicator placeholder.
+ */
 function addIndicator(kraId, critId) {
   const store = MockStore.load();
   const d = requireDraft(store);
   const kra = d.catalog.kras.find((k) => k.id === kraId);
   const crit = kra?.criteria.find((c) => c.id === critId);
   if (!crit) return toast('Criterion not found.', true);
-  const indId = `ind-${Date.now()}`;
-  crit.indicators.push({
-    id: indId,
-    name: 'New indicator',
-    description: '',
-    maxPoints: 0,
-    sourceRef: '',
-    conditions: [],
-    documentaryRequirements: [],
-    calculation: { kind: 'fixed_per_entry', maxPoints: 0 },
-    contributionAllocation: { mode: 'percent', defaultPercent: 100 },
+
+  const opener = document.querySelector(`[data-add-ind="${CSS.escape(critId)}"]`);
+  const modal = openCenteredModal({
+    title: 'Add indicator',
+    lede: 'Saved only when you confirm. Cancel leaves the draft unchanged.',
+    size: 'md',
+    bodyHtml: `
+      <form id="addIndForm" class="cfg-form">
+        <label>Indicator name
+          <input name="name" required minlength="3" maxlength="200" data-autofocus
+            placeholder="e.g. Membership in …" autocomplete="off" />
+        </label>
+        <label>Reference / max points (optional)
+          <input type="number" name="maxPoints" min="0" step="0.01" />
+        </label>
+        <p id="addIndErr" class="cfg-field-error" role="alert"></p>
+      </form>`,
+    footerHtml: `
+      <button type="button" class="cfg-btn-secondary" data-fl-modal-cancel>Cancel</button>
+      <button type="submit" form="addIndForm" class="cfg-btn-primary" id="addIndSave">Save indicator</button>`,
+    opener,
   });
-  _ui.expanded.add(critId);
-  persistDraftSafe(store).then(() => openIndicatorEditor(kraId, critId, indId));
+  if (!modal) return;
+
+  let saving = false;
+  modal.dialog.querySelector('#addIndForm')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (saving) return;
+    const err = modal.dialog.querySelector('#addIndErr');
+    const saveBtn = modal.dialog.querySelector('#addIndSave');
+    err.textContent = '';
+    const fd = new FormData(e.target);
+    const name = String(fd.get('name') || '').trim();
+    if (name.length < 3) {
+      err.textContent = 'Enter an indicator name (at least 3 characters).';
+      return;
+    }
+    if (/^new indicator$/i.test(name)) {
+      err.textContent = 'Choose a specific indicator name — placeholders are not saved.';
+      return;
+    }
+    if ((crit.indicators || []).some((i) => (i.name || '').trim().toLowerCase() === name.toLowerCase())) {
+      err.textContent = 'An indicator with this name already exists in this criterion.';
+      return;
+    }
+    const maxRaw = String(fd.get('maxPoints') || '').trim();
+    const maxPoints = maxRaw === '' ? 0 : Number(maxRaw);
+    if (maxRaw !== '' && (!Number.isFinite(maxPoints) || maxPoints < 0)) {
+      err.textContent = 'Max points must be a number ≥ 0.';
+      return;
+    }
+    let indId = slugIndicatorId(name);
+    if ((crit.indicators || []).some((i) => i.id === indId)) {
+      indId = `ind-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+    }
+    const ind = {
+      id: indId,
+      name,
+      description: '',
+      maxPoints,
+      sourceRef: '',
+      conditions: [],
+      documentaryRequirements: [],
+      calculation: { kind: 'fixed_per_entry', maxPoints },
+      contributionAllocation: { mode: 'percent', defaultPercent: 100 },
+    };
+    saving = true;
+    if (saveBtn) saveBtn.disabled = true;
+    crit.indicators = crit.indicators || [];
+    crit.indicators.push(ind);
+    _ui.expanded.add(critId);
+    persistDraftSafe(store)
+      .then(() => {
+        modal.close();
+        openIndicatorEditor(kraId, critId, indId);
+      })
+      .catch((ex) => {
+        crit.indicators = crit.indicators.filter((i) => i.id !== indId);
+        saving = false;
+        if (saveBtn) saveBtn.disabled = false;
+        err.textContent = ex?.message || 'Could not save indicator.';
+      });
+  });
 }
 
 function diffDraftVsActive(active, draft, weights) {

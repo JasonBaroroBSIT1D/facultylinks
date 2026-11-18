@@ -64,16 +64,11 @@ import {
   DEFAULT_INSTITUTION_CONFIG,
   evaluateRankEligibility,
 } from '../core/institution-config.js';
-import {
-  DEFAULT_RANK_SIMULATION,
-  RANK_CATEGORY_IDS,
-  RANK_CATEGORY_LABELS,
-  validateRankSimulation,
-} from '../core/rank-simulation-config.js';
+import { renderRankSimulationSettings } from './rank-simulation-settings.js';
+import { renderEvaluationPeriodSettings } from './evaluation-period-settings.js';
 import {
   computeEvaluationPeriodStatus,
   formatEvaluationDate,
-  validateEvaluationPeriodDates,
   reviewerAvailabilityDetail,
   statusBadgeClass,
 } from '../core/evaluation-period-service.js';
@@ -728,7 +723,7 @@ function renderEvaluationSettings(root, title) {
     }
   }
   try {
-    renderEvaluationPeriod(periodHost, title, { embedded: true, readOnly: periodReadOnly });
+    renderEvaluationPeriodSettings(periodHost, { readOnly: periodReadOnly });
   } catch (e) {
     console.error(e);
     if (periodHost) {
@@ -748,191 +743,6 @@ function renderEvaluationSettings(root, title) {
     if (rankHost) rankHost.innerHTML = `<div class="card" style="padding:1rem"><p>${e.message || 'Could not load rank simulation settings.'}</p></div>`;
   }
   setEvalSettingsTab(root, tab);
-}
-
-function renderRankSimulationSettings(root, { readOnly = false } = {}) {
-  if (!root) return;
-  const store = MockStore.load();
-  const ic = store.institutionConfig || DEFAULT_INSTITUTION_CONFIG();
-  const rs = { ...DEFAULT_RANK_SIMULATION(), ...(ic.rankSimulation || {}) };
-  const weightRows = RANK_CATEGORY_IDS.map((cat) => {
-    const w = rs.weightMatrixByCategory?.[cat] || {};
-    const cells = ['kra-I', 'kra-II', 'kra-III', 'kra-IV']
-      .map(
-        (kid) =>
-          `<label style="display:block;font-size:0.85rem">${kid}<input type="number" step="0.01" min="0" max="1" data-rs-weight="${cat}:${kid}" value="${w[kid] ?? ''}" ${readOnly ? 'disabled' : ''}/></label>`
-      )
-      .join('');
-    return `<details open><summary>${RANK_CATEGORY_LABELS[cat]}</summary><div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;margin:0.5rem 0">${cells}</div></details>`;
-  }).join('');
-  const bracketRows = (rs.scoreBrackets || [])
-    .map(
-      (b, i) =>
-        `<tr><td><input type="number" data-rs-bracket="${i}:min" value="${b.minInclusive}" ${readOnly ? 'disabled' : ''}/></td>
-        <td><input type="number" data-rs-bracket="${i}:max" value="${b.maxInclusive}" ${readOnly ? 'disabled' : ''}/></td>
-        <td><input type="number" data-rs-bracket="${i}:inc" value="${b.subRankIncrements}" ${readOnly ? 'disabled' : ''}/></td></tr>`
-    )
-    .join('');
-  root.innerHTML = `
-    <p class="muted" style="margin-top:0">Table 2.2 KRA weights by <strong>current</strong> faculty rank category · Table 3.1 sub-rank brackets · rank ladder from institution <code>rankOptions</code> (saved with institution config).</p>
-    <details style="margin-top:0.5rem"><summary>Rank ladder order (${(ic.rankOptions || []).length} steps)</summary>
-      <ol style="margin:0.5rem 0 0 1.25rem;font-size:0.9rem">${(ic.rankOptions || []).map((r) => `<li>${r}</li>`).join('') || '<li class="muted">No ranks configured</li>'}</ol>
-    </details>
-    <div class="card" style="padding:1rem;margin-top:0.75rem">
-      <p class="muted" style="font-size:0.85rem">Source: ${rs.sourceRef || 'JC3 Tables 2.2 & 3.1'}</p>
-      <h4 style="margin:1rem 0 0.5rem">Weight matrix</h4>
-      ${weightRows}
-      <h4 style="margin:1rem 0 0.5rem">Score brackets</h4>
-      <table class="data-table"><thead><tr><th>Min</th><th>Max</th><th>Sub-ranks</th></tr></thead><tbody>${bracketRows}</tbody></table>
-      <label style="display:block;margin-top:1rem">Decimal bracket policy
-        <select id="rsDecimalPolicy" ${readOnly ? 'disabled' : ''}>
-          <option value="unresolved" ${rs.decimalBracketPolicy === 'unresolved' ? 'selected' : ''}>Unresolved (default)</option>
-          <option value="floor_to_bracket" ${rs.decimalBracketPolicy === 'floor_to_bracket' ? 'selected' : ''}>Floor to bracket</option>
-          <option value="round_half_up" ${rs.decimalBracketPolicy === 'round_half_up' ? 'selected' : ''}>Round half up</option>
-        </select>
-      </label>
-      ${readOnly ? '' : '<button type="button" class="btn-primary-sm btn-sm" id="saveRankSim" style="margin-top:1rem">Save rank simulation settings</button>'}
-      <p id="rankSimMsg" class="muted" role="status" style="margin-top:0.5rem"></p>
-    </div>`;
-  if (readOnly) return;
-  root.querySelector('#saveRankSim')?.addEventListener('click', async () => {
-    const msg = root.querySelector('#rankSimMsg');
-    const next = { ...rs, weightMatrixByCategory: { ...rs.weightMatrixByCategory } };
-    root.querySelectorAll('[data-rs-weight]').forEach((inp) => {
-      const [cat, kid] = inp.dataset.rsWeight.split(':');
-      if (!next.weightMatrixByCategory[cat]) next.weightMatrixByCategory[cat] = {};
-      next.weightMatrixByCategory[cat][kid] = Number(inp.value);
-    });
-    const brackets = (rs.scoreBrackets || []).map((b, i) => ({
-      minInclusive: Number(root.querySelector(`[data-rs-bracket="${i}:min"]`)?.value),
-      maxInclusive: Number(root.querySelector(`[data-rs-bracket="${i}:max"]`)?.value),
-      subRankIncrements: Number(root.querySelector(`[data-rs-bracket="${i}:inc"]`)?.value),
-    }));
-    next.scoreBrackets = brackets;
-    next.decimalBracketPolicy = root.querySelector('#rsDecimalPolicy')?.value || 'unresolved';
-    next.status = 'published';
-    const errs = validateRankSimulation(next);
-    if (errs.length) {
-      msg.textContent = errs.join(' ');
-      return;
-    }
-    const s = MockStore.load();
-    s.institutionConfig = { ...(s.institutionConfig || DEFAULT_INSTITUTION_CONFIG()), rankSimulation: next };
-    try {
-      await PortalApi.saveInstitution(s.institutionConfig);
-      MockStore.save(s);
-      msg.textContent = 'Rank simulation settings saved.';
-    } catch (ex) {
-      msg.textContent = ex.message || 'Save failed.';
-    }
-  });
-}
-
-function renderEvaluationPeriod(root, title, { embedded = false, readOnly = false } = {}) {
-  if (!root) return;
-  if (!embedded) title.textContent = 'Evaluation Period';
-  const store = MockStore.load();
-  const ic = store.institutionConfig || DEFAULT_INSTITUTION_CONFIG();
-  const period = { ...DEFAULT_INSTITUTION_CONFIG().preparationPeriod, ...(ic.preparationPeriod || {}) };
-  const status = computeEvaluationPeriodStatus(period);
-  const rev = reviewerAvailabilityDetail(period);
-
-  if (readOnly) {
-    root.innerHTML = `
-      ${pageIntro(SCREEN_INTRO.simulationCfg)}
-      <p class="muted" style="margin:-0.5rem 0 1rem;font-size:0.92rem">These settings are managed by your administrator.</p>
-      <div class="card fl-eval-period-form">
-        <dl class="fl-eval-period-dl">
-          <div>
-            <dt>Start date</dt>
-            <dd>${formatEvaluationDate(period.start)}</dd>
-          </div>
-          <div>
-            <dt>End date</dt>
-            <dd>${formatEvaluationDate(period.end)}</dd>
-          </div>
-          <div>
-            <dt>Reviewer available from</dt>
-            <dd>${period.reviewerAvailableFrom ? formatEvaluationDate(period.reviewerAvailableFrom) : '—'}</dd>
-          </div>
-        </dl>
-        <div class="fl-eval-period-summary" style="margin-top:0.75rem">
-          <p><span class="muted">Current status</span> <span class="badge-status ${statusBadgeClass(status)}">${status}</span></p>
-          <p class="muted" style="font-size:0.9rem;margin:0.35rem 0 0">Reviewer availability: ${rev.shortLabel}</p>
-        </div>
-      </div>`;
-    return;
-  }
-
-  root.innerHTML = `
-    ${pageIntro(SCREEN_INTRO.simulationCfg)}
-    <div class="card fl-eval-period-form">
-      <form id="evalPeriodForm" class="fl-eval-period-fields" novalidate>
-        <label class="fl-field">
-          <span class="fl-field__label">Start Date</span>
-          <input type="date" id="ppStart" name="start" value="${period.start}" required aria-required="true" />
-        </label>
-        <label class="fl-field">
-          <span class="fl-field__label">End Date</span>
-          <input type="date" id="ppEnd" name="end" value="${period.end}" required aria-required="true" />
-        </label>
-        <label class="fl-field">
-          <span class="fl-field__label">Reviewer Available From</span>
-          <input type="date" id="ppRev" name="reviewerAvailableFrom" value="${period.reviewerAvailableFrom || ''}" />
-        </label>
-      </form>
-      <div class="fl-eval-period-summary" aria-live="polite">
-        <p><span class="muted">Current status</span> <span class="badge-status ${statusBadgeClass(status)}" id="ppStatusBadge">${status}</span></p>
-        <p class="muted" style="font-size:0.9rem;margin:0.35rem 0 0" id="ppRevLine">Reviewer availability: ${rev.shortLabel}</p>
-      </div>
-      <div style="margin-top:1rem;display:flex;flex-wrap:wrap;gap:0.75rem;align-items:center">
-        <button type="button" class="btn-primary-sm btn-sm" id="saveEvalPeriod">Save Changes</button>
-        <p id="evalPeriodMsg" class="muted" role="status" style="margin:0;flex:1 1 12rem"></p>
-      </div>
-    </div>`;
-
-  const form = document.getElementById('evalPeriodForm');
-  const msg = document.getElementById('evalPeriodMsg');
-
-  const refreshPreview = () => {
-    const draft = {
-      start: document.getElementById('ppStart').value,
-      end: document.getElementById('ppEnd').value,
-      reviewerAvailableFrom: document.getElementById('ppRev').value || null,
-    };
-    const st = computeEvaluationPeriodStatus(draft);
-    const badge = document.getElementById('ppStatusBadge');
-    badge.textContent = st;
-    badge.className = `badge-status ${statusBadgeClass(st)}`;
-    document.getElementById('ppRevLine').textContent = `Reviewer availability: ${reviewerAvailabilityDetail(draft).shortLabel}`;
-  };
-
-  form.querySelectorAll('input[type="date"]').forEach((inp) => inp.addEventListener('change', refreshPreview));
-
-  document.getElementById('saveEvalPeriod').onclick = async () => {
-    const start = document.getElementById('ppStart').value;
-    const end = document.getElementById('ppEnd').value;
-    const reviewerAvailableFrom = document.getElementById('ppRev').value || '';
-    const err = validateEvaluationPeriodDates({ start, end });
-    if (err) {
-      msg.textContent = err;
-      msg.style.color = 'var(--fl-danger, #b42318)';
-      return;
-    }
-    const s = MockStore.load();
-    s.institutionConfig = s.institutionConfig || DEFAULT_INSTITUTION_CONFIG();
-    s.institutionConfig.preparationPeriod = { start, end, reviewerAvailableFrom };
-    try {
-      await PortalApi.saveInstitution(s.institutionConfig);
-      await bootstrapPortal();
-      msg.style.color = '';
-      msg.textContent = `Saved. Evaluation period is ${computeEvaluationPeriodStatus(s.institutionConfig.preparationPeriod)} (${formatEvaluationDate(start)} – ${formatEvaluationDate(end)}).`;
-      refreshPreview();
-    } catch (ex) {
-      msg.style.color = 'var(--fl-danger, #b42318)';
-      msg.textContent = ex.message || 'Could not save evaluation period.';
-    }
-  };
 }
 
 function renderReports(root, title) {
