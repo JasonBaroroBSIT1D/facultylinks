@@ -140,6 +140,61 @@ export function reviewerAccessBadgeClass(detail) {
   return detail.available ? 'badge-approved' : 'badge-pending';
 }
 
+/**
+ * Reviewer submit window: max(start, reviewerAvailableFrom) … end (inclusive, Manila calendar days).
+ * @returns {{ allowed: boolean, state: string, message: string|null, opensOn: string|null, endsOn: string|null }}
+ */
+export function computeReviewerReviewWindow(period, now = new Date()) {
+  const start = period?.start ? String(period.start).slice(0, 10) : '';
+  const end = period?.end ? String(period.end).slice(0, 10) : '';
+  const ra = period?.reviewerAvailableFrom ? String(period.reviewerAvailableFrom).slice(0, 10) : '';
+  const first = start && end ? (ra ? (ra > start ? ra : start) : start) : null;
+  const today = calendarDateInTimeZone(now);
+  if (!first || !end) {
+    return {
+      allowed: false,
+      state: 'unconfigured',
+      message: 'Evaluation schedule is not configured.',
+      opensOn: first,
+      endsOn: end || null,
+    };
+  }
+  if (today < first) {
+    return {
+      allowed: false,
+      state: 'upcoming',
+      message: `Review opens ${formatEvaluationDate(first)}.`,
+      opensOn: first,
+      endsOn: end,
+    };
+  }
+  if (today > end) {
+    return {
+      allowed: false,
+      state: 'closed',
+      message: 'Review period has ended.',
+      opensOn: first,
+      endsOn: end,
+    };
+  }
+  return { allowed: true, state: 'open', message: null, opensOn: first, endsOn: end };
+}
+
+export function reviewerReviewWindowFromStore(store, now = new Date()) {
+  const api = store?.reviewWindow;
+  if (api && typeof api.allowed === 'boolean' && api.endsOn) {
+    return {
+      allowed: api.allowed,
+      state: api.state || (api.allowed ? 'open' : 'closed'),
+      message: api.message || null,
+      opensOn: api.opensOn || null,
+      endsOn: api.endsOn || null,
+    };
+  }
+  const period = store?.institutionConfig?.preparationPeriod || {};
+  return computeReviewerReviewWindow(period, now);
+}
+
 export function evaluationPeriodCardHtml(period, { compact = false } = {}) {
   const status = computeEvaluationPeriodStatus(period);
   const rev = reviewerAvailabilityDetail(period);

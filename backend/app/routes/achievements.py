@@ -146,6 +146,11 @@ def portal_list_achievements(faculty_portal_id: str):
 @require_roles(UserRole.admin, UserRole.reviewer)
 def portal_review_achievement(achievement_id: str):
     actor = current_user()
+    from app.services.review_action_guard import block_reviewer_review_response
+
+    denied = block_reviewer_review_response(actor)
+    if denied:
+        return denied
     body = request.get_json(silent=True) or {}
     owner_portal_id = body.get("facultyId")
     if not owner_portal_id:

@@ -528,6 +528,11 @@ def review_document(public_id: str):
 
     t0 = time.perf_counter()
     actor = current_user()
+    from app.services.review_action_guard import block_reviewer_review_response
+
+    denied = block_reviewer_review_response(actor)
+    if denied:
+        return denied
     doc = Document.query.filter_by(public_id=public_id, upload_status="stored").first()
     if not doc:
         return jsonify({"error": "Not found."}), 404

@@ -19,7 +19,22 @@ JSON field name `preparationPeriod` is retained for backward-compatible demo dat
 | `end` | ISO date | yes | End Date |
 | `reviewerAvailableFrom` | ISO date | no | Reviewer Available From |
 
-## Status (computed, never stored)
+## Reviewer review-action window
+
+Calendar dates in **Asia/Manila**. **Evaluation ends** is the **last allowed day** (inclusive through 23:59:59 Manila).
+
+| Rule | Detail |
+|------|--------|
+| First allowed day | `max(start, reviewerAvailableFrom)` when reviewer start is set; otherwise `start` |
+| Last allowed day | `end` (inclusive) |
+| After end | Closed — message: **Review period has ended** |
+| Before first day | **Review opens {date}.** |
+
+Reviewers may open workspace, history, and PDFs outside the window, but **cannot** approve/reject, request changes, or edit verified scores/remarks (UI + API). **Admins** are not restricted. **Faculty** uploads and self-assessment are unchanged outside the period.
+
+Portal bootstrap includes `reviewWindow` from the API; clients may also compute via `computeReviewerReviewWindow()`.
+
+## Evaluation period status (faculty-facing display)
 
 Compare **calendar dates** (ignore time of day):
 

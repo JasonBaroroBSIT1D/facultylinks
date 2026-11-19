@@ -58,12 +58,23 @@ def app_ctx(app):
         yield app
 
 
+_SKIP_CLEANUP_MODULES = frozenset(
+    {
+        "test_db_isolation_guard",
+        "test_evaluation_period_review_window",
+    }
+)
+
+
 @pytest.fixture(autouse=True)
-def _cleanup_pytest_fixture_rows(request, app):
+def _cleanup_pytest_fixture_rows(request):
     """Remove @test.local rows created during the test (test DB only)."""
     yield
-    if request.module and request.module.__name__.endswith("test_db_isolation_guard"):
+    if request.module and request.module.__name__ in _SKIP_CLEANUP_MODULES:
         return
+    if "app" not in request.fixturenames and "app_ctx" not in request.fixturenames:
+        return
+    app = request.getfixturevalue("app")
     with app.app_context():
         from app.models import (
             Document,

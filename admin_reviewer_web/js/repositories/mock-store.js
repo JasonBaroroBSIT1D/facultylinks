@@ -84,6 +84,7 @@ function mergePortalPayload(prev, data) {
   if (data.assessmentConfig) next.assessmentConfig = data.assessmentConfig;
   if (data.assessments) next.assessments = { ...prev.assessments, ...data.assessments };
   if (data.reviewQueue) next.reviewQueue = data.reviewQueue;
+  if (data.reviewWindow) next.reviewWindow = data.reviewWindow;
   if (Array.isArray(data.documents)) {
     const byId = new Map((prev.documents || []).map((d) => [d.id, d]));
     for (const d of data.documents) byId.set(d.id, { ...(byId.get(d.id) || {}), ...d });
@@ -191,6 +192,7 @@ function emptyState() {
     catalogPublished: null,
     assessmentConfig: { activePublishedId: null, versions: [] },
     reviewQueue: null,
+    reviewWindow: null,
   };
 }
 

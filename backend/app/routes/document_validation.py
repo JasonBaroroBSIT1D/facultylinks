@@ -233,6 +233,11 @@ def retry_general_ocr(public_id: str):
 @require_roles(UserRole.reviewer, UserRole.admin)
 def patch_extracted_field(public_id: str, field_id: int):
     actor = current_user()
+    from app.services.review_action_guard import block_reviewer_review_response
+
+    denied = block_reviewer_review_response(actor)
+    if denied:
+        return denied
     doc = _load_doc(public_id)
     if not doc:
         return jsonify({"error": "Not found."}), 404

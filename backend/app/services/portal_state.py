@@ -223,6 +223,10 @@ def build_portal_state(user: User, *, lite: bool = False) -> dict:
         admin=user.role == UserRole.admin,
     )
 
+    from app.services.evaluation_period import review_window_for_portal
+
+    review_window = review_window_for_portal()
+
     return {
         "user": user.to_public_dict(),
         "faculty": faculty,
@@ -239,6 +243,7 @@ def build_portal_state(user: User, *, lite: bool = False) -> dict:
         "configPublished": catalog_published.get("version") if isinstance(catalog_published, dict) else None,
         "configLite": lite,
         "reviewQueue": review_queue,
+        "reviewWindow": review_window,
     }
 
 

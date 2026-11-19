@@ -153,6 +153,11 @@ def retry_ocr(public_id: str):
 @require_roles(UserRole.reviewer, UserRole.admin)
 def patch_semester_record(public_id: str, record_id: int):
     actor = current_user()
+    from app.services.review_action_guard import block_reviewer_review_response
+
+    denied = block_reviewer_review_response(actor)
+    if denied:
+        return denied
     rec = (
         SetSefSemesterRecord.query.join(Document)
         .options(joinedload(SetSefSemesterRecord.document).joinedload(Document.owner))
@@ -263,6 +268,11 @@ def _refresh_set_sef_findings(doc: Document, owner: User, records: list[SetSefSe
 def resolve_set_sef_identity(public_id: str):
     """Audited reviewer action: confirm extracted identity for all active semester rows."""
     actor = current_user()
+    from app.services.review_action_guard import block_reviewer_review_response
+
+    denied = block_reviewer_review_response(actor)
+    if denied:
+        return denied
     doc = _load_set_sef_doc(public_id)
     if not doc:
         return jsonify({"error": "Not found or not a SET/SEF document."}), 404
@@ -349,6 +359,11 @@ def resolve_set_sef_identity(public_id: str):
 @require_roles(UserRole.reviewer, UserRole.admin)
 def add_semester_record(public_id: str):
     actor = current_user()
+    from app.services.review_action_guard import block_reviewer_review_response
+
+    denied = block_reviewer_review_response(actor)
+    if denied:
+        return denied
     doc = Document.query.filter_by(public_id=public_id).first()
     if not doc or not faculty_may_access_document(actor, doc.owner_user_id):
         return jsonify({"error": "Forbidden or not found."}), 403 if doc else 404

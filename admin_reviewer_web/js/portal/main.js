@@ -71,6 +71,7 @@ import {
   computeEvaluationPeriodStatus,
   formatEvaluationDate,
   reviewerAvailabilityDetail,
+  reviewerReviewWindowFromStore,
   statusBadgeClass,
 } from '../core/evaluation-period-service.js';
 import { SCREEN_INTRO, pageIntro, statusBadgeHtml } from '../core/copy.js';
@@ -2477,7 +2478,29 @@ async function renderDocumentReview(root, title) {
 
   let reviewSaveInflight = false;
 
+  const reviewWindow = reviewerReviewWindowFromStore(storeFresh);
+  const reviewActionsLocked = session.role === 'reviewer' && !reviewWindow.allowed;
+
+  if (reviewActionsLocked) {
+    const reviewPage = root.querySelector('[data-review-doc-id]');
+    const banner = document.createElement('p');
+    banner.className = 'doc-review-period-banner';
+    banner.setAttribute('role', 'status');
+    banner.textContent = reviewWindow.message;
+    reviewPage?.querySelector('.doc-review-workspace')?.prepend(banner);
+    reviewPage?.querySelectorAll(
+      '#rem, #verPts, [data-action], [data-resolve-identity], .btn-verify, .gen-field-confirm, #retrySetSefOcr, #saveGenFields'
+    ).forEach((el) => {
+      if (el && 'disabled' in el) el.disabled = true;
+    });
+  }
+
   const submitReviewDecision = async (action, triggerBtn) => {
+    if (reviewActionsLocked) {
+      const revErr = document.getElementById('revErr');
+      if (revErr) revErr.textContent = reviewWindow.message;
+      return;
+    }
     if (reviewSaveInflight) return;
     const note = document.getElementById('rem')?.value.trim() || '';
     const revErr = document.getElementById('revErr');

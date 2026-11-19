@@ -2256,3 +2256,13 @@ input[type="search"], input[type="text"], select, textarea {
   border-left: 3px solid var(--fl-blue, #1e5a9e);
   box-shadow: 0 1px 0 rgba(16, 43, 80, 0.06);
 }
+
+.doc-review-period-banner {
+  margin: 0 0 0.75rem;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  background: #eef4fb;
+  border-left: 3px solid #1e5a9e;
+  color: #102b50;
+  font-size: 0.95rem;
+}

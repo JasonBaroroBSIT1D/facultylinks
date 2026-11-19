@@ -37,6 +37,7 @@ import {
 } from './workspace-achievements-cache.js';
 import { bootstrapPortal } from '../repositories/mock-store.js';
 import { resolveSupportingDocuments } from './achievement-attachment-display.js';
+import { reviewerReviewWindowFromStore } from '../core/evaluation-period-service.js';
 
 export {
   formatFileSize,
@@ -570,8 +571,28 @@ export async function renderAchievementReviewPage(root, title, ctx) {
     },
   });
 
+  const reviewWindow = reviewerReviewWindowFromStore(store);
+  const reviewActionsLocked = session.role === 'reviewer' && !reviewWindow.allowed;
+  if (reviewActionsLocked) {
+    const page = root.querySelector('.ach-review-page');
+    const banner = document.createElement('p');
+    banner.className = 'doc-review-period-banner';
+    banner.setAttribute('role', 'status');
+    banner.textContent = reviewWindow.message;
+    page?.querySelector('.ach-review-workspace, .doc-review-workspace')?.prepend(banner)
+      || page?.prepend(banner);
+    root.querySelectorAll('#achVerPts, #achRem, #achReason, [data-ach-decision]').forEach((el) => {
+      if (el && 'disabled' in el) el.disabled = true;
+    });
+  }
+
   let saveInflight = false;
   const submitDecision = async (status) => {
+    if (reviewActionsLocked) {
+      const errEl = document.getElementById('achRevErr');
+      if (errEl) errEl.textContent = reviewWindow.message;
+      return;
+    }
     if (saveInflight) return;
     persistFormDraft();
     const errEl = document.getElementById('achRevErr');
