@@ -16,6 +16,7 @@ class KraIAchievementScreen extends StatefulWidget {
   final String kraId;
   final CriterionNode criterion;
   final IndicatorNode? indicator;
+  final String? initialAchievementId;
   final Future<void> Function() onSave;
 
   const KraIAchievementScreen({
@@ -24,6 +25,7 @@ class KraIAchievementScreen extends StatefulWidget {
     required this.kraId,
     required this.criterion,
     this.indicator,
+    this.initialAchievementId,
     required this.onSave,
   });
 
@@ -57,6 +59,19 @@ class _KraIAchievementScreenState extends State<KraIAchievementScreen> {
       loadError = e.toString();
     }
     if (mounted) setState(() => loading = false);
+    final openId = widget.initialAchievementId;
+    if (openId != null && mounted) {
+      Map<String, dynamic>? existing;
+      for (final a in items) {
+        if (a['id'] == openId) {
+          existing = a;
+          break;
+        }
+      }
+      if (existing != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _openEditor(existing));
+      }
+    }
   }
 
   Future<void> _openEditor([Map<String, dynamic>? existing]) async {

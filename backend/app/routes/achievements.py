@@ -3,7 +3,7 @@ from __future__ import annotations
 from flask import Blueprint, jsonify, request
 
 from app.extensions import db
-from app.models import Notification, User, UserRole
+from app.models import User, UserRole
 from app.services.portal_state import parse_portal_user_id
 from app.services.achievement_rules import expected_points_for_achievement
 from app.services.achievements_store import (
@@ -80,13 +80,20 @@ def faculty_submit_achievement(achievement_id: str):
     if not catalog:
         return jsonify({"error": "Assessment configuration is not published."}), 400
     body = request.get_json(silent=True) or {}
+    from app.services.achievements_store import get_achievement
+    from app.services.notification_service import notify_reviewers_achievement_submitted
+
+    prior = get_achievement(user.id, achievement_id)
+    was_resubmit = bool(
+        prior
+        and prior.get("submissionStatus") == "submitted"
+        and prior.get("reviewStatus") == "correction_requested"
+    )
     try:
         ach = submit_achievement(user.id, achievement_id, catalog=catalog, patch=body, actor=user)
     except CatalogValidationError as e:
         return jsonify({"error": str(e)}), 400
-    from app.services.document_correction import notify_reviewers_achievement_resubmitted
-
-    notify_reviewers_achievement_resubmitted(user, ach)
+    notify_reviewers_achievement_submitted(user, ach, resubmit=was_resubmit)
     db.session.commit()
     return jsonify({"achievement": ach})
 
@@ -164,18 +171,15 @@ def portal_review_achievement(achievement_id: str):
     except CatalogValidationError as e:
         return jsonify({"error": str(e)}), 400
 
-    title = {
-        "approved": "Achievement approved",
-        "rejected": "Achievement rejected",
-        "correction_requested": "Achievement — changes requested",
-    }.get(status, "Achievement updated")
-    db.session.add(
-        Notification(
-            user_id=faculty.id,
-            title=title,
-            body=body.get("remarks") or f"Indicator {ach.get('indicatorId')}: {status}",
-            read=False,
-        )
+    from app.services.notification_service import notify_faculty_achievement_review
+
+    notify_faculty_achievement_review(
+        faculty=faculty,
+        achievement_id=achievement_id,
+        ach=ach,
+        actor=actor,
+        status=status,
+        remarks=body.get("remarks"),
     )
     db.session.commit()
     log_activity(actor.email, f"{status} achievement {achievement_id} for {faculty.full_name}")

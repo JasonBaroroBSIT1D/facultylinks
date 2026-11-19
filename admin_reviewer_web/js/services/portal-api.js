@@ -132,4 +132,6 @@ export const PortalApi = {
       method: 'POST',
       body: JSON.stringify(body),
     }),
+  markNotificationRead: (id) =>
+    apiJson(`/api/portal/notifications/${encodeURIComponent(id)}/read`, { method: 'PATCH', body: '{}' }),
 };

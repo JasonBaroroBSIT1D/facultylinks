@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../data/assessment_catalog.dart';
+import '../models/faculty_notification.dart';
 import '../services/api_client.dart';
 import '../core/achievement_document_link.dart';
 import '../services/document_api.dart';
@@ -114,6 +115,8 @@ class FacultyDocument {
   String? parentSubmissionStatus;
   String? parentAchievementTitle;
   List<AchievementDocumentLink> achievementLinks;
+  bool canResubmit;
+  String? supersededByPublicId;
 
   FacultyDocument({
     required this.id,
@@ -141,7 +144,28 @@ class FacultyDocument {
     this.parentSubmissionStatus,
     this.parentAchievementTitle,
     this.achievementLinks = const [],
+    this.canResubmit = false,
+    this.supersededByPublicId,
   });
+
+  /// Faculty should replace or resubmit (document or parent achievement).
+  bool get facultyNeedsChanges {
+    if (reviewStatus == 'correction_requested' || reviewStatus == 'correction_prepared') {
+      return true;
+    }
+    if (displayStatus == 'achievement_needs_changes') return true;
+    if (parentReviewStatus == 'correction_requested') return true;
+    return false;
+  }
+
+  String? get effectiveReviewerRemarks {
+    if (remarks != null && remarks!.trim().isNotEmpty) return remarks!.trim();
+    for (final link in achievementLinks) {
+      final r = link.achievementRemarks?.trim();
+      if (r != null && r.isNotEmpty) return r;
+    }
+    return null;
+  }
 
   bool get isAchievementEvidence {
     final ind = indicatorId;
@@ -250,6 +274,10 @@ class FacultyDocument {
         achievementLinks: (j['achievementLinks'] as List<dynamic>? ?? [])
             .map((e) => AchievementDocumentLink.fromJson(e as Map<String, dynamic>))
             .toList(),
+        canResubmit: j['canResubmit'] == true,
+        supersededByPublicId: (j['supersededByPublicId'] as String?)?.trim().isNotEmpty == true
+            ? j['supersededByPublicId'] as String
+            : null,
       );
 }
 
@@ -278,7 +306,8 @@ class MockRepository {
   List<String> academicYears = ['2024-2025', '2025-2026'];
   List<AssessmentEntry> entries = [];
   List<FacultyDocument> documents = [];
-  List<Map<String, String>> notifications = [];
+  List<FacultyNotification> notifications = [];
+  int notificationUnreadCount = 0;
   String? loadError;
   String? syncError;
   String? configVersionId;
@@ -547,13 +576,40 @@ class MockRepository {
     if (nRes.statusCode != 200) return _FetchOutcome.failed;
     final nData = jsonDecode(nRes.body) as Map<String, dynamic>;
     final list = (nData['notifications'] as List<dynamic>? ?? [])
-        .map((n) => {
-              'title': (n['title'] ?? '').toString(),
-              'body': (n['body'] ?? '').toString(),
-            })
+        .map((n) => FacultyNotification.fromJson(n as Map<String, dynamic>))
         .toList();
-    notifications = list.isNotEmpty || notifications.isEmpty ? list : notifications;
+    notifications = list;
+    notificationUnreadCount = (nData['unreadCount'] as num?)?.toInt() ??
+        list.where((n) => !n.read).length;
     return _FetchOutcome.applied;
+  }
+
+  void markNotificationReadLocal(String id) {
+    final i = notifications.indexWhere((n) => n.id == id);
+    if (i < 0) return;
+    final n = notifications[i];
+    if (n.read) return;
+    notifications[i] = FacultyNotification(
+      id: n.id,
+      title: n.title,
+      body: n.body,
+      read: true,
+      at: n.at,
+      atManila: n.atManila,
+      eventType: n.eventType,
+      targetType: n.targetType,
+      targetDocumentPublicId: n.targetDocumentPublicId,
+      targetAchievementId: n.targetAchievementId,
+      actorName: n.actorName,
+      documentFileName: n.documentFileName,
+      achievementTitle: n.achievementTitle,
+      kraId: n.kraId,
+      criterionId: n.criterionId,
+      indicatorId: n.indicatorId,
+      indicatorLabel: n.indicatorLabel,
+      navigable: n.navigable,
+    );
+    if (notificationUnreadCount > 0) notificationUnreadCount -= 1;
   }
 
   Future<void> save() async {

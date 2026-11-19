@@ -188,8 +188,26 @@ function openSignOutConfirm(opener) {
   });
 }
 
+function escapeHtml(s) {
+  return String(s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function formatManilaAt(iso) {
+  if (!iso) return '';
+  try {
+    return new Date(iso).toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' });
+  } catch {
+    return '';
+  }
+}
+
 function renderShell() {
   const sidebar = document.getElementById('sidebar');
+  const unread = MockStore.load?.()?.notificationUnreadCount || 0;
   sidebar.innerHTML = `
     <div class="brand">${brandCompactHtml({ onDark: true })}</div>
     <nav class="sidebar-nav" aria-label="Portal sections">
@@ -201,7 +219,8 @@ function renderShell() {
             (state.route === 'achievement-review' && n.id === 'workspace') ||
             (n.id === 'evalSettings' &&
               (state.route === 'rules' || state.route === 'config' || state.route === 'simulationCfg'));
-          return `<button type="button" class="nav-item ${active ? 'active' : ''}" data-route="${n.id}" title="${n.label}" aria-label="${n.label}"${active ? ' aria-current="page"' : ''}>${iconForNav(n.id)}<span class="nav-label">${n.label}</span></button>`;
+          const badge = n.id === 'notifications' && unread > 0 ? `<span class="nav-badge">${unread > 99 ? '99+' : unread}</span>` : '';
+          return `<button type="button" class="nav-item ${active ? 'active' : ''}" data-route="${n.id}" title="${n.label}" aria-label="${n.label}"${active ? ' aria-current="page"' : ''}>${iconForNav(n.id)}<span class="nav-label">${n.label}</span>${badge}</button>`;
         })
         .join('')}
     </nav>
@@ -2525,15 +2544,74 @@ async function renderDocumentReview(root, title) {
   });
 }
 
+async function openPortalNotification(n) {
+  try {
+    await PortalApi.markNotificationRead(n.id);
+    const store = MockStore.load();
+    const i = (store.notifications || []).findIndex((x) => x.id === n.id);
+    if (i >= 0) store.notifications[i] = { ...n, read: true };
+    if (store.notificationUnreadCount > 0) store.notificationUnreadCount -= 1;
+    renderShell();
+  } catch (e) {
+    /* best effort */
+  }
+  if (!n.navigable) {
+    window.alert(n.message || 'This alert has no linked record. Use Assigned Faculty or your review queue.');
+    return;
+  }
+  if (n.targetType === 'document' && n.targetDocumentPublicId) {
+    const doc = (MockStore.load().documents || []).find((d) => d.id === n.targetDocumentPublicId);
+    if (!doc) {
+      window.alert('That document is no longer in your workspace. Try refreshing from the dashboard.');
+      return;
+    }
+    state.workspaceFacultyId = n.facultyId || doc.facultyId;
+    navigate('review', { docId: n.targetDocumentPublicId, facultyId: state.workspaceFacultyId });
+    return;
+  }
+  if (n.targetType === 'achievement' && n.targetAchievementId && n.facultyId) {
+    navigate('achievement-review', {
+      facultyId: n.facultyId,
+      achievementId: n.targetAchievementId,
+      criterionId: n.criterionId,
+    });
+    return;
+  }
+  window.alert('This alert cannot be opened automatically. Use your review queue.');
+}
+
 function renderNotifications(root, title) {
   title.textContent = 'Notifications';
   const store = MockStore.load();
-  const rev = store.reviewers.find((r) => r.id === session.reviewerId);
-  const facultyIds = rev?.assignedFacultyIds || [];
-  root.innerHTML = `${pageIntro(SCREEN_INTRO.notifications)}<ul>${store.notifications
-    .filter((n) => facultyIds.includes(n.facultyId))
-  .map((n) => `<li class="card" style="margin-bottom:0.5rem"><strong>${n.title}</strong><p>${n.body}</p><small>${new Date(n.at).toLocaleString()}</small></li>`)
+  const rows = (store.notifications || []).slice().sort((a, b) => String(b.at).localeCompare(String(a.at)));
+  if (!rows.length) {
+    root.innerHTML = `${pageIntro(SCREEN_INTRO.notifications)}<p class="muted">No new submissions or resubmissions yet.</p>`;
+    return;
+  }
+  root.innerHTML = `${pageIntro(SCREEN_INTRO.notifications)}<ul class="notif-list">${rows
+    .map((n) => {
+      const meta = [n.documentFileName, n.achievementTitle, n.indicatorLabel].filter(Boolean).join(' · ');
+      const who = n.subjectFacultyName ? `<span class="muted">${escapeHtml(n.subjectFacultyName)}</span>` : '';
+      const time = n.atManila || formatManilaAt(n.at);
+      const unread = !n.read ? ' notif-card--unread' : '';
+      return `<li><button type="button" class="card card--link notif-card${unread}" data-notif-id="${escapeHtml(n.id)}" style="width:100%;text-align:left;margin-bottom:0.5rem">
+        <div style="display:flex;justify-content:space-between;gap:0.5rem;align-items:flex-start">
+          <strong>${escapeHtml(n.title)}</strong>
+          <span aria-hidden="true" style="color:#1e5a9e">›</span>
+        </div>
+        ${meta ? `<p class="muted" style="margin:0.35rem 0 0;font-size:0.9rem">${escapeHtml(meta)}</p>` : ''}
+        ${who ? `<p style="margin:0.25rem 0 0;font-size:0.9rem">${who}</p>` : ''}
+        <p style="margin:0.35rem 0 0">${escapeHtml(n.body)}</p>
+        <small class="muted">${escapeHtml(time)}</small>
+      </button></li>`;
+    })
     .join('')}</ul>`;
+  root.querySelectorAll('[data-notif-id]').forEach((btn) => {
+    btn.onclick = () => {
+      const n = rows.find((x) => x.id === btn.dataset.notifId);
+      if (n) void openPortalNotification(n);
+    };
+  });
 }
 
 window.addEventListener('fl-state-changed', () => portalStateChanged());

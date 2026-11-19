@@ -23,6 +23,9 @@ class UploadEvidenceScreen extends StatefulWidget {
   final String? initialKraId;
   final String? initialCriterionId;
   final String? initialIndicatorId;
+  /// When set, upload supersedes this document (needs-changes workflow).
+  final String? replacesDocumentId;
+  final bool replaceMode;
 
   const UploadEvidenceScreen({
     super.key,
@@ -31,6 +34,8 @@ class UploadEvidenceScreen extends StatefulWidget {
     this.initialKraId,
     this.initialCriterionId,
     this.initialIndicatorId,
+    this.replacesDocumentId,
+    this.replaceMode = false,
   });
 
   @override
@@ -99,6 +104,7 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
   }
 
   int get _stepCount {
+    if (widget.replaceMode && _lockedIndicatorContext) return 2;
     if (_preselectCriterionA) return 3;
     if (_lockedIndicatorContext && _isAchievementCriterion) return 1;
     if (_lockedIndicatorContext) return 2;
@@ -114,12 +120,15 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
   void initState() {
     super.initState();
     _applyInitialSelection();
-    if (_lockedIndicatorContext && _isAchievementCriterion) {
+    if (_lockedIndicatorContext && _isAchievementCriterion && !widget.replaceMode) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted || _didAutoOpenAchievement) return;
         _didAutoOpenAchievement = true;
         _openAchievementFlow(replaceUpload: true);
       });
+    }
+    if (widget.replaceMode && _lockedIndicatorContext) {
+      _step = _fileStepIndex;
     }
   }
 
@@ -407,6 +416,12 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
   }
 
   void _appendDocument(PendingDocumentUpload doc) {
+    if (widget.replaceMode && _sessionItems.isNotEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Replace one file at a time. Remove the current selection to pick another.')),
+      );
+      return;
+    }
     final dup = _sessionItems.any((i) => i.document.sameContentAs(doc) && i.status != UploadSessionItemStatus.failed);
     if (dup) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -448,6 +463,7 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
         kraId: _kra!.id,
         criterionId: _crit?.id,
         title: title,
+        replacesDocumentId: widget.replacesDocumentId,
       );
       item.progress = 0.85;
       var publicId = DocumentApi.publicIdFromUploadResponse(body);
@@ -501,7 +517,15 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
         await widget.repo.save();
         await widget.onSave();
         if (!mounted) return;
-        Navigator.pop(context);
+        if (widget.replaceMode) {
+          final newId = _sessionItems.first.publicId;
+          Navigator.pop(context, <String, dynamic>{
+            'documentId': newId,
+            'canResubmit': true,
+          });
+        } else {
+          Navigator.pop(context);
+        }
       }
       return;
     }
@@ -1523,7 +1547,7 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
             onPressed: (_uploading || _openingAchievement) ? null : _continue,
             child: Text(openAchievement ? 'Open achievement' : 'Continue'),
           ),
-        if (_step == _reviewStepIndex && !_isAchievementCriterion) ...[
+        if (_step == _reviewStepIndex && (!_isAchievementCriterion || widget.replaceMode)) ...[
           if (_hasFailedUploads)
             OutlinedButton(
               onPressed: _uploading ? null : () => _submit(retryFailedOnly: true),
@@ -1538,9 +1562,11 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                   )
                 : Text(
-                    _allUploaded
-                        ? 'Done'
-                        : (_hasFailedUploads ? 'Upload remaining' : 'Send for review'),
+                    widget.replaceMode
+                        ? (_allUploaded ? 'Continue' : 'Save replacement')
+                        : (_allUploaded
+                            ? 'Done'
+                            : (_hasFailedUploads ? 'Upload remaining' : 'Send for review')),
                   ),
           ),
         ],
@@ -1557,7 +1583,7 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
     return Scaffold(
       resizeToAvoidBottomInset: true,
       appBar: AppBar(
-        title: const Text('Add document'),
+        title: Text(widget.replaceMode ? 'Replace document' : 'Add document'),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           tooltip: 'Back',

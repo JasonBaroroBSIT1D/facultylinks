@@ -76,6 +76,7 @@ class DocumentApi {
     String? criterionId,
     String? title,
     double? estimatedPoints,
+    String? replacesDocumentId,
   }) async {
     final req = http.MultipartRequest('POST', ApiConfig.uri('/api/documents'));
     final headers = await ApiClient.headers(jsonBody: false);
@@ -87,6 +88,9 @@ class DocumentApi {
     }
     if (title != null && title.isNotEmpty) req.fields['title'] = title;
     if (estimatedPoints != null) req.fields['estimatedPoints'] = estimatedPoints.toString();
+    if (replacesDocumentId != null && replacesDocumentId.isNotEmpty) {
+      req.fields['replacesDocumentId'] = replacesDocumentId;
+    }
 
     final multi = pages;
     if (multi != null && multi.length > 1) {
@@ -146,6 +150,16 @@ class DocumentApi {
     if (res.statusCode != 200) {
       final err = jsonDecode(res.body) as Map<String, dynamic>?;
       throw Exception(err?['error'] ?? 'Could not load document validation.');
+    }
+    return jsonDecode(res.body) as Map<String, dynamic>;
+  }
+
+  /// After a replacement upload (`correction_prepared`), faculty explicitly re-queues review.
+  static Future<Map<String, dynamic>> resubmitForReview(String publicId) async {
+    final res = await ApiClient.postJson('/api/documents/$publicId/resubmit', {});
+    if (res.statusCode != 200) {
+      final err = jsonDecode(res.body) as Map<String, dynamic>?;
+      throw Exception(err?['error'] ?? 'Could not resubmit for review.');
     }
     return jsonDecode(res.body) as Map<String, dynamic>;
   }

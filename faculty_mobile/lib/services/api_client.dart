@@ -72,6 +72,20 @@ class ApiClient {
         .timeout(timeout);
   }
 
+  static Future<http.Response> patch(
+    String path, {
+    String body = '{}',
+    Duration timeout = ApiConfig.requestTimeout,
+  }) async {
+    return http
+        .patch(
+          ApiConfig.uri(path),
+          headers: await headers(),
+          body: body,
+        )
+        .timeout(timeout);
+  }
+
   /// Shown on login and other flows when the API cannot be reached.
   static const String userConnectionMessage =
       'Cannot connect to the server. Check your connection and try again.';

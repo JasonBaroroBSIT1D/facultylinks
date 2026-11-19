@@ -48,6 +48,33 @@ def portal_state():
         return jsonify({"error": "Failed to load portal state."}), 500
 
 
+@bp.patch("/api/portal/notifications/<int:notification_id>/read")
+@require_roles(UserRole.admin, UserRole.reviewer)
+def portal_mark_notification_read(notification_id: int):
+    user = current_user()
+    from app.services.notification_service import mark_notification_read, serialize_notification
+
+    note = mark_notification_read(notification_id, user)
+    if not note:
+        return jsonify({"error": "Not found."}), 404
+    db.session.commit()
+    return jsonify({"notification": serialize_notification(note)})
+
+
+@bp.get("/api/portal/notifications/<int:notification_id>/open-check")
+@require_roles(UserRole.admin, UserRole.reviewer)
+def portal_notification_open_check(notification_id: int):
+    user = current_user()
+    from app.services.notification_service import serialize_notification, user_may_open_notification_target
+
+    note = Notification.query.filter_by(id=notification_id, user_id=user.id).first()
+    if not note:
+        return jsonify({"error": "Not found."}), 404
+    payload = serialize_notification(note)
+    ok, message = user_may_open_notification_target(user, payload)
+    return jsonify({"ok": ok, "message": message, "notification": payload})
+
+
 @bp.get("/api/portal/faculty/<faculty_portal_id>/assessment-report")
 @require_roles(UserRole.admin)
 def portal_faculty_assessment_report(faculty_portal_id: str):
@@ -520,19 +547,9 @@ def review_document(public_id: str):
 
     owner = User.query.get(doc.owner_user_id)
     if owner:
-        title = {
-            "approved": "Document approved",
-            "rejected": "Document rejected",
-            "correction_requested": "Correction requested",
-        }.get(status, "Document updated")
-        db.session.add(
-            Notification(
-                user_id=owner.id,
-                title=title,
-                body=doc.review_remarks or f"Status: {status}",
-                read=False,
-            )
-        )
+        from app.services.notification_service import notify_faculty_document_review
+
+        notify_faculty_document_review(owner=owner, doc=doc, actor=actor, status=status)
     db.session.commit()
     log_activity(actor.email, f"{status} document {doc.original_filename}")
     pid = owner.portal_id() if owner else ""

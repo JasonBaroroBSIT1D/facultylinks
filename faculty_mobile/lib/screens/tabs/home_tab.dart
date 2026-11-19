@@ -41,7 +41,7 @@ class HomeTab extends StatelessWidget {
     final scale = MediaQuery.textScalerOf(context);
     final first = _firstName(repo.profile.name);
     final initials = first.isNotEmpty ? first[0].toUpperCase() : '?';
-    final notifCount = repo.notifications.length;
+    final notifCount = repo.notificationUnreadCount;
 
     return RefreshIndicator(
       color: AppColors.primaryBlue,

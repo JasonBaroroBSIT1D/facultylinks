@@ -92,7 +92,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     final repo = _repo!;
     final cfg = _institutionConfig!;
     final refresh = _refresh!;
-    final notifCount = repo.notifications.length;
+    final notifCount = repo.notificationUnreadCount;
     final syncErr = refresh.lastError ?? repo.syncError;
 
     final pages = [

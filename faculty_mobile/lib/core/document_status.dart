@@ -38,6 +38,10 @@ String documentReviewerStatusLabel(
   switch (doc.reviewStatus) {
     case 'correction_requested':
       return 'Needs changes';
+    case 'correction_prepared':
+      return 'Ready to resubmit';
+    case 'replaced':
+      return 'Superseded';
     case 'rejected':
       return 'Not accepted';
     case 'approved':

@@ -3,6 +3,12 @@ import 'dart:convert';
 import 'api_client.dart';
 
 class AchievementApi {
+  static Future<Map<String, dynamic>> getOne(String id) async {
+    final res = await ApiClient.get('/api/faculty/achievements/$id');
+    if (res.statusCode != 200) throw Exception('Achievement not found');
+    return (jsonDecode(res.body) as Map<String, dynamic>)['achievement'] as Map<String, dynamic>;
+  }
+
   static Future<List<Map<String, dynamic>>> list({String? criterionId, String? indicatorId}) async {
     final q = <String>[];
     if (criterionId != null) q.add('criterionId=${Uri.encodeQueryComponent(criterionId)}');

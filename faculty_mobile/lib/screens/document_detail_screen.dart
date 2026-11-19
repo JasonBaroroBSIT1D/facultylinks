@@ -4,13 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/document_status.dart';
+import '../data/assessment_catalog.dart';
 import '../repositories/mock_repository.dart';
+import '../services/catalog_label_resolver.dart';
 import '../services/document_api.dart';
 import '../services/set_sef_api.dart';
 import '../theme/app_theme.dart';
 import '../widgets/document_detail_ui.dart';
 import '../widgets/set_sef_semester_list.dart';
 import 'set_sef_screen.dart';
+import 'upload_evidence_screen.dart';
 
 class DocumentDetailScreen extends StatefulWidget {
   final FacultyDocument doc;
@@ -28,6 +31,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> with Widget
   String? _error;
   bool _loading = false;
   bool _openingFile = false;
+  bool _resubmitting = false;
   Timer? _poll;
   Timer? _reviewPoll;
   bool _foreground = true;
@@ -192,6 +196,72 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> with Widget
     }
   }
 
+  Future<void> _replaceDocument(FacultyDocument doc) async {
+    final repo = widget.repo;
+    if (repo == null) return;
+  final kraId = doc.kraId.isNotEmpty
+        ? doc.kraId
+        : kraIdFromIndicator(doc.indicatorId, criterionId: doc.criterionId);
+    final result = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(
+        builder: (_) => UploadEvidenceScreen(
+          repo: repo,
+          onSave: widget.onRefresh ?? () async {},
+          initialKraId: kraId,
+          initialCriterionId: doc.criterionId,
+          initialIndicatorId: doc.indicatorId,
+          replacesDocumentId: doc.id,
+          replaceMode: true,
+        ),
+      ),
+    );
+    if (!mounted || result == null) return;
+    await widget.onRefresh?.call();
+    if (!mounted) return;
+    final newId = result['documentId'] as String?;
+    if (newId == null || newId.isEmpty) return;
+    final newDoc = repo.documentById(newId);
+    if (newDoc == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Replacement saved. Pull to refresh to open the new version.')),
+      );
+      return;
+    }
+    await Navigator.of(context).pushReplacement(
+      MaterialPageRoute<void>(
+        builder: (_) => DocumentDetailScreen(
+          doc: newDoc,
+          repo: repo,
+          onRefresh: widget.onRefresh,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _resubmitForReview(FacultyDocument doc) async {
+    setState(() => _resubmitting = true);
+    try {
+      await DocumentApi.resubmitForReview(doc.id);
+      await widget.onRefresh?.call();
+      if (doc.isSetSefOcr) {
+        await _refreshSetSef(silent: true);
+      } else if (_needsValidationPayload(doc)) {
+        await _refreshValidation(silent: true);
+      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Resubmitted for review. Your reviewer will be notified.')),
+      );
+      setState(() => _resubmitting = false);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _resubmitting = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+  }
+
   Future<void> _retryGeneralOcr() async {
     setState(() {
       _loading = true;
@@ -240,6 +310,15 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> with Widget
     final findings = _findingsForDoc();
     final fileLabel = originalFileActionLabel(doc);
     final isImage = fileLabel.contains('image');
+    final labels = resolveCatalogLabels(
+      widget.repo,
+      indicatorId: doc.indicatorId,
+      kraId: doc.kraId,
+      criterionId: doc.criterionId,
+    );
+    final remarks = doc.effectiveReviewerRemarks;
+    final showReplace = doc.facultyNeedsChanges && doc.reviewStatus != 'replaced' && doc.reviewStatus != 'correction_prepared';
+    final showResubmit = doc.canResubmit || doc.reviewStatus == 'correction_prepared';
 
     return Scaffold(
       appBar: AppBar(
@@ -256,6 +335,57 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> with Widget
             semesterRecords: records,
             verifyCounts: verifyCounts,
           ),
+          if (remarks != null) ...[
+            const SizedBox(height: 10),
+            Card(
+              color: AppColors.amberSoft,
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'Reviewer remarks',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(remarks, style: const TextStyle(fontSize: 14, height: 1.4)),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          if (showReplace && widget.repo != null) ...[
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: () => _replaceDocument(doc),
+              icon: const Icon(Icons.sync_outlined),
+              label: const Text('Replace document'),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Choose a new file or scan. Your current file stays until the replacement uploads successfully.',
+              style: TextStyle(fontSize: 13, color: AppColors.textMuted, height: 1.35),
+            ),
+          ],
+          if (showResubmit) ...[
+            const SizedBox(height: 12),
+            FilledButton.icon(
+              onPressed: _resubmitting ? null : () => _resubmitForReview(doc),
+              icon: _resubmitting
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.send_outlined),
+              label: Text(_resubmitting ? 'Submitting…' : 'Resubmit for review'),
+            ),
+            if (doc.processingStatus == 'queued' || doc.processingStatus == 'processing')
+              const Padding(
+                padding: EdgeInsets.only(top: 6),
+                child: Text(
+                  'Text extraction is still running on the new file. You can resubmit now; your reviewer will see processing status.',
+                  style: TextStyle(fontSize: 13, color: AppColors.textMuted),
+                ),
+              ),
+          ],
           if (doc.isAchievementEvidence)
             Padding(
               padding: const EdgeInsets.only(top: 8),
@@ -299,7 +429,10 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> with Widget
           if (doc.indicatorId.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Text('Category: ${doc.indicatorId}', style: const TextStyle(fontSize: 14, color: AppColors.textMuted)),
+              child: Text(
+                labels.compactLine.isNotEmpty ? labels.compactLine : doc.indicatorId,
+                style: const TextStyle(fontSize: 14, color: AppColors.textMuted),
+              ),
             ),
           const SizedBox(height: 14),
           FilledButton.icon(
@@ -309,14 +442,6 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> with Widget
                 : Icon(isImage ? Icons.image_outlined : Icons.picture_as_pdf_outlined),
             label: Text(fileLabel),
           ),
-          if (doc.filterBucket == 'correction_requested' && !doc.isAchievementEvidence)
-            const Padding(
-              padding: EdgeInsets.only(top: 10),
-              child: Text(
-                'Your reviewer requested changes. See Needs attention below.',
-                style: TextStyle(fontSize: 14),
-              ),
-            ),
           const SizedBox(height: 12),
           DocumentProcessingActionsCard(
             doc: doc,
@@ -353,11 +478,11 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> with Widget
               processingStatus: doc.processingStatus,
             ),
           ],
-          if (findings.isNotEmpty || (doc.remarks != null && doc.remarks!.trim().isNotEmpty)) ...[
+          if (findings.isNotEmpty) ...[
             const SizedBox(height: 12),
             DocumentNeedsAttentionSection(
               findings: findings,
-              reviewerRemarks: doc.remarks,
+              reviewerRemarks: null,
             ),
           ],
         ],

@@ -28,7 +28,7 @@ CatalogContextLabels resolveCatalogLabels(
   if (indicatorId == null || indicatorId.isEmpty) {
     return const CatalogContextLabels();
   }
-  final kras = repo?.catalogKras ?? defaultAssessmentCatalog;
+  final kras = repo?.catalogKras ?? const <KraNode>[];
   KraNode? kra;
   CriterionNode? crit;
   IndicatorNode? ind;

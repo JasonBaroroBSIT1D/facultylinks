@@ -192,38 +192,21 @@ def build_portal_state(user: User, *, lite: bool = False) -> dict:
 
     documents = enrich_portal_documents(documents_raw, assessments)
 
-    if user.role == UserRole.faculty:
-        notif_rows = (
-            Notification.query.filter_by(user_id=user.id)
-            .order_by(Notification.created_at.desc())
-            .limit(_PORTAL_NOTIF_LIMIT)
-            .all()
-        )
-    elif user.role == UserRole.reviewer:
-        fac_ids = by_reviewer_assign.get(user.id, [])
-        if fac_ids:
-            notif_rows = (
-                Notification.query.filter(Notification.user_id.in_(fac_ids))
-                .order_by(Notification.created_at.desc())
-                .limit(_PORTAL_NOTIF_LIMIT)
-                .all()
-            )
-        else:
-            notif_rows = []
-    else:
+    from app.services.notification_service import notifications_for_user, unread_count_for_user
+
+    if user.role in (UserRole.faculty, UserRole.reviewer):
+        notifications = notifications_for_user(user, limit=_PORTAL_NOTIF_LIMIT)
+    elif user.role == UserRole.admin:
+        from app.services.notification_service import serialize_notification
+
         notif_rows = (
             Notification.query.order_by(Notification.created_at.desc()).limit(_PORTAL_NOTIF_LIMIT).all()
         )
+        notifications = [serialize_notification(n) for n in notif_rows]
+    else:
+        notifications = []
 
-    notif_user_ids = {n.user_id for n in notif_rows}
-    notif_users = _users_by_id(notif_user_ids)
-    notifications = [
-        {
-            **n.to_dict(),
-            "facultyId": notif_users[n.user_id].portal_id() if n.user_id in notif_users else None,
-        }
-        for n in notif_rows
-    ]
+    notificationUnreadCount = unread_count_for_user(user.id)
 
     activity = [
         a.to_dict()
@@ -248,6 +231,7 @@ def build_portal_state(user: User, *, lite: bool = False) -> dict:
         "assessments": assessments,
         "activity": activity,
         "notifications": notifications,
+        "notificationUnreadCount": notificationUnreadCount,
         "institutionConfig": institution_out,
         "catalogPublished": catalog_out,
         "configDraft": config_draft,

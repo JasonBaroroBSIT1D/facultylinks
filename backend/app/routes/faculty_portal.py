@@ -237,5 +237,43 @@ def faculty_set_scoring_window():
 @require_roles(UserRole.faculty)
 def faculty_notifications():
     user = current_user()
-    rows = Notification.query.filter_by(user_id=user.id).order_by(Notification.created_at.desc()).limit(100).all()
-    return jsonify({"notifications": [n.to_dict() for n in rows]})
+    from app.services.notification_service import (
+        notifications_for_user,
+        unread_count_for_user,
+        user_may_open_notification_target,
+    )
+
+    payload = notifications_for_user(user)
+    return jsonify(
+        {
+            "notifications": payload,
+            "unreadCount": unread_count_for_user(user.id),
+        }
+    )
+
+
+@bp.patch("/api/faculty/notifications/<int:notification_id>/read")
+@require_roles(UserRole.faculty)
+def faculty_mark_notification_read(notification_id: int):
+    user = current_user()
+    from app.services.notification_service import mark_notification_read, serialize_notification
+
+    note = mark_notification_read(notification_id, user)
+    if not note:
+        return jsonify({"error": "Not found."}), 404
+    db.session.commit()
+    return jsonify({"notification": serialize_notification(note)})
+
+
+@bp.get("/api/faculty/notifications/<int:notification_id>/open-check")
+@require_roles(UserRole.faculty)
+def faculty_notification_open_check(notification_id: int):
+    user = current_user()
+    from app.services.notification_service import serialize_notification, user_may_open_notification_target
+
+    note = Notification.query.filter_by(id=notification_id, user_id=user.id).first()
+    if not note:
+        return jsonify({"error": "Not found."}), 404
+    payload = serialize_notification(note)
+    ok, message = user_may_open_notification_target(user, payload)
+    return jsonify({"ok": ok, "message": message, "notification": payload})

@@ -9,7 +9,9 @@ export function getApiBase() {
   }
   // Match the page host so the session cookie is same-site (localhost ≠ 127.0.0.1).
   if (typeof window !== 'undefined' && window.location?.hostname) {
-    return `http://${window.location.hostname}:5000`;
+    return window.location.protocol === 'https:'
+      ? window.location.origin
+      : `http://${window.location.hostname}:5000`;
   }
   return 'http://127.0.0.1:5000';
 }

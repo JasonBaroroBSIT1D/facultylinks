@@ -8,6 +8,7 @@ from app.extensions import db
 from app.models import Document, FacultyAssessment, UserRole
 from app.services.auth_context import current_user, faculty_may_access_document, require_roles
 from app.services.assessment_sync import attach_upload_to_assessment, supersede_prior_documents
+from app.services.document_achievement_display import achievement_links_for_user
 from app.services.document_correction import (
     REVIEW_CORRECTION_PREPARED,
     apply_document_replacement,
@@ -191,7 +192,8 @@ def upload_document():
         replaced_prior = Document.query.filter_by(
             public_id=replaces_public_id, owner_user_id=user.id, upload_status="stored"
         ).first()
-        if not replaced_prior or not faculty_may_replace_document(replaced_prior):
+        prior_links = achievement_links_for_user(user.id).get(replaced_prior.public_id, []) if replaced_prior else []
+        if not replaced_prior or not faculty_may_replace_document(replaced_prior, achievement_links=prior_links):
             db.session.rollback()
             return jsonify({"error": "This document cannot be replaced."}), 400
         if replaced_prior.indicator_id and indicator_id and replaced_prior.indicator_id != indicator_id:
@@ -205,7 +207,7 @@ def upload_document():
             doc.kra_id = kra_id
         if not resolved_criterion_id and replaced_prior.criterion_id:
             doc.criterion_id = replaced_prior.criterion_id
-        apply_document_replacement(old=replaced_prior, new=doc)
+        apply_document_replacement(old=replaced_prior, new=doc, achievement_links=prior_links)
     elif not achievement_evidence and not is_set_sef and request.form.get("replacePrior") == "1":
         # Generic legacy indicator upload (non targeted).
         supersede_prior_documents(user.id, indicator_id, doc.public_id)
@@ -219,7 +221,8 @@ def upload_document():
         )
         doc.upload_status = "stored"
         if replaced_prior is not None:
-            finalize_replacement_assessment(doc, title=title)
+            if not achievement_evidence and not is_set_sef:
+                finalize_replacement_assessment(doc, title=title)
             swap_achievement_document_reference(user.id, replaced_prior.public_id, doc.public_id)
         elif not achievement_evidence:
             attach_upload_to_assessment(doc, title=title, estimated_points=estimated_points)
@@ -227,6 +230,10 @@ def upload_document():
             enqueue_set_sef_job(doc)
         else:
             enqueue_general_ocr_job(doc)
+        if replaced_prior is None:
+            from app.services.notification_service import notify_reviewers_document_submitted
+
+            notify_reviewers_document_submitted(doc, actor=user)
         db.session.commit()
     except StorageNotConfiguredError:
         db.session.rollback()

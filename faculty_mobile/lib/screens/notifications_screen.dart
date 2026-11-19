@@ -1,21 +1,27 @@
 import 'package:flutter/material.dart';
 
 import '../repositories/mock_repository.dart';
+import '../services/notification_navigation.dart';
 import '../theme/app_spacing.dart';
 import '../theme/app_theme.dart';
 
-class NotificationsScreen extends StatelessWidget {
+class NotificationsScreen extends StatefulWidget {
   final MockRepository repo;
   final bool embedInTab;
   final Future<void> Function()? onRefresh;
 
   const NotificationsScreen({super.key, required this.repo, this.embedInTab = false, this.onRefresh});
 
+  @override
+  State<NotificationsScreen> createState() => _NotificationsScreenState();
+}
+
+class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget _body(Widget list) {
-    if (onRefresh == null) return list;
+    if (widget.onRefresh == null) return list;
     return RefreshIndicator(
       color: AppColors.primaryBlue,
-      onRefresh: onRefresh!,
+      onRefresh: widget.onRefresh!,
       child: list is ListView
           ? list
           : ListView(
@@ -30,9 +36,20 @@ class NotificationsScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _openNote(BuildContext context, n) async {
+    await openFacultyNotification(
+      context,
+      note: n,
+      repo: widget.repo,
+      onRefresh: widget.onRefresh ?? () async {},
+    );
+    if (mounted) setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     final scale = MediaQuery.textScalerOf(context);
+    final repo = widget.repo;
 
     final list = repo.notifications.isEmpty
         ? Center(
@@ -45,52 +62,85 @@ class NotificationsScreen extends StatelessWidget {
               ),
             ),
           )
-        : ListView(
+        : ListView.builder(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: FlLayout.pagePadding,
-            children: repo.notifications
-                .map(
-                  (n) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: FlSurfaceCard(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(Icons.notifications_active_outlined, color: AppColors.primaryBlue, size: 28),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  n['title'] ?? '',
-                                  style: TextStyle(fontSize: scale.scale(17), fontWeight: FontWeight.w700),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  n['body'] ?? '',
-                                  style: TextStyle(fontSize: scale.scale(16), color: AppColors.textMuted, height: 1.45),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
+            itemCount: repo.notifications.length,
+            itemBuilder: (context, index) {
+              final n = repo.notifications[index];
+              final unread = !n.read;
+              final subtitle = n.subtitleLine;
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 10),
+                child: FlSurfaceCard(
+                  onTap: () => _openNote(context, n),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        unread ? Icons.mark_email_unread_outlined : Icons.notifications_outlined,
+                        color: unread ? AppColors.primaryBlue : AppColors.textMuted,
+                        size: 28,
                       ),
-                    ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              n.title,
+                              style: TextStyle(
+                                fontSize: scale.scale(17),
+                                fontWeight: unread ? FontWeight.w800 : FontWeight.w600,
+                                color: AppColors.navyDeep,
+                              ),
+                            ),
+                            if (subtitle.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                subtitle,
+                                style: TextStyle(fontSize: scale.scale(14), color: AppColors.primaryBlue),
+                              ),
+                            ],
+                            if (n.actorName != null && n.actorName!.isNotEmpty) ...[
+                              const SizedBox(height: 4),
+                              Text(
+                                'From ${n.actorName}',
+                                style: TextStyle(fontSize: scale.scale(14), color: AppColors.textMuted),
+                              ),
+                            ],
+                            const SizedBox(height: 6),
+                            Text(
+                              n.body,
+                              style: TextStyle(fontSize: scale.scale(15), color: AppColors.textMuted, height: 1.45),
+                            ),
+                            if (n.atManila != null) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                n.atManila!,
+                                style: TextStyle(fontSize: scale.scale(13), color: AppColors.textMuted),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.chevron_right, color: AppColors.textMuted, size: 26),
+                    ],
                   ),
-                )
-                .toList(),
+                ),
+              );
+            },
           );
 
     final body = _body(list);
 
-    if (embedInTab) {
+    if (widget.embedInTab) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const FlPageHeader(
             title: 'Notifications',
-            subtitle: 'Messages from your reviewer about your documents.',
+            subtitle: 'Reviewer decisions and messages about your submissions.',
           ),
           Expanded(child: body),
         ],

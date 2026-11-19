@@ -76,6 +76,7 @@ function mergePortalPayload(prev, data) {
   if (Array.isArray(data.reviewers)) next.reviewers = data.reviewers;
   if (Array.isArray(data.activity)) next.activity = data.activity;
   if (Array.isArray(data.notifications)) next.notifications = data.notifications;
+  if (data.notificationUnreadCount != null) next.notificationUnreadCount = data.notificationUnreadCount;
   if (data.institutionConfig) next.institutionConfig = mergeInstitutionConfig(data.institutionConfig);
   if (data.catalogPublished) next.catalogPublished = data.catalogPublished;
   if (data.configDraft !== undefined) next.configDraft = data.configDraft;
@@ -186,6 +187,7 @@ function emptyState() {
     documents: [],
     activity: [],
     notifications: [],
+    notificationUnreadCount: 0,
     catalogPublished: null,
     assessmentConfig: { activePublishedId: null, versions: [] },
     reviewQueue: null,
@@ -202,6 +204,7 @@ function normalizeFromApi(data) {
     assessments: data.assessments || {},
     activity: data.activity || [],
     notifications: data.notifications || [],
+    notificationUnreadCount: data.notificationUnreadCount ?? 0,
     institutionConfig: mergeInstitutionConfig(data.institutionConfig),
     catalogPublished: data.catalogPublished ?? null,
     configDraft: data.configDraft ?? data.catalogDraft ?? null,

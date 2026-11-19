@@ -2239,3 +2239,20 @@ input[type="search"], input[type="text"], select, textarea {
     flex-direction: column;
   }
 }
+
+.nav-badge {
+  margin-left: auto;
+  min-width: 1.25rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  background: var(--fl-gold, #c9a227);
+  color: #102b50;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.notif-card--unread {
+  border-left: 3px solid var(--fl-blue, #1e5a9e);
+  box-shadow: 0 1px 0 rgba(16, 43, 80, 0.06);
+}

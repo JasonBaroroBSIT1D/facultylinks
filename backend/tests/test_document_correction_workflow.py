@@ -19,10 +19,19 @@ from app.services.document_correction import (
 
 def test_apply_replacement_and_resubmit(app):
     with app.app_context():
-        owner = User(email="own@test.local", role=UserRole.faculty, full_name="Owner")
-        owner.set_password("x")
-        reviewer = User(email="rev@test.local", role=UserRole.reviewer, full_name="Rev")
-        reviewer.set_password("x")
+        tag = uuid.uuid4().hex[:8]
+        owner = User(
+            email=f"own-{tag}@test.local",
+            role=UserRole.faculty,
+            full_name="Owner",
+            password_hash="x",
+        )
+        reviewer = User(
+            email=f"rev-{tag}@test.local",
+            role=UserRole.reviewer,
+            full_name="Rev",
+            password_hash="x",
+        )
         db.session.add_all([owner, reviewer])
         db.session.flush()
         db.session.add(ReviewerAssignment(faculty_user_id=owner.id, reviewer_user_id=reviewer.id))
@@ -30,7 +39,7 @@ def test_apply_replacement_and_resubmit(app):
         old = Document(
             public_id=str(uuid.uuid4()),
             owner_user_id=owner.id,
-            object_key="k/o.pdf",
+            object_key=f"k/o-{uuid.uuid4().hex}.pdf",
             original_filename="old.pdf",
             mime_type="application/pdf",
             size_bytes=1,
@@ -42,7 +51,7 @@ def test_apply_replacement_and_resubmit(app):
         new = Document(
             public_id=str(uuid.uuid4()),
             owner_user_id=owner.id,
-            object_key="k/n.pdf",
+            object_key=f"k/n-{uuid.uuid4().hex}.pdf",
             original_filename="new.pdf",
             mime_type="application/pdf",
             size_bytes=1,
@@ -70,3 +79,25 @@ def test_apply_replacement_and_resubmit(app):
 
         with pytest.raises(ValueError):
             resubmit_document_for_review(new, actor=owner)
+
+
+def test_evidence_replace_allowed_via_parent_correction():
+    doc = Document(
+        public_id=str(uuid.uuid4()),
+        owner_user_id=1,
+        object_key="k/x.pdf",
+        original_filename="x.pdf",
+        mime_type="application/pdf",
+        size_bytes=1,
+        upload_status="stored",
+        indicator_id="kra-II-A-3",
+        kra_id="kra-II",
+        review_status="evidence",
+    )
+    links = [
+        {
+            "parentReviewStatus": "correction_requested",
+            "parentSubmissionStatus": "submitted",
+        }
+    ]
+    assert faculty_may_replace_document(doc, achievement_links=links)

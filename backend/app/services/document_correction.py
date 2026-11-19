@@ -5,19 +5,30 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from app.extensions import db
-from app.models import Document, Notification, ReviewerAssignment, User
+from app.models import Document, User
 from app.services.assessment_sync import attach_upload_to_assessment, sync_review_to_assessment
 
 # Replacement uploaded; processing may still run — not in reviewer queue until resubmit.
 REVIEW_CORRECTION_PREPARED = "correction_prepared"
 
 
-def faculty_may_replace_document(doc: Document) -> bool:
+def faculty_may_replace_document(
+    doc: Document,
+    *,
+    achievement_links: list[dict] | None = None,
+) -> bool:
     if doc.upload_status != "stored":
         return False
     if doc.superseded_by_public_id:
         return False
-    return doc.review_status == "correction_requested"
+    if doc.review_status == "correction_requested":
+        return True
+    for link in achievement_links or []:
+        if (link.get("parentReviewStatus") or "") == "correction_requested" and (
+            link.get("parentSubmissionStatus") or ""
+        ) == "submitted":
+            return True
+    return False
 
 
 def faculty_may_resubmit_document(doc: Document) -> bool:
@@ -30,9 +41,14 @@ def faculty_may_resubmit_document(doc: Document) -> bool:
     return False
 
 
-def apply_document_replacement(*, old: Document, new: Document) -> None:
+def apply_document_replacement(
+    *,
+    old: Document,
+    new: Document,
+    achievement_links: list[dict] | None = None,
+) -> None:
     """Mark [old] superseded; new row awaits faculty resubmit (correction_prepared)."""
-    if not faculty_may_replace_document(old):
+    if not faculty_may_replace_document(old, achievement_links=achievement_links):
         raise ValueError("Document is not eligible for replacement.")
     if old.owner_user_id != new.owner_user_id:
         raise ValueError("Owner mismatch.")
@@ -49,6 +65,37 @@ def apply_document_replacement(*, old: Document, new: Document) -> None:
 
     old.review_status = "replaced"
     old.superseded_by_public_id = new.public_id
+    # Prior reviewer remarks remain on [old] for audit; new version starts clean.
+
+
+def _achievement_links_for_document(owner_user_id: int, public_id: str) -> list[dict]:
+    from app.services.document_achievement_display import achievement_links_for_user
+
+    return achievement_links_for_user(owner_user_id).get(public_id, [])
+
+
+def resubmit_achievements_linked_to_document(owner_user_id: int, document_public_id: str, *, actor: User) -> list[str]:
+    """Resubmit parent achievements in correction_requested that reference this evidence file."""
+    from app.services.achievements_store import list_achievements, submit_achievement
+    from app.services.catalog import get_catalog_for_assessment
+    from app.models import FacultyAssessment
+
+    row = FacultyAssessment.query.get(owner_user_id)
+    data = row.data if row else {}
+    catalog, _ = get_catalog_for_assessment(data or {})
+    if not catalog:
+        return []
+    submitted: list[str] = []
+    for ach in list_achievements(owner_user_id):
+        if ach.get("reviewStatus") != "correction_requested":
+            continue
+        doc_ids = [str(d) for d in (ach.get("documentIds") or []) if d]
+        if document_public_id not in doc_ids:
+            continue
+        submit_achievement(owner_user_id, ach["id"], catalog=catalog, patch={}, actor=actor)
+        submitted.append(ach["id"])
+        notify_reviewers_achievement_resubmitted(actor, ach)
+    return submitted
 
 
 def finalize_replacement_assessment(new: Document, *, title: str | None = None) -> None:
@@ -94,6 +141,8 @@ def swap_achievement_document_reference(owner_user_id: int, old_public_id: str, 
 
 
 def resubmit_document_for_review(doc: Document, *, actor: User) -> Document:
+    from app.services.catalog import is_kra_i_achievement_indicator
+
     if doc.owner_user_id != actor.id:
         raise ValueError("Forbidden.")
     if not faculty_may_resubmit_document(doc):
@@ -101,28 +150,27 @@ def resubmit_document_for_review(doc: Document, *, actor: User) -> Document:
     if doc.review_status != REVIEW_CORRECTION_PREPARED:
         raise ValueError("Invalid state for resubmit.")
 
-    doc.review_status = "pending"
     doc.verified_points = None
     doc.reviewed_by_user_id = None
     doc.reviewed_at = None
-    sync_review_to_assessment(doc)
-    _notify_reviewers_document_resubmitted(doc)
+
+    achievement_ids = resubmit_achievements_linked_to_document(
+        doc.owner_user_id, doc.public_id, actor=actor
+    )
+    if is_kra_i_achievement_indicator(doc.indicator_id):
+        doc.review_status = "evidence"
+    else:
+        doc.review_status = "pending"
+        sync_review_to_assessment(doc)
+    if not achievement_ids:
+        _notify_reviewers_document_resubmitted(doc)
     return doc
 
 
 def _notify_reviewers_document_resubmitted(doc: Document) -> None:
-    assignments = ReviewerAssignment.query.filter_by(faculty_user_id=doc.owner_user_id).all()
-    title = "Document resubmitted for review"
-    body = f"{doc.original_filename} was corrected and resubmitted."
-    for a in assignments:
-        db.session.add(
-            Notification(
-                user_id=a.reviewer_user_id,
-                title=title,
-                body=body,
-                read=False,
-            )
-        )
+    from app.services.notification_service import notify_reviewers_document_resubmitted
+
+    notify_reviewers_document_resubmitted(doc)
 
 
 def append_achievement_faculty_resubmit_history(ach: dict, *, user: User) -> None:
@@ -143,16 +191,6 @@ def append_achievement_faculty_resubmit_history(ach: dict, *, user: User) -> Non
 
 
 def notify_reviewers_achievement_resubmitted(owner: User, ach: dict) -> None:
-    assignments = ReviewerAssignment.query.filter_by(faculty_user_id=owner.id).all()
-    title = "Achievement resubmitted for review"
-    ind = ach.get("indicatorId") or ""
-    body = f"{ach.get('title') or 'Achievement'} ({ind}) was resubmitted after corrections."
-    for a in assignments:
-        db.session.add(
-            Notification(
-                user_id=a.reviewer_user_id,
-                title=title,
-                body=body,
-                read=False,
-            )
-        )
+    from app.services.notification_service import notify_reviewers_achievement_submitted
+
+    notify_reviewers_achievement_submitted(owner, ach, resubmit=True)
