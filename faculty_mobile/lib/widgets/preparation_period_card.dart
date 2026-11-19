@@ -8,19 +8,33 @@ import '../theme/app_theme.dart';
 
 class PreparationPeriodCard extends StatelessWidget {
   final PreparationPeriod period;
+  final ReviewWindow? reviewWindow;
   final VoidCallback onDetails;
 
-  const PreparationPeriodCard({super.key, required this.period, required this.onDetails});
+  const PreparationPeriodCard({
+    super.key,
+    required this.period,
+    this.reviewWindow,
+    required this.onDetails,
+  });
 
   String _reviewerLine() => EvaluationPeriodService.reviewerScheduleLine(
+        start: period.start,
+        end: period.end,
         reviewerAvailableFrom: period.reviewerAvailableFrom,
+        reviewWindow: reviewWindow,
       );
 
   @override
   Widget build(BuildContext context) {
     final status = period.evaluationStatus();
     final scale = MediaQuery.textScalerOf(context);
-    final closed = status == EvaluationPeriodService.statusClosed;
+    final reviewClosed = EvaluationPeriodService.reviewPeriodClosed(
+      start: period.start,
+      end: period.end,
+      reviewerAvailableFrom: period.reviewerAvailableFrom,
+      reviewWindow: reviewWindow,
+    );
 
     return FlSurfaceCard(
       padding: const EdgeInsets.all(14),
@@ -55,7 +69,7 @@ class PreparationPeriodCard extends StatelessWidget {
             _reviewerLine(),
             style: TextStyle(fontSize: scale.scale(14), color: AppColors.textMuted, height: 1.4),
           ),
-          if (closed) ...[
+          if (reviewClosed) ...[
             const SizedBox(height: 6),
             Text(
               EvaluationPeriodService.facultyClosedHelper,

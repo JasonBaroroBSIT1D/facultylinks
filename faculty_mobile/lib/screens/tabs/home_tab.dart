@@ -119,6 +119,7 @@ class HomeTab extends StatelessWidget {
                   builder: (_) => EvaluationDetailsScreen(
                     period: institutionConfig.preparationPeriod,
                     profile: repo.profile,
+                    reviewWindow: institutionConfig.reviewWindow,
                   ),
                 ),
               );

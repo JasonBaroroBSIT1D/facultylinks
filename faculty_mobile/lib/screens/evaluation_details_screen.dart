@@ -14,11 +14,13 @@ class EvaluationDetailsScreen extends StatelessWidget {
 
   final PreparationPeriod period;
   final FacultyProfile profile;
+  final ReviewWindow? reviewWindow;
 
   const EvaluationDetailsScreen({
     super.key,
     required this.period,
     required this.profile,
+    this.reviewWindow,
   });
 
   String _safeDate(DateTime? d) {
@@ -35,7 +37,16 @@ class EvaluationDetailsScreen extends StatelessWidget {
     final scale = MediaQuery.textScalerOf(context);
     final status = period.evaluationStatus();
     final reviewerLine = EvaluationPeriodService.reviewerScheduleLine(
+      start: period.start,
+      end: period.end,
       reviewerAvailableFrom: period.reviewerAvailableFrom,
+      reviewWindow: reviewWindow,
+    );
+    final reviewClosed = EvaluationPeriodService.reviewPeriodClosed(
+      start: period.start,
+      end: period.end,
+      reviewerAvailableFrom: period.reviewerAvailableFrom,
+      reviewWindow: reviewWindow,
     );
     final assigned = facultyHasReviewer(profile);
 
@@ -116,17 +127,19 @@ class EvaluationDetailsScreen extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          FlSurfaceCard(
-            child: Text(
-              EvaluationPeriodService.facultyClosedHelper,
-              style: TextStyle(
-                fontSize: scale.scale(15),
-                height: 1.45,
-                color: AppColors.textMuted,
+          if (reviewClosed) ...[
+            const SizedBox(height: 12),
+            FlSurfaceCard(
+              child: Text(
+                EvaluationPeriodService.facultyClosedHelper,
+                style: TextStyle(
+                  fontSize: scale.scale(15),
+                  height: 1.45,
+                  color: AppColors.textMuted,
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );

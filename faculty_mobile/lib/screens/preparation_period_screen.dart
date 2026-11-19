@@ -8,15 +8,25 @@ import '../theme/app_theme.dart';
 
 class PreparationPeriodScreen extends StatelessWidget {
   final PreparationPeriod period;
+  final ReviewWindow? reviewWindow;
 
-  const PreparationPeriodScreen({super.key, required this.period});
+  const PreparationPeriodScreen({super.key, required this.period, this.reviewWindow});
 
   @override
   Widget build(BuildContext context) {
     final scale = MediaQuery.textScalerOf(context);
     final status = period.evaluationStatus();
     final reviewerLine = EvaluationPeriodService.reviewerScheduleLine(
+      start: period.start,
+      end: period.end,
       reviewerAvailableFrom: period.reviewerAvailableFrom,
+      reviewWindow: reviewWindow,
+    );
+    final reviewClosed = EvaluationPeriodService.reviewPeriodClosed(
+      start: period.start,
+      end: period.end,
+      reviewerAvailableFrom: period.reviewerAvailableFrom,
+      reviewWindow: reviewWindow,
     );
 
     return Scaffold(
@@ -42,13 +52,15 @@ class PreparationPeriodScreen extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: 12),
-          FlSurfaceCard(
-            child: Text(
-              EvaluationPeriodService.facultyClosedHelper,
-              style: TextStyle(fontSize: scale.scale(16), height: 1.5, color: AppColors.textMuted),
+          if (reviewClosed) ...[
+            const SizedBox(height: 12),
+            FlSurfaceCard(
+              child: Text(
+                EvaluationPeriodService.facultyClosedHelper,
+                style: TextStyle(fontSize: scale.scale(16), height: 1.5, color: AppColors.textMuted),
+              ),
             ),
-          ),
+          ],
         ],
       ),
     );

@@ -103,8 +103,9 @@ export function reviewerScheduleNote(period) {
 
 /** @param {{ start: string, end: string, reviewerAvailableFrom?: string }} period */
 export function reviewerAvailabilityDetail(period, now = new Date()) {
-  const ra = period?.reviewerAvailableFrom ? String(period.reviewerAvailableFrom).slice(0, 10) : '';
-  if (!ra) {
+  const start = period?.start ? String(period.start).slice(0, 10) : '';
+  const end = period?.end ? String(period.end).slice(0, 10) : '';
+  if (!start || !end) {
     return {
       available: false,
       configured: false,
@@ -112,20 +113,53 @@ export function reviewerAvailabilityDetail(period, now = new Date()) {
       shortLabel: 'Not configured',
       scheduleLine: 'Reviewer access is not configured.',
       startDateLabel: null,
+      opensOn: null,
     };
   }
-  const today = calendarDateInTimeZone(now);
-  const available = today >= ra;
-  const readable = formatEvaluationDate(ra);
+  const win = computeReviewerReviewWindow(period, now);
+  const firstReadable = formatEvaluationDate(win.opensOn);
+  if (win.state === 'closed') {
+    return {
+      available: false,
+      configured: true,
+      statusLabel: 'Closed',
+      shortLabel: 'Closed',
+      scheduleLine: win.message || 'Review period has ended.',
+      startDateLabel: firstReadable,
+      opensOn: win.opensOn,
+    };
+  }
+  if (win.state === 'upcoming') {
+    const opensLabel = `Opens ${firstReadable}`;
+    return {
+      available: false,
+      configured: true,
+      statusLabel: opensLabel,
+      shortLabel: opensLabel,
+      scheduleLine: win.message || opensLabel,
+      startDateLabel: firstReadable,
+      opensOn: win.opensOn,
+    };
+  }
+  if (win.state === 'open') {
+    return {
+      available: true,
+      configured: true,
+      statusLabel: 'Available now',
+      shortLabel: 'Available now',
+      scheduleLine: `Review window ${formatEvaluationDateRange(win.opensOn, end)}`,
+      startDateLabel: firstReadable,
+      opensOn: win.opensOn,
+    };
+  }
   return {
-    available,
-    configured: true,
-    statusLabel: available ? 'Available now' : 'Not yet open',
-    shortLabel: available ? `Available now · from ${readable}` : `Opens ${readable}`,
-    scheduleLine: available
-      ? `Reviewers may check documents from ${readable}`
-      : `Reviewer access opens ${readable}`,
-    startDateLabel: readable,
+    available: false,
+    configured: false,
+    statusLabel: 'Not configured',
+    shortLabel: 'Not configured',
+    scheduleLine: win.message || 'Reviewer access is not configured.',
+    startDateLabel: null,
+    opensOn: win.opensOn,
   };
 }
 
@@ -137,6 +171,7 @@ export function statusBadgeClass(status) {
 
 export function reviewerAccessBadgeClass(detail) {
   if (!detail?.configured) return 'badge-pending';
+  if (detail.statusLabel === 'Closed') return 'badge-correction';
   return detail.available ? 'badge-approved' : 'badge-pending';
 }
 

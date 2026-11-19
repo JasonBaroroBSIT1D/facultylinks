@@ -10,7 +10,11 @@ class InstitutionConfigRepository {
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body) as Map<String, dynamic>;
         if (data['configured'] == true && data['institutionConfig'] != null) {
-          return InstitutionConfig.fromJson(data['institutionConfig'] as Map<String, dynamic>);
+          final cfgJson = Map<String, dynamic>.from(data['institutionConfig'] as Map<String, dynamic>);
+          if (data['reviewWindow'] != null) {
+            cfgJson['reviewWindow'] = data['reviewWindow'];
+          }
+          return InstitutionConfig.fromJson(cfgJson);
         }
       }
     } catch (_) {

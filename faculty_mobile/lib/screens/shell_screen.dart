@@ -80,6 +80,8 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
 
   Future<void> _softRefresh({Set<FacultyRefreshScope>? scopes, bool force = false}) async {
     await _refresh?.refresh(scopes: scopes, force: force);
+    final cfg = await InstitutionConfigRepository.load();
+    if (mounted) setState(() => _institutionConfig = cfg);
   }
 
   void _goToAssessment() => setState(() => _index = 2);

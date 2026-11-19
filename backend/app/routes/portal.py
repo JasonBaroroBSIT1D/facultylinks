@@ -424,7 +424,15 @@ def get_institution():
     cfg = get_json(INSTITUTION_KEY)
     if not cfg:
         return jsonify({"institutionConfig": None, "configured": False})
-    return jsonify({"institutionConfig": cfg, "configured": True})
+    from app.services.evaluation_period import review_window_for_portal
+
+    return jsonify(
+        {
+            "institutionConfig": cfg,
+            "configured": True,
+            "reviewWindow": review_window_for_portal(),
+        }
+    )
 
 
 @bp.get("/api/config/catalog")

@@ -49,11 +49,15 @@ function summaryHtml(period, { preview = false } = {}) {
   const previewLabel = preview
     ? `<span class="fl-ep-preview-tag">Preview (unsaved)</span>`
     : `<span class="fl-ep-preview-tag fl-ep-preview-tag--saved">Saved schedule</span>`;
-  const revMeta = rev.configured
-    ? rev.available
-      ? `from ${esc(rev.startDateLabel)}`
-      : `Opens ${esc(rev.startDateLabel)}`
-    : '';
+  const revMeta = !rev.configured
+    ? ''
+    : rev.available
+      ? `through ${esc(formatEvaluationDate(period.end))}`
+      : rev.statusLabel === 'Closed'
+        ? ''
+        : rev.opensOn
+          ? `Opens ${esc(formatEvaluationDate(rev.opensOn))}`
+          : '';
 
   return `
     <div class="fl-ep-summary" aria-live="polite">
@@ -275,7 +279,8 @@ export function renderEvaluationPeriodSettings(root, { readOnly = false } = {}) 
       await bootstrapPortal();
       baseline = normalizePeriod(institutionConfig.preparationPeriod);
       savedFp = fingerprint(baseline);
-      msg.textContent = `Schedule saved. Evaluation period is ${computeEvaluationPeriodStatus(baseline)} (${formatEvaluationDateRange(baseline.start, baseline.end)}).`;
+      const rev = reviewerAvailabilityDetail(baseline);
+      msg.textContent = `Schedule saved. Evaluation period is ${computeEvaluationPeriodStatus(baseline)} (${formatEvaluationDateRange(baseline.start, baseline.end)}). Reviewer access: ${rev.statusLabel}.`;
       msg.dataset.kind = 'ok';
     } catch (ex) {
       // Keep entered dates; do not reset the form.

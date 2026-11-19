@@ -5,12 +5,14 @@ class InstitutionConfig {
   final List<String> rankOptions;
   final Map<String, RankRequirement> rankRequirements;
   final String rankMappingStatus;
+  final ReviewWindow? reviewWindow;
 
   InstitutionConfig({
     required this.preparationPeriod,
     required this.rankOptions,
     required this.rankRequirements,
     required this.rankMappingStatus,
+    this.reviewWindow,
   });
 
   factory InstitutionConfig.defaults() => InstitutionConfig(
@@ -42,6 +44,13 @@ class InstitutionConfig {
         'rankOptions': rankOptions,
         'rankRequirements': rankRequirements.map((k, v) => MapEntry(k, v.toJson())),
         'rankMappingStatus': rankMappingStatus,
+        if (reviewWindow != null) 'reviewWindow': {
+          'allowed': reviewWindow!.allowed,
+          'state': reviewWindow!.state,
+          'message': reviewWindow!.message,
+          'opensOn': reviewWindow!.opensOn,
+          'endsOn': reviewWindow!.endsOn,
+        },
       };
 
   factory InstitutionConfig.fromJson(Map<String, dynamic> j) => InstitutionConfig(
@@ -51,6 +60,9 @@ class InstitutionConfig {
           (k, v) => MapEntry(k, RankRequirement.fromJson(v as Map<String, dynamic>)),
         ),
         rankMappingStatus: j['rankMappingStatus'] as String? ?? 'pending',
+        reviewWindow: j['reviewWindow'] != null
+            ? ReviewWindow.fromJson(j['reviewWindow'] as Map<String, dynamic>)
+            : null,
       );
 }
 
@@ -66,10 +78,15 @@ class PreparationPeriod {
 
   String evaluationStatus([DateTime? now]) => preparationStatus(now);
 
-  bool reviewerIsAvailable([DateTime? now]) {
-    final n = EvaluationPeriodService.dateOnly(now ?? DateTime.now());
-    if (reviewerAvailableFrom == null) return false;
-    return !n.isBefore(EvaluationPeriodService.dateOnly(reviewerAvailableFrom!));
+  bool reviewerIsAvailable({DateTime? now, ReviewWindow? reviewWindow}) {
+    final win = EvaluationPeriodService.resolveReviewWindow(
+      start: start,
+      end: end,
+      reviewerAvailableFrom: reviewerAvailableFrom,
+      serverWindow: reviewWindow,
+      now: now,
+    );
+    return win.allowed;
   }
 
   Map<String, dynamic> toJson() => {

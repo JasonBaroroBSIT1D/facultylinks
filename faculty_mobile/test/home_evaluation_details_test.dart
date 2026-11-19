@@ -109,7 +109,7 @@ void main() {
     expect(find.textContaining('Jun 30, 2026'), findsWidgets);
     expect(find.text('Ana Reviewer'), findsOneWidget);
     expect(find.text('Assigned Evaluator'), findsOneWidget);
-    expect(find.text('You can still prepare documents and check estimated points.'), findsOneWidget);
+    expect(find.text('Review period closed. You can still prepare and upload your documents.'), findsOneWidget);
 
     await tester.pageBack();
     await tester.pumpAndSettle();

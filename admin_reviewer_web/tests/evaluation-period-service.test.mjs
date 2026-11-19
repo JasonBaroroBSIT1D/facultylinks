@@ -35,24 +35,32 @@ test('status uses Asia/Manila calendar day boundaries', () => {
   assert.equal(computeEvaluationPeriodStatus(period, new Date('2026-03-20T16:00:00Z')), 'Closed');
 });
 
-test('reviewer availability distinguishes configured open vs not yet', () => {
-  const open = reviewerAvailabilityDetail(
-    { reviewerAvailableFrom: '2026-01-01' },
-    new Date('2026-06-01T04:00:00Z')
-  );
+test('reviewer availability follows review window (start/end inclusive)', () => {
+  const period = { start: '2026-01-15', end: '2026-06-30', reviewerAvailableFrom: '2026-02-01' };
+
+  const open = reviewerAvailabilityDetail(period, new Date('2026-06-01T04:00:00Z'));
   assert.equal(open.available, true);
   assert.equal(open.statusLabel, 'Available now');
 
-  const future = reviewerAvailabilityDetail(
-    { reviewerAvailableFrom: '2026-12-01' },
-    new Date('2026-06-01T04:00:00Z')
-  );
+  const future = reviewerAvailabilityDetail(period, new Date('2026-01-20T04:00:00Z'));
   assert.equal(future.available, false);
-  assert.equal(future.statusLabel, 'Not yet open');
+  assert.match(future.statusLabel, /^Opens /);
+
+  const closed = reviewerAvailabilityDetail(period, new Date('2026-07-01T04:00:00Z'));
+  assert.equal(closed.available, false);
+  assert.equal(closed.statusLabel, 'Closed');
 
   const missing = reviewerAvailabilityDetail({}, new Date('2026-06-01T04:00:00Z'));
   assert.equal(missing.configured, false);
   assert.equal(missing.statusLabel, 'Not configured');
+});
+
+test('reviewer access closes day after evaluation end (Manila)', () => {
+  const period = { start: '2026-10-01', end: '2026-11-18', reviewerAvailableFrom: '2026-10-15' };
+  const lastDay = reviewerAvailabilityDetail(period, new Date('2026-11-18T15:00:00Z'));
+  assert.equal(lastDay.statusLabel, 'Available now');
+  const afterEnd = reviewerAvailabilityDetail(period, new Date('2026-11-19T15:00:00Z'));
+  assert.equal(afterEnd.statusLabel, 'Closed');
 });
 
 test('calendarDateInTimeZone returns YYYY-MM-DD', () => {
