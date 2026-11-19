@@ -1,10 +1,11 @@
 """Re-run SET/SEF OCR pipeline for one document (idempotent; preserves verified fields)."""
 import sys
+import time
 
 from app import create_app
 from app.extensions import db
 from app.models import Document, DocumentProcessingJob, SetSefSemesterRecord
-from app.services.set_sef_processor import process_set_sef_document
+from app.services.set_sef_processor import enqueue_set_sef_job, process_set_sef_document
 
 public_id = sys.argv[1] if len(sys.argv) > 1 else "4dbd48ca-a190-4579-87aa-ca251f16b35c"
 
@@ -14,13 +15,21 @@ with app.app_context():
     if not doc:
         print("not found")
         sys.exit(1)
-    job = DocumentProcessingJob(document_id=doc.id, job_type="set_sef_ocr", status="pending")
-    db.session.add(job)
-    db.session.commit()
-    process_set_sef_document(doc.id, job.id)
+    job = enqueue_set_sef_job(doc, force=True)
+    # Wait for inline dispatcher; fall back to sync if still pending / recovered.
+    for _ in range(180):
+        db.session.refresh(job)
+        if job.status in ("completed", "failed"):
+            break
+        if job.status == "pending":
+            process_set_sef_document(doc.id, job.id)
+            break
+        time.sleep(1)
     db.session.refresh(doc)
     recs = SetSefSemesterRecord.query.filter_by(document_id=doc.id, superseded_by_id=None).all()
+    jobs = DocumentProcessingJob.query.filter_by(document_id=doc.id, job_type="set_sef_ocr").all()
     print("ocr", doc.ocr_status, "proc", doc.processing_status, "err", doc.processing_error)
+    print("jobs", [(j.id, j.status) for j in jobs])
     print("active records", len(recs))
     for r in recs:
         print(r.semester_key, r.faculty_name_extracted, r.set_rating_extracted, r.sef_rating_extracted)

@@ -8,6 +8,7 @@ from app.services.rank_simulation import (
     compute_rank_simulation_bucket,
     merge_rank_simulation_config,
     resolve_rank_category,
+    resolve_rank_kra_weights,
     resolve_sub_rank_bracket,
     validate_rank_simulation_config,
 )
@@ -202,6 +203,13 @@ def test_provisional_scoring_still_names_destination():
     assert bucket["potentialRank"]["status"] == "eligibility_required"
     assert bucket["potentialRank"]["potentialRank"] == "Assistant Professor I"
     assert bucket["potentialRank"]["displayLabel"] == "Projected rank — provisional scoring"
+
+
+def test_resolve_rank_kra_weights_uses_institution_matrix():
+    inst = {"rankSimulation": {"weightMatrixByCategory": {"instructor": DEFAULT_WEIGHT_MATRIX["instructor"]}}}
+    res = resolve_rank_kra_weights("Instructor I", inst)
+    assert res.ok
+    assert res.weights == DEFAULT_WEIGHT_MATRIX["instructor"]
 
 
 def test_validate_weight_matrix_sum():

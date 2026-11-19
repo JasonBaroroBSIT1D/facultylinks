@@ -12,6 +12,8 @@ import '../widgets/achievement_attachments_panel.dart';
 
 class KraIAchievementScreen extends StatefulWidget {
   final MockRepository repo;
+  /// Stable parent KRA id (`kra-I` … `kra-IV`) from the selected assessment context.
+  final String kraId;
   final CriterionNode criterion;
   final IndicatorNode? indicator;
   final Future<void> Function() onSave;
@@ -19,6 +21,7 @@ class KraIAchievementScreen extends StatefulWidget {
   const KraIAchievementScreen({
     super.key,
     required this.repo,
+    required this.kraId,
     required this.criterion,
     this.indicator,
     required this.onSave,
@@ -32,6 +35,7 @@ class _KraIAchievementScreenState extends State<KraIAchievementScreen> {
   List<Map<String, dynamic>> items = [];
   String? loadError;
   bool loading = true;
+  bool _openingEditor = false;
 
   @override
   void initState() {
@@ -57,21 +61,27 @@ class _KraIAchievementScreenState extends State<KraIAchievementScreen> {
 
   Future<void> _openEditor([Map<String, dynamic>? existing]) async {
     final ind = widget.indicator;
-    if (ind == null) return;
-    final saved = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (_) => _AchievementEditor(
-          repo: widget.repo,
-          criterion: widget.criterion,
-          indicator: ind,
-          existing: existing,
+    if (ind == null || _openingEditor) return;
+    setState(() => _openingEditor = true);
+    try {
+      final saved = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => _AchievementEditor(
+            repo: widget.repo,
+            kraId: widget.kraId,
+            criterion: widget.criterion,
+            indicator: ind,
+            existing: existing,
+          ),
         ),
-      ),
-    );
-    if (saved == true) {
-      await _load();
-      await widget.onSave();
+      );
+      if (saved == true) {
+        await _load();
+        await widget.onSave();
+      }
+    } finally {
+      if (mounted) setState(() => _openingEditor = false);
     }
   }
 
@@ -82,7 +92,7 @@ class _KraIAchievementScreenState extends State<KraIAchievementScreen> {
       floatingActionButton: widget.indicator == null
           ? null
           : FloatingActionButton(
-              onPressed: () => _openEditor(),
+              onPressed: _openingEditor ? null : () => _openEditor(),
               child: const Icon(Icons.add),
             ),
       body: RefreshIndicator(
@@ -172,12 +182,14 @@ class _KraIAchievementScreenState extends State<KraIAchievementScreen> {
 
 class _AchievementEditor extends StatefulWidget {
   final MockRepository repo;
+  final String kraId;
   final CriterionNode criterion;
   final IndicatorNode indicator;
   final Map<String, dynamic>? existing;
 
   const _AchievementEditor({
     required this.repo,
+    required this.kraId,
     required this.criterion,
     required this.indicator,
     this.existing,
@@ -290,15 +302,24 @@ class _AchievementEditorState extends State<_AchievementEditor> {
   }
 
   String get _kraId {
+    // Prefer the KRA chosen in My Assessment / Add Document — never invent kra-I.
+    final passed = widget.kraId.trim();
+    if (passed == 'kra-I' ||
+        passed == 'kra-II' ||
+        passed == 'kra-III' ||
+        passed == 'kra-IV') {
+      return passed;
+    }
     final fromCatalog = kraIdFromPublishedCatalog(
       widget.repo.catalogKras,
       widget.indicator.id,
     );
-    return fromCatalog ??
-        kraIdFromIndicator(
+    if (fromCatalog != null) return fromCatalog;
+    return tryKraIdFromIndicator(
           widget.indicator.id,
           criterionId: widget.criterion.id,
-        );
+        ) ??
+        passed; // keep caller context; never invent kra-I
   }
 
   Map<String, dynamic> _fields() => {
@@ -535,6 +556,7 @@ class _AchievementEditorState extends State<_AchievementEditor> {
   }
 
   Future<void> _save({bool submit = false}) async {
+    if (saving) return;
     if (submit) {
       final blocker = _submitBlocker;
       if (blocker != null) {
@@ -551,6 +573,7 @@ class _AchievementEditorState extends State<_AchievementEditor> {
         attachments: _attachments,
         indicatorId: widget.indicator.id,
         kraId: _kraId,
+        criterionId: widget.criterion.id,
         title: _title.text.trim().isEmpty ? null : _title.text.trim(),
       );
       if (mounted) setState(() {});
@@ -985,6 +1008,7 @@ class _AchievementEditorState extends State<_AchievementEditor> {
             attachments: _attachments,
             indicatorId: widget.indicator.id,
             kraId: _kraId,
+            criterionId: widget.criterion.id,
             titleHint: _title.text.trim().isEmpty ? null : _title.text.trim(),
             onChanged: (list) => setState(() => _attachments = list),
           ),

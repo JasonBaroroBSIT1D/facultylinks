@@ -56,6 +56,36 @@ def test_content_date_requires_label_not_any_date(app, app_ctx):
     assert date_fields[0].status == "missing"
 
 
+def test_advisory_identity_only_when_certificate_labels(app, app_ctx):
+    faculty = User.query.filter_by(role=UserRole.faculty).order_by(User.id.asc()).first()
+    assert faculty
+    text_plain = "Title: Leadership Seminar\nAchievement date: January 15, 2024\n"
+    plain = validate_document_content(
+        full_text=text_plain,
+        pages=[{"page": 1, "text": text_plain}],
+        indicator_id="kra-IV-A-1",
+        kra_id="kra-IV",
+        profile_full_name=faculty.full_name,
+    )
+    assert "subject_name" not in {f.field_name for f in plain.fields}
+
+    text_cert = (
+        "Certificate of Participation\n"
+        "This is to certify that Maria Santos Cruz attended the leadership seminar.\n"
+        "Issued on: January 15, 2024\n"
+    )
+    cert = validate_document_content(
+        full_text=text_cert,
+        pages=[{"page": 1, "text": text_cert}],
+        indicator_id="kra-IV-A-1",
+        kra_id="kra-IV",
+        profile_full_name="Maria Santos Cruz",
+    )
+    by_name = {f.field_name: f for f in cert.fields}
+    assert by_name.get("subject_name") is not None
+    assert any(f["rule_id"].startswith("faculty_identity_advisory") for f in cert.findings)
+
+
 def test_content_labeled_date_ok(app, app_ctx):
     text = (
         "Title: Leadership Seminar\n"
@@ -140,7 +170,25 @@ def test_every_catalog_indicator_has_explicit_coverage(app, app_ctx):
                     gaps.append((ind.get("id"), cov["status"]))
                 if cov["status"] == "unconfigured" and cov.get("ocr_fields"):
                     gaps.append((ind.get("id"), "unconfigured_with_ocr_fields"))
+                # Coverage entry must not claim full automatic validation.
+                if cov.get("fully_validated"):
+                    gaps.append((ind.get("id"), "claimed_fully_validated"))
+                if not cov.get("manual_review_gaps"):
+                    gaps.append((ind.get("id"), "missing_manual_review_gaps"))
+                if not cov.get("automatic_checks"):
+                    gaps.append((ind.get("id"), "missing_automatic_checks"))
     assert not gaps
+
+
+def test_hierarchy_mismatch_finding(app, app_ctx):
+    result = validate_document_content(
+        full_text="Title: Sample\nIssued on: January 1, 2024\n",
+        pages=[{"page": 1, "text": "Title: Sample\nIssued on: January 1, 2024\n"}],
+        indicator_id="kra-IV-A-1",
+        kra_id="kra-IV",
+        criterion_id="kra-IV-B",
+    )
+    assert any(f["rule_id"] == "hierarchy_criterion_mismatch" for f in result.findings)
 
 
 def test_image_extract_requires_tesseract_or_succeeds(app, app_ctx):

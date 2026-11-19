@@ -7,7 +7,6 @@ import '../repositories/auth_repository.dart';
 import '../repositories/institution_config_repository.dart';
 import '../repositories/mock_repository.dart';
 import '../services/faculty_refresh.dart';
-import '../services/simulation_engine.dart';
 import '../theme/app_theme.dart';
 import 'notifications_screen.dart';
 import 'tabs/documents_tab.dart';
@@ -26,7 +25,6 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
   int _index = 0;
   MockRepository? _repo;
   InstitutionConfig? _institutionConfig;
-  WhatIfScenario _whatIf = WhatIfScenario.empty;
   FacultyRefreshCoordinator? _refresh;
 
   @override
@@ -84,7 +82,7 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
     await _refresh?.refresh(scopes: scopes, force: force);
   }
 
-  void _goToSimulation() => setState(() => _index = 2);
+  void _goToAssessment() => setState(() => _index = 2);
 
   @override
   Widget build(BuildContext context) {
@@ -101,9 +99,9 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       HomeTab(
         repo: repo,
         institutionConfig: cfg,
-        whatIf: _whatIf,
         onRefresh: () => _softRefresh(force: true),
-        onOpenSimulation: _goToSimulation,
+        onOpenAssessment: _goToAssessment,
+        onOpenSimulation: _goToAssessment,
         onOpenNotifications: () => setState(() => _index = 3),
       ),
       DocumentsTab(
@@ -113,8 +111,6 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
       SimulationTab(
         repo: repo,
         institutionConfig: cfg,
-        whatIf: _whatIf,
-        onWhatIfChanged: (w) => setState(() => _whatIf = w),
         onRefresh: () => _softRefresh(
           scopes: {
             FacultyRefreshScope.scores,
@@ -199,9 +195,9 @@ class _ShellScreenState extends State<ShellScreen> with WidgetsBindingObserver {
               label: 'Documents',
             ),
             const NavigationDestination(
-              icon: Icon(Icons.insights_outlined),
-              selectedIcon: Icon(Icons.insights),
-              label: 'Simulation',
+              icon: Icon(Icons.fact_check_outlined),
+              selectedIcon: Icon(Icons.fact_check),
+              label: 'Assessment',
             ),
             NavigationDestination(
               icon: _badgedIcon(Icons.notifications_outlined, notifCount),

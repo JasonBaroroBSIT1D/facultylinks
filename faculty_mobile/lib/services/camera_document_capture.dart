@@ -58,9 +58,9 @@ class CameraDocumentCapture {
           'Camera permission is required to take a photo. Enable it in system settings, then try again.',
         );
       }
-      if (code.contains('photo') && code.contains('access')) {
+      if (code.contains('photo') && (code.contains('access') || code.contains('denied') || code.contains('permission'))) {
         throw CameraCaptureException(
-          'Camera access was denied. Enable camera permission in system settings.',
+          'Camera permission is required to take a photo. Enable it in system settings, then try again.',
         );
       }
       throw CameraCaptureException(

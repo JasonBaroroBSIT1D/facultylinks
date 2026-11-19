@@ -36,7 +36,7 @@ void main() {
     await tester.tap(find.text('KRA I · Instruction').last);
     await tester.pumpAndSettle();
 
-    await tester.tap(find.widgetWithText(FilledButton, 'Next').first);
+    await tester.tap(find.widgetWithText(FilledButton, 'Continue').first);
     await tester.pumpAndSettle();
 
     expect(find.text('B. Instructional Materials Development'), findsOneWidget);
@@ -60,7 +60,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('KRA I · Instruction').last);
     await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(FilledButton, 'Next').first);
+    await tester.tap(find.widgetWithText(FilledButton, 'Continue').first);
     await tester.pumpAndSettle();
 
     await tester.ensureVisible(find.text('B. Instructional Materials Development'));
@@ -76,6 +76,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(KraIAchievementScreen), findsOneWidget);
+    final screen = tester.widget<KraIAchievementScreen>(find.byType(KraIAchievementScreen));
+    expect(screen.kraId, 'kra-I');
+    expect(screen.indicator?.id, 'kra-I-B-1-1');
   });
 
   testWidgets('Upload SET/SEF shortcut still preselects Criterion A', (tester) async {
@@ -103,10 +106,13 @@ void main() {
     );
     await tester.pump();
 
-    await tester.tap(find.text('KRA I · Instruction'));
+    final kraHeader = find.byKey(const ValueKey('kra-expand-kra-I'));
+    await tester.ensureVisible(kraHeader);
+    await tester.tap(kraHeader);
     await tester.pump(const Duration(milliseconds: 400));
-    await tester.ensureVisible(find.text('Criterion B – Instructional Materials Development'));
-    expect(find.text('Criterion B – Instructional Materials Development'), findsOneWidget);
+    final criterionB = find.text('Criterion B – Instructional Materials Development');
+    await tester.ensureVisible(criterionB);
+    expect(criterionB, findsOneWidget);
     expect(find.textContaining('Criterion C'), findsWidgets);
   });
 }

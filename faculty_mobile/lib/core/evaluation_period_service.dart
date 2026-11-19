@@ -69,5 +69,5 @@ class EvaluationPeriodService {
   }
 
   static const facultyClosedHelper =
-      'You can still prepare documents and check your estimated points outside this period.';
+      'You can still prepare documents and check estimated points.';
 }

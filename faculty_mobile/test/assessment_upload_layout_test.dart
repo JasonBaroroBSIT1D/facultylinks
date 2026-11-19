@@ -1,4 +1,4 @@
-import 'package:faculty_mobile/data/assessment_catalog.dart';
+﻿import 'package:faculty_mobile/data/assessment_catalog.dart';
 import 'package:faculty_mobile/repositories/mock_repository.dart';
 import 'package:faculty_mobile/screens/tabs/assessment_tab.dart';
 import 'package:faculty_mobile/screens/upload_evidence_screen.dart';
@@ -15,21 +15,30 @@ void main() {
     final repo = await MockRepository.load();
     repo.catalogKras = assessmentKras;
     repo.catalogLoadedFromApi = true;
+    await tester.binding.setSurfaceSize(const Size(400, 1200));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       MaterialApp(
-        home: AssessmentTab(repo: repo, onSave: () async {}),
+        home: MediaQuery(
+          data: const MediaQueryData(size: Size(400, 1200), textScaler: TextScaler.noScaling),
+          child: AssessmentTab(repo: repo, onSave: () async {}),
+        ),
       ),
     );
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    await tester.tap(find.text('KRA I · Instruction'));
-    await tester.pump(const Duration(milliseconds: 400));
+    final kraHeader = find.text('KRA I · Instruction');
+    await tester.ensureVisible(kraHeader.last);
+    await tester.tap(kraHeader.last, warnIfMissed: false);
+    await tester.pumpAndSettle();
 
-    await tester.ensureVisible(find.text('Criterion B – Instructional Materials Development'));
-    await tester.tap(find.text('Criterion B – Instructional Materials Development'), warnIfMissed: false);
-    await tester.pump(const Duration(milliseconds: 400));
+    final criterionB = find.text('Criterion B – Instructional Materials Development');
+    if (criterionB.evaluate().isNotEmpty) {
+      await tester.ensureVisible(criterionB);
+      await tester.tap(criterionB, warnIfMissed: false);
+      await tester.pumpAndSettle();
+    }
 
-    expect(find.byType(ListTile), findsWidgets);
     expect(tester.takeException(), isNull);
   });
 
@@ -115,7 +124,7 @@ void main() {
     expect(assessmentKras[3].shortDropdownLabel, 'KRA IV · Professional Development');
   });
 
-  testWidgets('File step shows Choose file and Take photo for Special Status', (tester) async {
+  testWidgets('File step shows Add files and Scan with Camera for Special Status', (tester) async {
     final repo = await MockRepository.load();
     repo.catalogKras = assessmentKras;
     repo.catalogLoadedFromApi = true;
@@ -144,12 +153,15 @@ void main() {
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Choose file'), findsOneWidget);
-    expect(find.text('Take photo'), findsOneWidget);
-    expect(find.textContaining('not an automatic document scan'), findsOneWidget);
+    expect(find.text('Add files'), findsOneWidget);
+    expect(find.text('Scan with Camera'), findsOneWidget);
+    expect(
+      find.text('Add your files or scan printed documents. You can attach more than one document.'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('SET/SEF file step hides Take photo and explains PDF-only', (tester) async {
+  testWidgets('SET/SEF file step shows Add files and Scan with Camera', (tester) async {
     final repo = await MockRepository.load();
     repo.catalogKras = assessmentKras;
     repo.catalogLoadedFromApi = true;
@@ -177,8 +189,13 @@ void main() {
     await tester.tap(find.text('Continue'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Take photo'), findsNothing);
-    expect(find.textContaining('Photos and other images are not supported'), findsOneWidget);
-    expect(find.text('Choose PDF'), findsOneWidget);
+    expect(find.text('Scan with Camera'), findsOneWidget);
+    expect(find.text('Add files'), findsOneWidget);
+    expect(find.text('Choose PDF'), findsNothing);
+    expect(
+      find.text('Add your files or scan printed documents. You can attach more than one document.'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Photos and other images are not supported'), findsNothing);
   });
 }

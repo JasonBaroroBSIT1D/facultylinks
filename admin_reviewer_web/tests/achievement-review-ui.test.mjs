@@ -9,8 +9,14 @@ import {
   criterionBackLabel,
   formatAchievementContextLine,
   rulePermittedPoints,
+  achievementReviewPageTitle,
 } from '../js/portal/achievement-review-format.js';
 import { resolveSupportingDocuments } from '../js/portal/achievement-attachment-display.js';
+
+test('achievementReviewPageTitle is fixed label', () => {
+  assert.equal(achievementReviewPageTitle(), 'Achievement review');
+  assert.equal(achievementReviewPageTitle('kra-I-A'), 'Achievement review');
+});
 
 test('formatFileSize handles unknown and kb', () => {
   assert.equal(formatFileSize(null), '—');

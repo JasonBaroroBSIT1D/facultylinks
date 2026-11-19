@@ -310,7 +310,14 @@ def submit_achievement(
     *,
     catalog: dict,
     patch: dict[str, Any] | None = None,
+    actor: User | None = None,
 ) -> dict:
+    prior_status = get_achievement(user_id, achievement_id)
+    was_correction = (
+        prior_status
+        and prior_status.get("submissionStatus") == "submitted"
+        and prior_status.get("reviewStatus") == "correction_requested"
+    )
     ach = update_achievement_draft(user_id, achievement_id, patch or {}, catalog=catalog)
     if not (ach.get("title") or "").strip():
         raise CatalogValidationError("Title is required before submission.")
@@ -328,6 +335,11 @@ def submit_achievement(
     ach["reviewStatus"] = "pending"
     ach["originalClaimedPoints"] = ach.get("claimedPoints")
     ach["reviewerVerifiedPoints"] = None
+    if was_correction and actor is not None:
+        from app.services.document_correction import append_achievement_faculty_resubmit_history
+
+        append_achievement_faculty_resubmit_history(ach, user=actor)
+        ach["priorReviewRemarks"] = ach.get("reviewRemarks")
 
     row = _row(user_id)
     data = copy.deepcopy(row.data or _empty_assessment())

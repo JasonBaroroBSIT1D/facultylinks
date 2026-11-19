@@ -11,20 +11,18 @@ import '../theme/app_theme.dart';
 class SimulationSummaryCard extends StatelessWidget {
   final MockRepository repo;
   final InstitutionConfig institutionConfig;
-  final WhatIfScenario whatIf;
   final VoidCallback onTap;
 
-  SimulationSummaryCard({
+  const SimulationSummaryCard({
     super.key,
     required this.repo,
     required this.institutionConfig,
-    this.whatIf = WhatIfScenario.empty,
     required this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    final snapshot = SimulationEngine.compute(repo, whatIf: whatIf);
+    final snapshot = SimulationEngine.compute(repo);
     final target = SimulationEngine.nextRankOption(institutionConfig, repo.profile.rank);
     final eval = snapshot.usesRankTableWeights
         ? SimulationEngine.evaluateFromSnapshot(snapshot)

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import math
 import re
+from dataclasses import dataclass
 from typing import Any
 
 KRA_IDS = ("kra-I", "kra-II", "kra-III", "kra-IV")
@@ -93,6 +94,83 @@ def resolve_rank_category(rank_label: str | None) -> str | None:
         if pattern.search(text):
             return cat_id
     return None
+
+
+@dataclass
+class RankKraWeightResolution:
+    ok: bool
+    category_id: str | None = None
+    category_label: str | None = None
+    weights: dict[str, float] | None = None
+    error: str | None = None
+    weight_matrix_version: str | None = None
+    source_ref: str | None = None
+    current_rank: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "ok": self.ok,
+            "categoryId": self.category_id,
+            "categoryLabel": self.category_label,
+            "weights": self.weights,
+            "error": self.error,
+            "weightMatrixVersion": self.weight_matrix_version,
+            "sourceRef": self.source_ref,
+            "currentRank": self.current_rank,
+        }
+
+
+def resolve_rank_kra_weights(
+    faculty_rank: str | None,
+    institution_config: dict | None,
+) -> RankKraWeightResolution:
+    """Resolve Table 2.2 KRA weights from saved institution config and faculty current rank only."""
+    current_rank = (faculty_rank or "").strip()
+    category_id = resolve_rank_category(current_rank)
+    if not category_id:
+        return RankKraWeightResolution(
+            ok=False,
+            current_rank=current_rank,
+            error=(
+                "Current rank is missing or not recognized. Update the faculty profile with a supported "
+                "rank label before KRA weights can be applied."
+            ),
+        )
+    rs_config = merge_rank_simulation_config(institution_config)
+    matrix = rs_config.get("weightMatrixByCategory") or {}
+    row = matrix.get(category_id)
+    if not isinstance(row, dict):
+        cat_label = RANK_CATEGORY_META.get(category_id, {}).get("label", category_id)
+        return RankKraWeightResolution(
+            ok=False,
+            category_id=category_id,
+            category_label=cat_label,
+            current_rank=current_rank,
+            error=f"No KRA weight matrix row is configured for rank category {cat_label}.",
+        )
+    weights = {kid: float(row.get(kid) or 0.0) for kid in KRA_IDS}
+    wsum = sum(weights.values())
+    cat_meta = RANK_CATEGORY_META.get(category_id, {})
+    if abs(wsum - 1.0) > 0.001:
+        return RankKraWeightResolution(
+            ok=False,
+            category_id=category_id,
+            category_label=cat_meta.get("label", category_id),
+            current_rank=current_rank,
+            error=(
+                f"KRA weights for {cat_meta.get('label', category_id)} sum to {wsum:.4f}; "
+                "institution rank simulation must total 100%."
+            ),
+        )
+    return RankKraWeightResolution(
+        ok=True,
+        category_id=category_id,
+        category_label=cat_meta.get("label", category_id),
+        weights=weights,
+        weight_matrix_version=rs_config.get("version"),
+        source_ref=rs_config.get("sourceRef") or cat_meta.get("sourceRef"),
+        current_rank=current_rank,
+    )
 
 
 def merge_rank_simulation_config(institution_config: dict | None) -> dict:
@@ -425,16 +503,26 @@ def compute_rank_simulation_bucket(
     score_source: str,
 ) -> dict[str, Any]:
     rs_config = merge_rank_simulation_config(institution_config)
-    category_id = resolve_rank_category(current_rank)
-    if not category_id:
+    resolution = resolve_rank_kra_weights(current_rank, institution_config)
+    if not resolution.ok:
+        status = "profile_incomplete" if not resolution.category_id else "configuration_error"
         return {
             "configured": False,
             "scoreSource": score_source,
-            "status": "profile_incomplete",
-            "message": "Current rank is missing or not recognized. Complete your profile with a supported rank label.",
+            "status": status,
+            "message": resolution.error,
             "currentRank": current_rank or "",
+            "rankCategory": (
+                {
+                    "id": resolution.category_id,
+                    "label": resolution.category_label,
+                }
+                if resolution.category_id
+                else None
+            ),
         }
-    weights = (rs_config.get("weightMatrixByCategory") or {}).get(category_id) or DEFAULT_WEIGHT_MATRIX[category_id]
+    weights = resolution.weights or {}
+    category_id = resolution.category_id
     wsum = sum(float(weights.get(k, 0)) for k in KRA_IDS)
     raw_by_kra = _extract_raw_by_kra(score_summary)
     kra_lines, overall = apply_rank_weights(raw_by_kra, weights)

@@ -19,15 +19,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   bool _unavailable = false;
   bool _completed = false;
   String _resetToken = '';
-  String _neutralMsg = 'If an eligible account exists, a verification code will be sent.';
+  RecoveryChannel _channel = RecoveryChannel.email;
 
   final _email = TextEditingController();
+  final _phone = TextEditingController();
   final _code = TextEditingController();
   final _password = TextEditingController();
   final _confirm = TextEditingController();
+  final _newPasswordFocus = FocusNode();
+  final _confirmPasswordFocus = FocusNode();
   bool _obscure1 = true;
   bool _obscure2 = true;
   String? _error;
+
+  static const _step2Subtitle =
+      'If recovery is available through your selected method, a code will be sent.';
 
   @override
   void initState() {
@@ -41,14 +47,27 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   void dispose() {
     _email.dispose();
+    _phone.dispose();
     _code.dispose();
     _password.dispose();
     _confirm.dispose();
+    _newPasswordFocus.dispose();
+    _confirmPasswordFocus.dispose();
     super.dispose();
   }
 
-  Future<void> _continueEmail() async {
-    final err = PasswordRecoveryRepository.validateEmail(_email.text);
+  void _onChannelChanged(RecoveryChannel? value) {
+    if (value == null) return;
+    setState(() {
+      _channel = value;
+      _error = null;
+    });
+  }
+
+  Future<void> _sendCode() async {
+    final err = _channel == RecoveryChannel.email
+        ? PasswordRecoveryRepository.validateEmail(_email.text)
+        : PasswordRecoveryRepository.validatePhone(_phone.text);
     setState(() => _error = err);
     if (err != null) return;
     setState(() {
@@ -56,12 +75,16 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       _error = null;
     });
     try {
-      final msg = await PasswordRecoveryRepository.requestCode(_email.text);
+      await PasswordRecoveryRepository.requestCode(
+        channel: _channel,
+        email: _channel == RecoveryChannel.email ? _email.text : null,
+        phone: _channel == RecoveryChannel.sms ? _phone.text : null,
+      );
       if (!mounted) return;
       setState(() {
         _loading = false;
         _step = 2;
-        _neutralMsg = msg;
+        _code.clear();
       });
     } catch (ex) {
       if (!mounted) return;
@@ -78,12 +101,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       _error = null;
     });
     try {
-      final token = await PasswordRecoveryRepository.verifyCode(_email.text, _code.text);
+      final token = await PasswordRecoveryRepository.verifyCode(
+        channel: _channel,
+        code: _code.text,
+        email: _channel == RecoveryChannel.email ? _email.text : null,
+        phone: _channel == RecoveryChannel.sms ? _phone.text : null,
+      );
       if (!mounted) return;
+      FocusManager.instance.primaryFocus?.unfocus();
       setState(() {
         _loading = false;
         _resetToken = token;
         _step = 3;
+        _password.clear();
+        _confirm.clear();
+      });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _step != 3) return;
+        _newPasswordFocus.requestFocus();
       });
     } catch (ex) {
       if (!mounted) return;
@@ -118,6 +153,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         _error = ex.toString().replaceFirst('Exception: ', '');
       });
     }
+  }
+
+  void _changeDeliveryMethod() {
+    setState(() {
+      _step = 1;
+      _error = null;
+      _code.clear();
+    });
   }
 
   @override
@@ -204,66 +247,28 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
             _step == 1
                 ? 'Forgot Password?'
                 : _step == 2
-                    ? 'Check Your Email'
+                    ? 'Enter Verification Code'
                     : 'Set Your New Password',
             style: TextStyle(fontSize: scale.scale(22), fontWeight: FontWeight.w700, color: AppColors.navyDeep),
           ),
           const SizedBox(height: 8),
           Text(
             _step == 1
-                ? 'Enter your account email to request a verification code.'
+                ? 'Choose how to receive your code, then enter the matching account detail.'
                 : _step == 2
-                    ? _neutralMsg
+                    ? _step2Subtitle
                     : 'Choose a new password for your account.',
             style: TextStyle(fontSize: scale.scale(15), color: AppColors.textMuted, height: 1.4),
           ),
           const SizedBox(height: 18),
-          if (_step == 1) ...[
-            TextField(
-              controller: _email,
-              keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(labelText: 'Email Address', prefixIcon: Icon(Icons.mail_outline)),
-            ),
-          ] else if (_step == 2) ...[
-            TextField(
-              controller: _code,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              maxLength: 6,
-              decoration: const InputDecoration(labelText: 'Verification Code', prefixIcon: Icon(Icons.pin_outlined)),
-            ),
-          ] else ...[
-            TextField(
-              controller: _password,
-              obscureText: _obscure1,
-              decoration: InputDecoration(
-                labelText: 'New Password',
-                prefixIcon: const Icon(Icons.lock_outline),
-                suffixIcon: IconButton(
-                  icon: Icon(_obscure1 ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                  onPressed: () => setState(() => _obscure1 = !_obscure1),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _confirm,
-              obscureText: _obscure2,
-              decoration: InputDecoration(
-                labelText: 'Confirm New Password',
-                prefixIcon: const Icon(Icons.lock_outline),
-                suffixIcon: IconButton(
-                  icon: Icon(_obscure2 ? Icons.visibility_outlined : Icons.visibility_off_outlined),
-                  onPressed: () => setState(() => _obscure2 = !_obscure2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'At least 8 characters with one letter and one number.',
-              style: TextStyle(fontSize: scale.scale(14), color: AppColors.textMuted),
-            ),
-          ],
+          KeyedSubtree(
+            key: ValueKey<int>(_step),
+            child: _step == 1
+                ? _step1Fields()
+                : _step == 2
+                    ? _step2Fields()
+                    : _step3Fields(scale),
+          ),
           if (_error != null) ...[
             const SizedBox(height: 10),
             Text(_error!, style: const TextStyle(color: Color(0xFFC62828), fontSize: 15)),
@@ -276,7 +281,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   ? null
                   : () {
                       if (_step == 1) {
-                        _continueEmail();
+                        _sendCode();
                       } else if (_step == 2) {
                         _verifyCode();
                       } else {
@@ -285,21 +290,132 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     },
               child: _loading
                   ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                  : Text(_step == 1 ? 'Send Verification Code' : _step == 2 ? 'Verify Code' : 'Save New Password'),
+                  : Text(_step == 1 ? 'Send Code' : _step == 2 ? 'Verify Code' : 'Save New Password'),
             ),
           ),
           if (_step == 1)
             TextButton(onPressed: () => Navigator.pop(context), child: const Text('Back to Sign In'))
           else if (_step == 2)
             TextButton(
-              onPressed: () => setState(() {
-                _step = 1;
-                _error = null;
-              }),
-              child: const Text('Change Email'),
+              onPressed: _changeDeliveryMethod,
+              child: const Text('Change delivery method'),
             ),
         ],
       ),
+    );
+  }
+
+  Widget _step1Fields() {
+    final scale = MediaQuery.textScalerOf(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'How would you like to receive your code?',
+          style: TextStyle(fontSize: scale.scale(15), fontWeight: FontWeight.w600, color: AppColors.navyDeep),
+        ),
+        const SizedBox(height: 6),
+        RadioGroup<RecoveryChannel>(
+          groupValue: _channel,
+          onChanged: _onChannelChanged,
+          child: Column(
+            children: [
+              RadioListTile<RecoveryChannel>(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Email'),
+                subtitle: const Text('Code sent to your account email'),
+                value: RecoveryChannel.email,
+              ),
+              RadioListTile<RecoveryChannel>(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('SMS'),
+                subtitle: const Text('Uses the verified mobile number on your account.'),
+                value: RecoveryChannel.sms,
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        if (_channel == RecoveryChannel.email)
+          TextField(
+            key: const ValueKey('recovery_email'),
+            controller: _email,
+            keyboardType: TextInputType.emailAddress,
+            autofillHints: const [AutofillHints.email],
+            decoration: const InputDecoration(labelText: 'Email Address', prefixIcon: Icon(Icons.mail_outline)),
+          )
+        else
+          TextField(
+            key: const ValueKey('recovery_phone'),
+            controller: _phone,
+            keyboardType: TextInputType.phone,
+            autofillHints: const [AutofillHints.telephoneNumber],
+            decoration: const InputDecoration(labelText: 'Mobile Number', prefixIcon: Icon(Icons.phone_outlined)),
+          ),
+      ],
+    );
+  }
+
+  Widget _step2Fields() {
+    return TextField(
+      key: const ValueKey('recovery_otp'),
+      controller: _code,
+      keyboardType: TextInputType.number,
+      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+      maxLength: 6,
+      decoration: const InputDecoration(labelText: 'Verification Code', prefixIcon: Icon(Icons.pin_outlined)),
+    );
+  }
+
+  Widget _step3Fields(TextScaler scale) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        TextField(
+          key: const ValueKey('recovery_new_password'),
+          focusNode: _newPasswordFocus,
+          controller: _password,
+          keyboardType: TextInputType.visiblePassword,
+          autocorrect: false,
+          enableSuggestions: false,
+          obscureText: _obscure1,
+          autofillHints: const [AutofillHints.newPassword],
+          decoration: InputDecoration(
+            labelText: 'New Password',
+            prefixIcon: const Icon(Icons.lock_outline),
+            suffixIcon: IconButton(
+              icon: Icon(_obscure1 ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+              onPressed: () => setState(() => _obscure1 = !_obscure1),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        TextField(
+          key: const ValueKey('recovery_confirm_password'),
+          focusNode: _confirmPasswordFocus,
+          controller: _confirm,
+          keyboardType: TextInputType.visiblePassword,
+          autocorrect: false,
+          enableSuggestions: false,
+          obscureText: _obscure2,
+          autofillHints: const [AutofillHints.newPassword],
+          textInputAction: TextInputAction.done,
+          onSubmitted: (_) => _savePassword(),
+          decoration: InputDecoration(
+            labelText: 'Confirm New Password',
+            prefixIcon: const Icon(Icons.lock_outline),
+            suffixIcon: IconButton(
+              icon: Icon(_obscure2 ? Icons.visibility_outlined : Icons.visibility_off_outlined),
+              onPressed: () => setState(() => _obscure2 = !_obscure2),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'At least 8 characters with one letter and one number.',
+          style: TextStyle(fontSize: scale.scale(14), color: AppColors.textMuted),
+        ),
+      ],
     );
   }
 

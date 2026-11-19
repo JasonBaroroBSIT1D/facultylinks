@@ -29,7 +29,7 @@ void main() {
               data: MediaQueryData(size: Size(width, 800), textScaler: TextScaler.noScaling),
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
-                child: HomeKraGrid(repo: repo, onOpenAssessment: () {}),
+                child: HomeKraGrid(repo: repo, onOpenKra: (_) {}),
               ),
             ),
           ),
@@ -60,7 +60,7 @@ void main() {
               data: MediaQueryData(size: Size(width, 900), textScaler: const TextScaler.linear(1.3)),
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
-                child: HomeKraGrid(repo: repo, onOpenAssessment: () {}),
+                child: HomeKraGrid(repo: repo, onOpenKra: (_) {}),
               ),
             ),
           ),
@@ -74,7 +74,7 @@ void main() {
     });
   }
 
-  testWidgets('Rank simulation screen builds without overflow at 360px', (tester) async {
+  testWidgets('Unified My Assessment screen builds without overflow at 360px', (tester) async {
     final repo = await MockRepository.load();
     await tester.binding.setSurfaceSize(const Size(360, 800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -95,17 +95,13 @@ void main() {
     );
     await tester.pump();
 
-    expect(find.text('Rank simulation'), findsOneWidget);
+    expect(find.text('My Assessment'), findsOneWidget);
+    expect(find.text('Current rank'), findsOneWidget);
+    expect(find.text('Potential rank'), findsWidgets);
+    expect(find.text('What-if points'), findsNothing);
+    expect(find.text('Try a Scenario'), findsNothing);
+    expect(find.text('Reset Scenario'), findsNothing);
     expect(tester.takeException(), isNull);
     expect(_overflowIndicators(), findsNothing);
-
-    final viewCalc = find.text('View calculation');
-    if (viewCalc.evaluate().isNotEmpty) {
-      await tester.ensureVisible(viewCalc);
-      await tester.tap(viewCalc);
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
-      expect(_overflowIndicators(), findsNothing);
-    }
   });
 }

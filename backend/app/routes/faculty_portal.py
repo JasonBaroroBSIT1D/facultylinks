@@ -95,8 +95,15 @@ def faculty_scores():
     catalog, weights = get_catalog_for_assessment(data)
     if not catalog or not weights:
         return jsonify({"configured": False, "scores": None, "rankSimulation": None}), 200
-    scores = compute_faculty_scores(data, catalog, weights, faculty_user_id=user.id)
     institution = get_json(INSTITUTION_KEY) or {}
+    scores = compute_faculty_scores(
+        data,
+        catalog,
+        weights,
+        faculty_user_id=user.id,
+        faculty_rank=user.rank,
+        institution_config=institution,
+    )
     rank_simulation = compute_faculty_rank_simulation(
         faculty_rank=user.rank,
         faculty_scores=scores,

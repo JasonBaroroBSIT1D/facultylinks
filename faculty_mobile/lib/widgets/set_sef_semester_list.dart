@@ -4,11 +4,13 @@ import 'package:flutter/material.dart';
 class SetSefSemesterList extends StatelessWidget {
   final List<Map<String, dynamic>> records;
   final String? facultyDisplayName;
+  final bool compactExpandable;
 
   const SetSefSemesterList({
     super.key,
     required this.records,
     this.facultyDisplayName,
+    this.compactExpandable = false,
   });
 
   static String? facultyNameFromRecords(List<Map<String, dynamic>> records) {
@@ -80,15 +82,80 @@ class SetSefSemesterList extends StatelessWidget {
           const SizedBox(height: 12),
         ],
         ...records.map((r) => Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: _SemesterCard(
-                record: r,
-                titleSize: titleSize,
-                bodySize: bodySize,
-                metaSize: metaSize,
-              ),
+              padding: const EdgeInsets.only(bottom: 8),
+              child: compactExpandable
+                  ? _SemesterExpansionTile(record: r, bodySize: bodySize)
+                  : _SemesterCard(
+                      record: r,
+                      titleSize: titleSize,
+                      bodySize: bodySize,
+                      metaSize: metaSize,
+                    ),
             )),
       ],
+    );
+  }
+}
+
+class _SemesterExpansionTile extends StatelessWidget {
+  final Map<String, dynamic> record;
+  final double bodySize;
+
+  const _SemesterExpansionTile({required this.record, required this.bodySize});
+
+  @override
+  Widget build(BuildContext context) {
+    final setExt = SetSefSemesterList._ratingText(record['setRatingExtracted']);
+    final setConf = SetSefSemesterList._ratingText(record['setRatingConfirmed']);
+    final sefExt = SetSefSemesterList._ratingText(record['sefRatingExtracted']);
+    final sefConf = SetSefSemesterList._ratingText(record['sefRatingConfirmed']);
+    final setShow = setConf ?? setExt ?? '—';
+    final sefShow = sefConf ?? sefExt ?? '—';
+    final setStatus = SetSefSemesterList._verifyLabel(record['setVerificationStatus'] as String?);
+    final sefStatus = SetSefSemesterList._verifyLabel(record['sefVerificationStatus'] as String?);
+
+    return Material(
+      color: const Color(0xFFF8FAFC),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: const BorderSide(color: Color(0xFFE2E8F0)),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 10),
+          title: Text(
+            SetSefSemesterList._semesterTitle(record),
+            style: TextStyle(fontSize: bodySize, fontWeight: FontWeight.w700),
+          ),
+          subtitle: Text(
+            'SET $setShow ($setStatus) · SEF $sefShow ($sefStatus)',
+            style: TextStyle(fontSize: bodySize * 0.9, color: Colors.black54, height: 1.3),
+          ),
+          children: [
+            Wrap(
+              spacing: 16,
+              runSpacing: 6,
+              children: [
+                _RatingBlock(label: 'SET', confirmed: setConf, extracted: setExt, fontSize: bodySize),
+                _RatingBlock(label: 'SEF', confirmed: sefConf, extracted: sefExt, fontSize: bodySize),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'SET ${SetSefSemesterList._verifyLabel(record['setVerificationStatus'] as String?)} · '
+              'SEF ${SetSefSemesterList._verifyLabel(record['sefVerificationStatus'] as String?)}',
+              style: TextStyle(fontSize: bodySize, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              SetSefSemesterList._sourceLine(record),
+              style: TextStyle(fontSize: bodySize * 0.93, color: Colors.black54),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

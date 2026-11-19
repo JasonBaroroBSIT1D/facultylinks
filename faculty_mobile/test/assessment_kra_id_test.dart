@@ -8,6 +8,7 @@ void main() {
     expect(kraIdFromCriterion('kra-II-C'), 'kra-II');
     expect(kraIdFromCriterion('kra-I-B'), 'kra-I');
     expect(kraIdFromCriterion('kra-IV-A'), 'kra-IV');
+    expect(tryKraIdFromCriterion('unknown-x'), isNull);
   });
 
   test('kraIdFromIndicator prefers criterion when provided', () {
@@ -17,6 +18,7 @@ void main() {
     );
     expect(kraIdFromIndicator('kra-III-B-2-1'), 'kra-III');
     expect(kraIdFromIndicator('kra-II-B-1-1'), 'kra-II');
+    expect(tryKraIdFromIndicator('not-a-kra'), isNull);
   });
 
   test('kraIdFromPublishedCatalog walks catalog hierarchy', () {

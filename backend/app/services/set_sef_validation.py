@@ -6,6 +6,7 @@ import re
 from dataclasses import dataclass
 
 from app.models import Document, SetSefSemesterRecord, User
+from app.services.catalog import CRITERION_A_POLICY_FLEXIBLE, criterion_a_calculation_params
 from app.services.set_sef_identity import classify_faculty_identity
 
 SET_SEF_COMBINED_INDICATOR = "kra-I-A-setsef-combined"
@@ -32,6 +33,7 @@ def run_set_sef_validations(
     records: list[SetSefSemesterRecord],
     prior_hash: str | None,
     document_kind: str | None = None,
+    catalog: dict | None = None,
 ) -> list[ValidationFinding]:
     kind = document_kind or document.document_kind or "set_sef_combined"
     unified = kind == "set_sef_unified"
@@ -181,16 +183,34 @@ def run_set_sef_validations(
             )
         )
 
-    if len(records) < EXPECTED_SEMESTER_SLOTS:
-        findings.append(
-            ValidationFinding(
-                rule_id="incomplete_semester_count",
-                outcome="review",
-                affected_field=None,
-                semester_key=None,
-                explanation=f"Only {len(records)} of {EXPECTED_SEMESTER_SLOTS} semester slots were extracted.",
+    params = criterion_a_calculation_params(catalog)
+    max_slots = int(params.get("max_semester_slots") or EXPECTED_SEMESTER_SLOTS)
+    flex_policy = params.get("calculation_policy") == CRITERION_A_POLICY_FLEXIBLE
+    if len(records) < max_slots:
+        if flex_policy:
+            findings.append(
+                ValidationFinding(
+                    rule_id="incomplete_semester_count",
+                    outcome="info",
+                    affected_field=None,
+                    semester_key=None,
+                    explanation=(
+                        f"Only {len(records)} of up to {max_slots} semester slots appear on this document. "
+                        "Under the average-available (max six) policy, fewer rows does not invalidate scoring; "
+                        "eligible extracted semesters are averaged when computing Criterion A estimates."
+                    ),
+                )
             )
-        )
+        else:
+            findings.append(
+                ValidationFinding(
+                    rule_id="incomplete_semester_count",
+                    outcome="review",
+                    affected_field=None,
+                    semester_key=None,
+                    explanation=f"Only {len(records)} of {max_slots} semester slots were extracted.",
+                )
+            )
 
     if unified:
         has_set = any(r.set_rating_extracted is not None for r in records)

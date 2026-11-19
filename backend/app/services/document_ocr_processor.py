@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import json
 import logging
 from datetime import datetime, timezone
 
@@ -15,6 +16,8 @@ from app.models import (
     DocumentExtraction,
     DocumentProcessingJob,
     DocumentValidationFinding,
+    FacultyAssessment,
+    User,
 )
 from app.services.catalog import get_published_catalog_and_weights
 from app.services.document_classification import classify_document_kra
@@ -22,6 +25,11 @@ from app.services.document_content_validation import validate_document_content
 from app.services.document_text import extract_document_text, supports_general_ocr
 from app.services.document_validation_config import CLASSIFICATION_VERSION, CONTENT_RULES_VERSION
 from app.services.set_sef_document import is_set_sef_document
+from app.services.infrastructure_errors import (
+    faculty_safe_processing_error,
+    infrastructure_error_faculty_message,
+    is_transient_infrastructure_error,
+)
 from app.services.storage import download_private_file
 
 _log = logging.getLogger(__name__)
@@ -33,25 +41,34 @@ def _file_hash(raw: bytes) -> str:
     return hashlib.sha256(raw).hexdigest()
 
 
-def enqueue_general_ocr_job(document: Document) -> DocumentProcessingJob | None:
+def enqueue_general_ocr_job(
+    document: Document, *, force: bool = False
+) -> DocumentProcessingJob | None:
     if is_set_sef_document(document):
         return None
     if not supports_general_ocr(document.mime_type):
         document.ocr_status = "none"
         document.processing_status = "none"
         return None
+    from app.services.ocr_job_dispatch import recover_stale_jobs, schedule_ocr_job
+
+    recover_stale_jobs(older_than_minutes=1 if force else None)
     existing = (
         DocumentProcessingJob.query.filter_by(document_id=document.id, job_type=JOB_TYPE)
         .filter(DocumentProcessingJob.status.in_(("pending", "running")))
         .first()
     )
     if existing:
+        if existing.status == "pending":
+            schedule_ocr_job(existing.id, JOB_TYPE)
         return existing
     job = DocumentProcessingJob(document_id=document.id, job_type=JOB_TYPE, status="pending")
     document.processing_status = "queued"
     document.ocr_status = "pending"
+    document.processing_error = None
     db.session.add(job)
     db.session.commit()
+    schedule_ocr_job(job.id, JOB_TYPE)
     return job
 
 
@@ -77,9 +94,14 @@ def _preserve_confirmed_fields(document_id: int) -> dict[str, DocumentExtractedF
 
 
 def process_general_ocr_document(document_id: int, job_id: int) -> None:
-    job = db.session.get(DocumentProcessingJob, job_id)
+    job = (
+        DocumentProcessingJob.query.filter_by(id=job_id, status="pending")
+        .with_for_update()
+        .first()
+    )
     doc = db.session.get(Document, document_id)
     if not job or not doc:
+        db.session.rollback()
         return
     if is_set_sef_document(doc):
         job.status = "failed"
@@ -91,6 +113,8 @@ def process_general_ocr_document(document_id: int, job_id: int) -> None:
     job.status = "running"
     job.started_at = datetime.now(timezone.utc)
     job.attempts = (job.attempts or 0) + 1
+    prior_ocr_status = doc.ocr_status
+    prior_processing_status = doc.processing_status
     doc.processing_status = "processing"
     doc.ocr_status = "processing"
     db.session.commit()
@@ -128,14 +152,27 @@ def process_general_ocr_document(document_id: int, job_id: int) -> None:
             prev_ext.superseded_by_id = ext.id
 
         extraction_failed = bool(extracted.error)
-        catalog, _ = get_published_catalog_and_weights()
+        from app.services.catalog import get_catalog_for_assessment
+
+        assess = db.session.get(FacultyAssessment, doc.owner_user_id)
+        assessment_data = assess.data if assess else {}
+        catalog, _ = get_catalog_for_assessment(assessment_data)
+        if not catalog:
+            catalog, _ = get_published_catalog_and_weights()
+        pinned = (assessment_data or {}).get("configVersionId") or (catalog or {}).get("version")
+        if pinned:
+            doc.config_version = str(pinned)
+        owner = db.session.get(User, doc.owner_user_id)
+        profile_name = owner.full_name if owner else None
         content = validate_document_content(
             full_text=extracted.full_text or "",
             pages=extracted.pages_payload(),
             indicator_id=doc.indicator_id,
             kra_id=doc.kra_id,
+            criterion_id=doc.criterion_id,
             extraction_failed=extraction_failed,
             catalog=catalog,
+            profile_full_name=profile_name,
         )
         # Persist rule/coverage version on the extraction row before completion.
         ext.rules_version = content.rules_version or CONTENT_RULES_VERSION
@@ -183,6 +220,31 @@ def process_general_ocr_document(document_id: int, job_id: int) -> None:
             prev_cls.superseded_by_id = cls_row.id
 
         findings_payload = list(content.findings)
+        findings_payload.insert(
+            0,
+            {
+                "rule_id": "validation_configuration_snapshot",
+                "outcome": "info",
+                "affected_field": None,
+                "severity": "info",
+                "rule_version": content.rules_version,
+                "explanation": json.dumps(
+                    {
+                        "contentRulesVersion": content.rules_version,
+                        "coverageStatus": content.coverage_status,
+                        "documentType": content.document_type,
+                        "configVersion": doc.config_version,
+                        "catalogVersion": (catalog or {}).get("version"),
+                        "indicatorId": doc.indicator_id,
+                        "kraId": doc.kra_id,
+                        "criterionId": doc.criterion_id,
+                    },
+                    sort_keys=True,
+                ),
+                "excerpt": None,
+                "source_pages": [],
+            },
+        )
         if classification.outcome == "mismatch_selected":
             findings_payload.append(
                 {
@@ -250,13 +312,29 @@ def process_general_ocr_document(document_id: int, job_id: int) -> None:
         job.last_error = None
         db.session.commit()
     except Exception as exc:
-        err = str(exc)[:480]
-        _log.exception("general OCR failed for document %s", document_id)
-        doc.ocr_status = "failed"
-        doc.processing_status = "failed"
-        doc.processing_error = err
+        technical = str(exc)[:480]
+        infra = is_transient_infrastructure_error(exc)
+        _log.exception(
+            "general OCR failed for document_id=%s job_id=%s (%s)",
+            document_id,
+            job_id,
+            "infrastructure" if infra else "processing",
+        )
+        db.session.rollback()
+        job = db.session.get(DocumentProcessingJob, job_id)
+        doc = db.session.get(Document, document_id)
+        if not job or not doc:
+            return
         job.status = "failed"
-        job.last_error = err
+        job.last_error = technical
         job.finished_at = datetime.now(timezone.utc)
+        if infra:
+            doc.processing_error = infrastructure_error_faculty_message()
+            doc.ocr_status = prior_ocr_status
+            doc.processing_status = prior_processing_status or "queued"
+        else:
+            doc.processing_error = faculty_safe_processing_error(technical, technical_for_logs=technical)
+            doc.ocr_status = "failed"
+            doc.processing_status = "failed"
         db.session.commit()
         raise

@@ -4,8 +4,6 @@ class UiStrings {
   static const estimatedPointsHelp = 'Your current self-assessment estimate.';
   static const verifiedPoints = 'Reviewer-verified points';
   static const verifiedPointsHelp = 'Points checked by your reviewer.';
-  static const whatIfPoints = 'What-if points';
-  static const whatIfPointsHelp = 'Practice changes that do not affect your saved assessment.';
 
   static const rankRulesPending =
       'Rank requirements are not set yet. You can still explore your KRA points.';
@@ -30,25 +28,26 @@ class UiStrings {
   static const emptyDocuments =
       'You have no documents yet. Tap Add Document to begin.';
 
-  static const uploadPdfServerNote =
-      'PDFs and photos are uploaded securely for OCR and reviewer verification. '
-      'Take photo uses your camera to capture an image — it is not an automatic document scan with edge detection or crop.';
+  static const uploadDocumentHint =
+      'Add your files or scan printed documents. You can attach more than one document.';
+
+  /// @Deprecated — use [uploadDocumentHint]
+  static const uploadPdfServerNote = uploadDocumentHint;
 
   static const takePhotoLabel = 'Take photo';
-  static const chooseFileLabel = 'Choose file';
+  static const scanWithCameraLabel = 'Scan with Camera';
+  static const chooseFileLabel = 'Choose File';
+  static const addFilesLabel = 'Add files';
   static const cameraPermissionDenied =
       'Camera permission is required to take a photo. Enable it in system settings, then try again.';
-  static const setSefCameraNotSupported =
-      'SET / SEF evaluation uses a specialized PDF reader. Photos and other images are not supported for this document type — choose a PDF instead.';
 
   static const setSefEvalCardTitle = 'SET / SEF Evaluation';
   static const setSefEvalCardBody =
-      'Upload your evaluation PDF. It may contain SET, SEF, or both. We read the semesters from the file.';
+      'Add evaluation files or scans. You can attach more than one document. We read the semesters from clear text.';
 
   static const specialStatusCardTitle = 'Special Status';
   static const specialStatusCardBody =
       'Upload supporting documents for leave or other circumstances that apply to you.';
 
-  static const setSefUploadHint =
-      'Choose one PDF from your phone or computer. Camera photos are not accepted for SET / SEF because that pipeline only reads PDF text. You can add a short description if you like.';
+  static const setSefUploadHint = uploadDocumentHint;
 }

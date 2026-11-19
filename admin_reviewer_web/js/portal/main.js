@@ -12,6 +12,7 @@ import {
 } from '../repositories/mock-store.js';
 import { PortalApi } from '../services/portal-api.js';
 import { computeKraSummaries } from '../core/scoring.js';
+import { resolveRankKraWeights } from '../core/rank-simulation-config.js';
 import { formatCriterionAEstimateHtml, formatCriterionAVerifiedHtml } from '../core/criterion-a-display.js';
 import {
   buildCriterionADocumentsHtml,
@@ -350,24 +351,70 @@ function renderDashboard(root, title) {
   title.textContent = 'Dashboard';
   const store = MockStore.load();
   const docStats = MockStore.getDocumentStats();
+  const isReviewer = session.role === 'reviewer';
   const facultyCount = store.faculty.filter((f) => f.status === 'active').length;
   const revCount = store.reviewers.filter((r) => r.status === 'active').length;
-  const assigned = session.role === 'reviewer' ? store.faculty.filter((f) => session.reviewerId && store.reviewers.find((r) => r.id === session.reviewerId)?.assignedFacultyIds?.includes(f.id)) : [];
+  const reviewerRecord =
+    isReviewer && session.reviewerId
+      ? store.reviewers.find((r) => r.id === session.reviewerId)
+      : null;
+  const assignedFacultyIds = new Set(reviewerRecord?.assignedFacultyIds || []);
+  const assignedFacultyCount = isReviewer
+    ? store.faculty.filter((f) => assignedFacultyIds.has(f.id)).length
+    : 0;
 
   const ic = store.institutionConfig || DEFAULT_INSTITUTION_CONFIG();
-  const evalCard =
-    session.role === 'reviewer'
-      ? evaluationPeriodReviewerDashboardHtml(ic.preparationPeriod)
-      : '';
+  const activityRows = store.activity
+    .slice(0, 8)
+    .map((a) => `<tr><td>${new Date(a.at).toLocaleString()}</td><td>${a.actor}</td><td>${a.text}</td></tr>`)
+    .join('');
+
+  if (isReviewer) {
+    root.innerHTML = `
+      <section class="fl-dash fl-dash--reviewer" aria-labelledby="dashHeading">
+        ${pageIntro(SCREEN_INTRO.dashboardReviewer)}
+        <h2 id="dashHeading" class="fl-dash__title">Reviewer Dashboard</h2>
+        ${evaluationPeriodReviewerDashboardHtml(ic.preparationPeriod)}
+        <div class="cards fl-dash-cards" role="list">
+          <div class="card fl-dash-card" role="listitem">
+            <h3>Assigned faculty</h3>
+            <div class="val">${assignedFacultyCount}</div>
+          </div>
+          <button type="button" class="card card--link fl-dash-card" data-dash-nav="assigned" role="listitem">
+            <h3>Awaiting review</h3>
+            <div class="val">${docStats.pending || 0}</div>
+            <p class="muted fl-dash-card__meta">${docStats.documentsPending || 0} document(s) · ${docStats.achievementsPending || 0} achievement(s)</p>
+          </button>
+          <div class="card fl-dash-card" role="listitem">
+            <h3>Evidence files</h3>
+            <div class="val">${docStats.bcEvidenceUnlinked || 0}</div>
+            <p class="muted fl-dash-card__meta">Uploaded B/C files without a submitted achievement</p>
+          </div>
+          <div class="card fl-dash-card" role="listitem">
+            <h3>Files approved</h3>
+            <div class="val">${docStats.approved || 0}</div>
+          </div>
+          <div class="card fl-dash-card" role="listitem">
+            <h3>Needs changes</h3>
+            <div class="val">${docStats.correction_requested || 0}</div>
+          </div>
+        </div>
+        <h3 class="fl-dash__section">Recent activity</h3>
+        <div class="table-wrap"><table><thead><tr><th>When</th><th>Actor</th><th>Event</th></tr></thead><tbody>
+          ${activityRows}
+        </tbody></table></div>
+      </section>`;
+    root.querySelector('[data-dash-nav="assigned"]')?.addEventListener('click', () => navigate('assigned'));
+    return;
+  }
 
   root.innerHTML = `
-    ${pageIntro(session.role === 'admin' ? SCREEN_INTRO.dashboardAdmin : SCREEN_INTRO.dashboardReviewer)}
-    <h2 style="margin-top:0">${session.role === 'admin' ? 'Admin' : 'Reviewer'} Dashboard</h2>
-    ${evalCard}
+    ${pageIntro(SCREEN_INTRO.dashboardAdmin)}
+    <h2 style="margin-top:0">Admin Dashboard</h2>
     <p class="muted" style="font-size:0.9rem;margin-bottom:0.75rem">Awaiting review = documents (SET/SEF and legacy) + submitted KRA I B/C achievements. Supporting evidence files alone are not counted until the faculty submits an achievement.</p>
     <div class="cards">
-      <div class="card"><h3>Active faculty</h3><div class="val">${session.role === 'reviewer' ? assigned.length : facultyCount}</div></div>
-      <div class="card"><h3>Active reviewers</h3><div class="val">${session.role === 'admin' ? revCount : '—'}</div></div>
+      <div class="card"><h3>Active faculty</h3><div class="val">${facultyCount}</div></div>
+      <div class="card"><h3>Active reviewers</h3><div class="val">${revCount}</div></div>
       <button type="button" class="card card--link" data-dash-nav="assigned" style="text-align:left"><h3>Awaiting review</h3><div class="val">${docStats.pending || 0}</div><p class="muted" style="font-size:0.85rem;margin:0.35rem 0 0">${docStats.documentsPending || 0} document(s) · ${docStats.achievementsPending || 0} achievement(s)</p></button>
       <div class="card"><h3>Evidence files (not queued)</h3><div class="val">${docStats.bcEvidenceUnlinked || 0}</div><p class="muted" style="font-size:0.85rem;margin:0.35rem 0 0">Uploaded B/C files without a submitted achievement</p></div>
       <div class="card"><h3>Files approved</h3><div class="val">${docStats.approved || 0}</div></div>
@@ -376,10 +423,7 @@ function renderDashboard(root, title) {
     </div>
     <h3>Recent activity</h3>
     <div class="table-wrap"><table><thead><tr><th>When</th><th>Actor</th><th>Event</th></tr></thead><tbody>
-      ${store.activity
-        .slice(0, 8)
-        .map((a) => `<tr><td>${new Date(a.at).toLocaleString()}</td><td>${a.actor}</td><td>${a.text}</td></tr>`)
-        .join('')}
+      ${activityRows}
     </tbody></table></div>
   `;
   root.querySelector('[data-dash-nav="assigned"]')?.addEventListener('click', () => navigate('assigned'));
@@ -642,14 +686,14 @@ function evaluationPeriodReviewerDashboardHtml(period) {
   const status = computeEvaluationPeriodStatus(period);
   const rev = reviewerAvailabilityDetail(period);
   return `
-    <div class="card fl-eval-period-card fl-eval-period-card--compact" style="margin-bottom:1rem" aria-labelledby="dash-eval-period">
+    <div class="card fl-eval-period-card fl-eval-period-card--compact fl-dash-eval" aria-labelledby="dash-eval-period">
       <div class="fl-eval-period-card__head">
         <h3 id="dash-eval-period" style="margin:0">Evaluation Period</h3>
         <span class="badge-status ${statusBadgeClass(status)}">${status}</span>
       </div>
-      <p style="margin:0.35rem 0 0;font-weight:600">${formatEvaluationDate(period.start)} – ${formatEvaluationDate(period.end)}</p>
-      <p class="muted" style="margin:0.35rem 0 0;font-size:0.9rem">Reviewer availability: ${rev.shortLabel}</p>
-      <p class="muted" style="margin:0.5rem 0 0;font-size:0.85rem">Schedule is read-only for reviewers.</p>
+      <p class="fl-dash-eval__range">${formatEvaluationDate(period.start)} – ${formatEvaluationDate(period.end)}</p>
+      <p class="muted fl-dash-eval__meta">Reviewer availability: ${rev.shortLabel}</p>
+      <p class="muted fl-dash-eval__note">Schedule is read-only for reviewers.</p>
     </div>`;
 }
 
@@ -837,12 +881,13 @@ function docBelongsToIndicator(d, indId, catalogIndicatorIds) {
 
 function ocrStatusLabel(s) {
   const map = {
-    pending: 'OCR pending',
-    queued: 'OCR queued',
-    processing: 'OCR processing',
-    completed: 'OCR complete',
-    failed: 'OCR failed',
-    review_required: 'OCR needs review',
+    pending: 'Waiting for document processing.',
+    queued: 'Waiting for document processing.',
+    processing: 'Reading and checking the document.',
+    completed: 'Extraction complete',
+    failed: 'Extraction incomplete',
+    review_required: 'Needs reviewer confirmation',
+    none: '—',
   };
   return map[s] || s || '—';
 }
@@ -919,11 +964,12 @@ function identitySummaryFromRecords(records) {
 
 function processingStatusLabel(s) {
   const map = {
-    completed: 'Complete',
-    processing: 'Processing',
+    completed: 'Job finished',
+    processing: 'Reading and checking the document.',
     failed: 'Failed',
-    pending: 'Pending',
-    queued: 'Queued',
+    pending: 'Waiting for document processing.',
+    queued: 'Waiting for document processing.',
+    none: '—',
   };
   return map[s] || s || '—';
 }
@@ -932,13 +978,23 @@ function statusChip(label, tone = 'neutral') {
   return `<span class="doc-status-chip doc-status-chip--${tone}">${label}</span>`;
 }
 
-function verifyControlButton(kind, recordId, isVerified) {
+function identityAllowsRatingVerify(identityStatus) {
+  return identityStatus === 'match';
+}
+
+function verifyControlButton(kind, recordId, isVerified, identityStatus) {
   if (isVerified) return '';
   const attr = kind === 'set' ? `data-verify-set="${recordId}"` : `data-verify-sef="${recordId}"`;
   const label = kind === 'set' ? 'Verify SET' : 'Verify SEF';
-  return `<button type="button" class="btn-verify" ${attr} data-verify-label="${label}">
+  const blocked = !identityAllowsRatingVerify(identityStatus);
+  const title = blocked
+    ? 'Confirm faculty identity on this document before verifying ratings.'
+    : '';
+  return `<button type="button" class="btn-verify" ${attr} data-verify-label="${label}"${
+    blocked ? ' disabled aria-disabled="true"' : ''
+  } title="${title}">
     <span class="btn-verify__label">${label}</span>
-  </button>`;
+  </button>${blocked ? `<p class="btn-verify__hint muted">Identity must be confirmed (match) before ${label}.</p>` : ''}`;
 }
 
 function formatScoringVerifiedHtml(scoringVer, verifyCounts) {
@@ -1217,12 +1273,35 @@ function ensureSetSefVerificationDelegation() {
   if (!host || host._verifyDelegationBound) return;
   host._verifyDelegationBound = true;
   host.addEventListener('click', (ev) => {
+    const resolveBtn = ev.target.closest('[data-resolve-identity]');
+    if (resolveBtn?.closest('.doc-review-page')) {
+      ev.preventDefault();
+      void runSetSefIdentityResolution(resolveBtn);
+      return;
+    }
     const btn = ev.target.closest('[data-verify-set], [data-verify-sef]');
     if (!btn || !btn.closest('.doc-review-page') || btn.disabled) return;
     if (ev.target.closest('.btn-verify__retry')) return;
     ev.preventDefault();
     void runSemesterVerification(btn);
   });
+}
+
+async function runSetSefIdentityResolution(btn) {
+  const pageRoot = btn.closest('.doc-review-page');
+  if (!pageRoot) return;
+  const docId = pageRoot.dataset.reviewDocId;
+  if (!docId || state.route !== 'review') return;
+  const resolution = btn.getAttribute('data-resolve-identity');
+  if (!resolution) return;
+  btn.disabled = true;
+  try {
+    await PortalApi.resolveSetSefIdentity(docId, { resolution });
+    await renderReview({ ...state.params, docId }, document.getElementById('appContent'));
+  } catch (e) {
+    alert(e.message || 'Identity resolution was not saved.');
+    btn.disabled = false;
+  }
 }
 
 let _workspaceRenderSeq = 0;
@@ -1586,8 +1665,14 @@ async function renderWorkspace(root, title) {
   const rules = rulesForFaculty(storeFresh, facId);
   const catalogOk = rules.state === 'ok' && rules.catalog;
   const catalogForUi = catalogOk ? rules.catalog : null;
-  const kraSum = catalogOk ? computeKraSummaries(ass, rules.catalog, rules.kraWeights) : { overallWeighted: 0, byKra: {} };
   const ic = storeFresh.institutionConfig || DEFAULT_INSTITUTION_CONFIG();
+  const rankWt = resolveRankKraWeights(fac.rank, ic);
+  const kraWeightMap = rankWt.ok
+    ? rankWt.weights
+    : { 'kra-I': 0, 'kra-II': 0, 'kra-III': 0, 'kra-IV': 0 };
+  const kraSum = catalogOk
+    ? computeKraSummaries(ass, rules.catalog, kraWeightMap, rankWt)
+    : { overallWeighted: 0, byKra: {} };
   const estWt = kraSum.overallWeighted;
   const verifiedAss = {
     ...ass,
@@ -1599,7 +1684,7 @@ async function renderWorkspace(root, title) {
     ),
   };
   const verSum = catalogOk
-    ? computeKraSummaries(verifiedAss, rules.catalog, rules.kraWeights)
+    ? computeKraSummaries(verifiedAss, rules.catalog, kraWeightMap, rankWt)
     : { overallWeighted: 0, byKra: {} };
 
   const catalogBanner = workspaceCatalogStatusMessage(rules, catalogLoad);
@@ -1660,15 +1745,19 @@ async function renderWorkspace(root, title) {
     ${
       folder === WS_FOLDER_FACULTY
         ? `<details class="ws-kra-reference card">
-      <summary class="ws-kra-reference__summary">Weighted KRA simulation (reference)</summary>
+      <summary class="ws-kra-reference__summary">Overall weighted score (JC3 Table 2.2 · current rank)</summary>
       <p>Estimated weighted total: <strong>${estWt.toFixed(2)}</strong> · Reviewer-verified weighted: <strong>${verSum.overallWeighted.toFixed(2)}</strong></p>
-      <p class="muted" style="font-size:0.85rem">Preparation only — not an official promotion decision.${catalogOk ? ` Rules: ${rules.versionId}${rules.pinned ? ' (pinned to assessment)' : ''}.` : ' Requires a published catalog.'}</p>
+      <p class="muted" style="font-size:0.85rem">${
+        rankWt.ok
+          ? `Weights: ${rankWt.categoryLabel} · current rank ${rankWt.currentRank || '—'}.`
+          : (rankWt.error || 'Rank weights unavailable.')
+      } Preparation only — not an official promotion decision.${catalogOk ? ` Catalog: ${rules.versionId}${rules.pinned ? ' (pinned)' : ''}.` : ' Requires a published catalog.'}</p>
       ${
         catalogOk
           ? Object.values(kraSum.byKra)
               .map(
                 (k) =>
-                  `<div style="margin-top:0.35rem">${k.name}: est. ${k.weightedContribution.toFixed(2)} · verified ${(verSum.byKra[k.kraId]?.weightedContribution ?? 0).toFixed(2)}</div>`
+                  `<div style="margin-top:0.35rem">${k.name}: raw ${k.rawTotal.toFixed(2)} × ${k.weightPercent ?? Math.round((k.weight || 0) * 100)}% → est. ${k.weightedContribution.toFixed(2)} · verified ${(verSum.byKra[k.kraId]?.weightedContribution ?? 0).toFixed(2)}</div>`
               )
               .join('')
           : '<p class="muted" style="font-size:0.9rem">Manual KRA weighting is hidden until the published rule tree is loaded.</p>'
@@ -1869,9 +1958,26 @@ async function renderDocumentReview(root, title) {
     ? `${facultyMember.firstName} ${facultyMember.lastName}`.trim()
     : semesterRecords[0]?.facultyNameExtracted || '—';
   const extractedName = semesterRecords[0]?.facultyNameExtracted;
+  const profileName = semesterRecords[0]?.profileFacultyName || facultyDisplay;
   const identityNote =
-    extractedName && facultyMember && extractedName.toLowerCase() !== facultyDisplay.toLowerCase()
-      ? `<p class="doc-review-meta__note">Extracted name in PDF: <strong>${extractedName}</strong></p>`
+    extractedName && profileName && extractedName.toLowerCase() !== String(profileName).toLowerCase()
+      ? `<p class="doc-review-meta__note">Extracted name in PDF: <strong>${extractedName}</strong> · Profile: <strong>${profileName}</strong></p>`
+      : extractedName
+        ? `<p class="doc-review-meta__note">Extracted name in PDF: <strong>${extractedName}</strong></p>`
+        : identityInfo.primary === 'missing'
+          ? `<p class="doc-review-meta__note doc-review-meta__note--warn">Faculty name was not read from the text layer. Use header OCR retry or confirm identity below before verifying ratings.</p>`
+          : '';
+  const identityResolutionBlock =
+    isSetSefPdf && identityInfo.primary !== 'match'
+      ? `<div class="doc-identity-resolve" data-doc-id="${docFresh.id}">
+          <p class="muted">Confirm that the name on the PDF matches the faculty profile before SET/SEF verification.</p>
+          <p class="muted">Extracted: <strong>${extractedName || '—'}</strong> · Profile: <strong>${profileName || '—'}</strong> · Status: <strong>${identityInfo.summary}</strong></p>
+          <div class="doc-identity-resolve__actions">
+            <button type="button" class="btn-primary-sm btn-sm" data-resolve-identity="match" ${extractedName ? '' : 'disabled title="No extracted name to confirm."'}>Confirm identity match</button>
+            <button type="button" class="btn-ghost btn-sm" data-resolve-identity="needs_confirmation">Mark needs confirmation</button>
+            <button type="button" class="btn-ghost btn-sm" data-resolve-identity="mismatch">Mark mismatch</button>
+          </div>
+        </div>`
       : '';
 
   const semesterRowHtml = (r) => {
@@ -1887,11 +1993,11 @@ async function renderDocumentReview(root, title) {
       <td class="doc-sem-verify-col">${rowIdentity}
         <div class="doc-sem-verify">
           <span class="doc-verify-badge" data-record-badge="${r.id}-set" data-v="${recordComponentVerified(r, 'set') ? 'verified' : r.setVerificationStatus || 'pending'}">SET · ${verifyStatusShort(r.setVerificationStatus, { confirmed: r.setRatingConfirmed })}</span>
-          ${verifyControlButton('set', r.id, recordComponentVerified(r, 'set'))}
+          ${verifyControlButton('set', r.id, recordComponentVerified(r, 'set'), r.facultyIdentityStatus)}
         </div>
         <div class="doc-sem-verify">
           <span class="doc-verify-badge" data-record-badge="${r.id}-sef" data-v="${recordComponentVerified(r, 'sef') ? 'verified' : r.sefVerificationStatus || 'pending'}">SEF · ${verifyStatusShort(r.sefVerificationStatus, { confirmed: r.sefRatingConfirmed })}</span>
-          ${verifyControlButton('sef', r.id, recordComponentVerified(r, 'sef'))}
+          ${verifyControlButton('sef', r.id, recordComponentVerified(r, 'sef'), r.facultyIdentityStatus)}
         </div>
       </td>
       <td class="doc-sem-pages">${formatSourcePages(r)}</td>
@@ -1915,9 +2021,9 @@ async function renderDocumentReview(root, title) {
       ${rowIdentity}
       <div class="doc-sem-card__actions">
         <span class="doc-verify-badge" data-record-badge="${r.id}-set" data-v="${recordComponentVerified(r, 'set') ? 'verified' : r.setVerificationStatus || 'pending'}">SET · ${verifyStatusShort(r.setVerificationStatus, { confirmed: r.setRatingConfirmed })}</span>
-        ${verifyControlButton('set', r.id, recordComponentVerified(r, 'set'))}
+        ${verifyControlButton('set', r.id, recordComponentVerified(r, 'set'), r.facultyIdentityStatus)}
         <span class="doc-verify-badge" data-record-badge="${r.id}-sef" data-v="${recordComponentVerified(r, 'sef') ? 'verified' : r.sefVerificationStatus || 'pending'}">SEF · ${verifyStatusShort(r.sefVerificationStatus, { confirmed: r.sefRatingConfirmed })}</span>
-        ${verifyControlButton('sef', r.id, recordComponentVerified(r, 'sef'))}
+        ${verifyControlButton('sef', r.id, recordComponentVerified(r, 'sef'), r.facultyIdentityStatus)}
       </div>
     </article>`;
   };
@@ -1958,19 +2064,28 @@ async function renderDocumentReview(root, title) {
         <button type="button" class="btn-ghost btn-sm" id="saveGenFields">Save field corrections</button>`
     : '<p class="muted">No structured fields extracted (rules may be unconfigured for this indicator).</p>';
   const coverage = generalValidation?.coverage;
+  const hierarchy = generalValidation?.hierarchy || {};
+  const hierarchyHtml = `<dl class="doc-review-meta">
+        <div><dt>Selected KRA</dt><dd>${hierarchy.kraName || hierarchy.kraId || docFresh.kraId || '—'}</dd></div>
+        <div><dt>Criterion</dt><dd>${hierarchy.criterionName || hierarchy.criterionId || docFresh.criterionId || '—'}</dd></div>
+        <div><dt>Indicator</dt><dd>${hierarchy.indicatorName || hierarchy.indicatorId || docFresh.indicatorId || '—'}</dd></div>
+        <div><dt>Catalog / rules</dt><dd>${hierarchy.configVersion || coverage?.rulesVersion || '—'}</dd></div>
+      </dl>`;
   const coverageHtml = coverage
     ? `<dl class="doc-review-meta">
-        <div><dt>Coverage</dt><dd>${coverage.status || '—'}</dd></div>
+        <div><dt>Coverage</dt><dd>${coverage.status || '—'}${coverage.fullyValidated ? '' : ' (assistive — not full validation)'}</dd></div>
         <div><dt>Document type</dt><dd>${coverage.documentType || '—'}</dd></div>
         <div><dt>OCR fields</dt><dd>${(coverage.ocrFields || []).join(', ') || '—'}</dd></div>
         <div><dt>Form-only fields</dt><dd class="rep-wrap">${(coverage.formOnlyFields || []).join(', ') || '—'}</dd></div>
+        <div><dt>Automatic checks</dt><dd class="rep-wrap">${(coverage.automaticChecks || []).join(', ') || '—'}</dd></div>
+        <div><dt>Manual review gaps</dt><dd class="rep-wrap">${(coverage.manualReviewGaps || []).join(' ') || '—'}</dd></div>
         <div><dt>Rules version</dt><dd>${coverage.rulesVersion || generalValidation?.extraction?.rulesVersion || '—'}</dd></div>
       </dl>
       <p class="muted rep-wrap">${coverage.reason || ''}</p>`
     : '';
   const generalClassHtml = generalClass
     ? `<dl class="doc-review-meta">
-        <div><dt>Selected KRA</dt><dd>${generalClass.selectedKraId || '—'}</dd></div>
+        <div><dt>Selected KRA</dt><dd>${generalClass.selectedKraId || hierarchy.kraId || '—'}</dd></div>
         <div><dt>Suggested KRA</dt><dd>${generalClass.suggestedKraId || '—'}</dd></div>
         <div><dt>Classification</dt><dd>${generalClass.outcome || '—'}</dd></div>
         <div><dt>Notes</dt><dd class="rep-wrap">${generalClass.ambiguityNotes || '—'}</dd></div>
@@ -1978,9 +2093,16 @@ async function renderDocumentReview(root, title) {
       <p class="muted">Suggestions use project keyword heuristics and do not move the file or change the selected KRA.</p>`
     : '<p class="muted">No classification result yet.</p>';
 
+  const setSefHierarchy = setSefPayload?.hierarchy || {};
+  const setSefHierarchyHtml = `<dl class="doc-review-meta">
+        <div><dt>Selected KRA</dt><dd>${setSefHierarchy.kraName || setSefHierarchy.kraId || docFresh.kraId || '—'}</dd></div>
+        <div><dt>Criterion</dt><dd>${setSefHierarchy.criterionName || setSefHierarchy.criterionId || docFresh.criterionId || '—'}</dd></div>
+        <div><dt>Indicator</dt><dd>${setSefHierarchy.indicatorName || setSefHierarchy.indicatorId || docFresh.indicatorId || '—'}</dd></div>
+      </dl>`;
   const extractionBlock = isSetSefPdf
     ? semesterRecords.length
-      ? `<div class="doc-semester-table-wrap">
+      ? `${setSefHierarchyHtml}
+        <div class="doc-semester-table-wrap">
           <table class="doc-semester-table">
             <thead><tr>
               <th>AY</th><th>Sem</th><th>SET</th><th>SEF</th><th>Verification</th><th>Page</th>
@@ -1996,23 +2118,30 @@ async function renderDocumentReview(root, title) {
                 .join('')}</ul>`
             : '<ul class="doc-findings-list"><li class="muted">No SET/SEF validation findings.</li></ul>'
         }`
-      : `<p class="muted">${
+      : `${setSefHierarchyHtml}<p class="muted">${
           (ocrRawEarly === 'failed' || procRawEarly === 'failed')
-            ? 'Extraction failed — no semester rows were persisted. Use Retry OCR after fixing the file or OCR tools.'
-            : (ocrRawEarly === 'pending' || ocrRawEarly === 'processing' || procRawEarly === 'queued' || procRawEarly === 'processing')
-              ? 'No semester records yet. OCR is still queued or processing — keep the OCR worker running.'
-              : 'No eligible semester records. Extraction may have found none, or all rows are outside the selected scoring window.'
+            ? `Processing failed${docFresh?.processingError ? `: ${docFresh.processingError}` : '.'} Use Retry OCR after fixing the document, then refresh.`
+            : (ocrRawEarly === 'pending' || procRawEarly === 'queued' || procRawEarly === 'pending')
+              ? 'Waiting for document processing. Semester ratings appear here after processing finishes — validation has not run yet.'
+              : (ocrRawEarly === 'processing' || procRawEarly === 'processing')
+                ? 'Reading and checking the document. Extracted values and rule findings will appear when processing completes.'
+                : 'No eligible semester records. Extraction may have found none, or all rows are outside the selected scoring window.'
         }</p>
         ${
-          (setSefPayload?.validationFindings || []).length
-            ? `<ul class="doc-findings-list">${(setSefPayload.validationFindings || [])
-                .map((f) => `<li><strong>${f.ruleId}</strong> (${f.outcome}): ${f.explanation}</li>`)
-                .join('')}</ul>`
-            : ''
+          (ocrRawEarly === 'pending' || ocrRawEarly === 'processing' || procRawEarly === 'queued' || procRawEarly === 'processing' || procRawEarly === 'pending')
+            ? ''
+            : (setSefPayload?.validationFindings || []).length
+              ? `<ul class="doc-findings-list">${(setSefPayload.validationFindings || [])
+                  .map((f) => `<li><strong>${f.ruleId}</strong> (${f.outcome}): ${f.explanation}</li>`)
+                  .join('')}</ul>`
+              : ''
         }`
     : generalValidation
       ? `<div class="doc-general-ocr">
           <p class="muted">General OCR assists review only — it does not award points, approve evidence, or verify authenticity.</p>
+          ${generalValidation?.processing?.pending ? `<p class="muted" role="status">${generalValidation.processing.message || 'Waiting for document processing. Validation has not completed.'}</p>` : ''}
+          <h5>Selected hierarchy</h5>
+          ${hierarchyHtml}
           <h5>Rule coverage</h5>
           ${coverageHtml || '<p class="muted">Coverage metadata unavailable.</p>'}
           <h5>Suggested vs selected KRA</h5>
@@ -2028,10 +2157,12 @@ async function renderDocumentReview(root, title) {
         </div>`
       : `<p class="muted">${
           (ocrRawEarly === 'failed' || procRawEarly === 'failed')
-            ? 'Extraction failed. Findings may still be listed after Retry OCR.'
-            : (ocrRawEarly && ocrRawEarly !== 'none') || (procRawEarly && procRawEarly !== 'none')
-              ? 'OCR is queued or unavailable. Keep the document OCR worker running, then refresh.'
-              : 'No OCR validation payload for this document yet.'
+            ? `Processing failed${docFresh?.processingError ? `: ${docFresh.processingError}` : '.'} Use Retry OCR, then refresh.`
+            : (ocrRawEarly === 'pending' || procRawEarly === 'queued' || procRawEarly === 'pending')
+              ? 'Waiting for document processing. Validation findings are not available yet — this is not a pass.'
+              : (ocrRawEarly === 'processing' || procRawEarly === 'processing')
+                ? 'Reading and checking the document. Results appear when processing completes — validation has not passed yet.'
+                : 'No OCR validation payload for this document yet.'
         }</p>`;
 
   const scoringBlock =
@@ -2067,6 +2198,10 @@ async function renderDocumentReview(root, title) {
   const procSt = processingStatusLabel(procRaw);
   const ocrTone = ocrRaw === 'completed' ? 'ok' : ocrRaw === 'failed' ? 'danger' : 'warn';
   const procTone = procRaw === 'completed' ? 'ok' : procRaw === 'failed' ? 'danger' : 'warn';
+  const statusChipsHtml =
+    procRaw === 'completed' && ocrRaw === 'failed'
+      ? statusChip(ocrSt, 'warn')
+      : `${statusChip(ocrSt, ocrTone)} ${statusChip(procSt, procTone)}`;
 
   const bcAchievementBanner = bcReviewViaAchievement
     ? `<p class="doc-review-bc-banner" role="status">This file is supporting evidence for achievement <strong>${bcParentLink.achievement.title || 'Untitled'}</strong>. Review and scoring happen on the achievement — not per file.</p>
@@ -2124,7 +2259,7 @@ async function renderDocumentReview(root, title) {
                 <div><dt>Faculty</dt><dd>${facultyDisplay}</dd></div>
                 <div><dt>Document</dt><dd>${docTypeLabel}</dd></div>
                 <div><dt>Submitted</dt><dd>${submitted}</dd></div>
-                <div><dt>Status</dt><dd class="doc-review-meta__status">${statusChip(ocrSt, ocrTone)} ${statusChip(procSt, procTone)}</dd></div>
+                <div><dt>Status</dt><dd class="doc-review-meta__status">${statusChipsHtml}</dd></div>
                 ${
                   isSetSefPdf
                     ? `<div><dt>Identity check</dt><dd>${identityInfo.summary}</dd></div>`
@@ -2132,6 +2267,7 @@ async function renderDocumentReview(root, title) {
                 }
               </dl>
               ${identityNote}
+              ${identityResolutionBlock}
               ${docFresh.processingError ? `<p class="doc-review-error">${docFresh.processingError}</p>` : ''}
             </section>
             ${
@@ -2277,7 +2413,7 @@ async function renderDocumentReview(root, title) {
       if (revErr) revErr.textContent = '';
       if (revOk) {
         revOk.hidden = false;
-        revOk.textContent = 'OCR requeued. Keep the worker running, then refresh.';
+        revOk.textContent = 'OCR queued. Reading and checking the document — refresh shortly for results.';
       }
       navigate('review', { docId: docFresh.id });
     } catch (e) {
@@ -2291,7 +2427,7 @@ async function renderDocumentReview(root, title) {
       await PortalApi.retrySetSefOcr(docFresh.id);
       if (revOk) {
         revOk.hidden = false;
-        revOk.textContent = 'SET/SEF OCR requeued. Keep the worker running, then refresh.';
+        revOk.textContent = 'Document requeued. Reading and checking the document — refresh shortly for results.';
       }
       navigate('review', { docId: docFresh.id });
     } catch (e) {

@@ -77,6 +77,7 @@ Future<void> uploadAllPendingAchievementAttachments({
   required List<AchievementAttachment> attachments,
   required String indicatorId,
   required String kraId,
+  String? criterionId,
   String? title,
 }) async {
   for (final item in attachments) {
@@ -86,6 +87,7 @@ Future<void> uploadAllPendingAchievementAttachments({
         item: item,
         indicatorId: indicatorId,
         kraId: kraId,
+        criterionId: criterionId,
         title: title,
       );
     }
@@ -96,6 +98,7 @@ Future<void> uploadAchievementAttachment({
   required AchievementAttachment item,
   required String indicatorId,
   required String kraId,
+  String? criterionId,
   String? title,
 }) async {
   item.status = AchievementAttachmentStatus.uploading;
@@ -113,6 +116,7 @@ Future<void> uploadAchievementAttachment({
       mimeType: item.mimeType,
       indicatorId: indicatorId,
       kraId: kraId,
+      criterionId: criterionId,
       title: title,
     );
     item.progress = 0.85;

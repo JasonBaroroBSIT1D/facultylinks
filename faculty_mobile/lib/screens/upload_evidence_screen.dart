@@ -6,8 +6,10 @@ import 'package:flutter/material.dart';
 import '../core/ui_strings.dart';
 import '../data/assessment_catalog.dart';
 import '../repositories/mock_repository.dart';
+import '../services/achievement_attachment_upload.dart';
 import '../services/camera_document_capture.dart';
 import '../services/document_api.dart';
+import '../services/document_scan_session.dart';
 import '../services/selected_upload_file.dart';
 import 'kra_i_achievement_screen.dart';
 import '../theme/app_spacing.dart';
@@ -41,24 +43,40 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
   CriterionNode? _crit;
   IndicatorNode? _ind;
   _CriterionADocChoice? _criterionAChoice;
-  SelectedUploadFile? _selectedFile;
+  final List<UploadSessionItem> _sessionItems = [];
   bool _pickingFile = false;
   bool _capturingPhoto = false;
   bool _uploading = false;
-  final _cameraCapture = CameraDocumentCapture();
+  bool _openingAchievement = false;
+  bool _didAutoOpenAchievement = false;
   final _title = TextEditingController();
   final _year = TextEditingController();
   final _sem = TextEditingController();
   final _scrollController = ScrollController();
 
-  String? get _fileName => _selectedFile?.filename;
-  bool get _hasReadableFile => _selectedFile?.isReadable == true;
+  bool get _hasReadableFile =>
+      _sessionItems.isNotEmpty && _sessionItems.every((i) => i.isReadable);
+  int get _selectedCount => _sessionItems.length;
+  bool get _hasFailedUploads =>
+      _sessionItems.any((i) => i.status == UploadSessionItemStatus.failed);
+  bool get _allUploaded =>
+      _sessionItems.isNotEmpty && _sessionItems.every((i) => i.isUploaded);
+  List<UploadSessionItem> get _itemsNeedingUpload =>
+      _sessionItems.where((i) => i.needsUpload).toList();
 
   /// Explicit SET/SEF shortcut from My Assessment (preselect Criterion A only).
   bool get _preselectCriterionA =>
-      widget.initialKraId == 'kra-I' && widget.initialCriterionId == 'kra-I-A';
+      widget.initialKraId == 'kra-I' &&
+      widget.initialCriterionId == 'kra-I-A' &&
+      widget.initialIndicatorId == null;
 
-  bool get _skipKraCriterionSteps => _preselectCriterionA;
+  /// Opened from a specific indicator (My Assessment) with full context locked.
+  bool get _lockedIndicatorContext =>
+      widget.initialKraId != null &&
+      widget.initialCriterionId != null &&
+      widget.initialIndicatorId != null;
+
+  bool get _skipKraCriterionSteps => _preselectCriterionA || _lockedIndicatorContext;
 
   bool get _isTeachingCriterionA => _kra?.id == 'kra-I' && _crit?.id == 'kra-I-A';
 
@@ -82,16 +100,27 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
 
   int get _stepCount {
     if (_preselectCriterionA) return 3;
+    if (_lockedIndicatorContext && _isAchievementCriterion) return 1;
+    if (_lockedIndicatorContext) return 2;
     return 4;
   }
 
   int get _reviewStepIndex => _stepCount - 1;
-  int get _fileStepIndex => _stepCount - 2;
+  int get _fileStepIndex => _lockedIndicatorContext && !_isAchievementCriterion
+      ? 0
+      : _stepCount - 2;
 
   @override
   void initState() {
     super.initState();
     _applyInitialSelection();
+    if (_lockedIndicatorContext && _isAchievementCriterion) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _didAutoOpenAchievement) return;
+        _didAutoOpenAchievement = true;
+        _openAchievementFlow(replaceUpload: true);
+      });
+    }
   }
 
   void _applyInitialSelection() {
@@ -105,23 +134,39 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
       }
     }
     if (kra == null) return;
+
+    // Never invent Criterion A (or any first criterion) when criterion id is missing.
     CriterionNode? crit;
-    for (final c in kra.criteria) {
-      if (widget.initialCriterionId == null || c.id == widget.initialCriterionId) {
-        crit = c;
-        break;
+    final wantedCrit = widget.initialCriterionId;
+    if (wantedCrit != null) {
+      for (final c in kra.criteria) {
+        if (c.id == wantedCrit) {
+          crit = c;
+          break;
+        }
       }
     }
+
     IndicatorNode? ind;
-    if (crit != null && widget.initialIndicatorId != null) {
-      ind = indicatorById(widget.repo.catalogKras, widget.initialIndicatorId!);
+    final wantedInd = widget.initialIndicatorId;
+    if (crit != null && wantedInd != null) {
+      final candidates = <IndicatorNode>[
+        ...crit.indicators,
+        ...scoringIndicatorsForCriterion(crit),
+        if (crit.id == 'kra-I-A') ...setSefDocumentIntakeIndicators,
+      ];
+      for (final i in candidates) {
+        if (i.id == wantedInd) {
+          ind = i;
+          break;
+        }
+      }
     }
-    setState(() {
-      _kra = kra;
-      _crit = crit;
-      _ind = ind;
-      _step = 0;
-    });
+
+    _kra = kra;
+    _crit = crit;
+    _ind = ind;
+    _step = 0;
   }
 
   @override
@@ -223,13 +268,7 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
       if (step == fileStep) {
         if (!_hasReadableFile) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Choose a file to continue.')),
-          );
-          return false;
-        }
-        if (_isSetSefOcrPdf && _selectedFile!.mimeType != 'application/pdf') {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Please choose a PDF file.')),
+            const SnackBar(content: Text('Add at least one file or scan to continue.')),
           );
           return false;
         }
@@ -288,7 +327,7 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
         }
         if (!_hasReadableFile) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Choose a file to continue.')),
+            const SnackBar(content: Text('Add at least one file or scan to continue.')),
           );
           return false;
         }
@@ -306,7 +345,7 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
 
   void _continue() {
     if (!_validateStep(_step)) return;
-    if (_isAchievementCriterion && _step == 1) {
+    if (_isAchievementCriterion && (_step == 1 || _lockedIndicatorContext)) {
       _openAchievementFlow();
       return;
     }
@@ -319,19 +358,38 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
     _next();
   }
 
-  Future<void> _openAchievementFlow() async {
-    if (_crit == null || _ind == null) return;
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => KraIAchievementScreen(
-          repo: widget.repo,
-          criterion: _crit!,
-          indicator: _ind,
-          onSave: widget.onSave,
-        ),
-      ),
-    );
+  Future<void> _openAchievementFlow({bool replaceUpload = false}) async {
+    if (_openingAchievement) return;
+    if (_kra == null || _crit == null || _ind == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Choose a KRA, criterion, and indicator before continuing.')),
+      );
+      return;
+    }
+    setState(() => _openingAchievement = true);
+    try {
+      final page = KraIAchievementScreen(
+        repo: widget.repo,
+        kraId: _kra!.id,
+        criterion: _crit!,
+        indicator: _ind,
+        onSave: widget.onSave,
+      );
+      if (replaceUpload) {
+        await Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => page),
+        );
+      } else {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => page),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _openingAchievement = false);
+    }
   }
 
   String get _documentCategoryLabel {
@@ -348,7 +406,71 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
     return 'My Documents → ${_kra?.shortDropdownLabel ?? ''} → ${_crit?.name ?? ''} → ${_ind!.name}';
   }
 
-  Future<void> _submit() async {
+  void _appendDocument(PendingDocumentUpload doc) {
+    final dup = _sessionItems.any((i) => i.document.sameContentAs(doc) && i.status != UploadSessionItemStatus.failed);
+    if (dup) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('That document is already in your list.')),
+      );
+      return;
+    }
+    _sessionItems.add(
+      UploadSessionItem(
+        localKey: newUploadSessionLocalKey(doc.displayName),
+        document: doc,
+      ),
+    );
+  }
+
+  void _removeSessionItem(String localKey) {
+    if (_uploading) return;
+    setState(() => _sessionItems.removeWhere((i) => i.localKey == localKey));
+  }
+
+  Future<void> _uploadOneItem(UploadSessionItem item) async {
+    if (item.isUploaded) return;
+    item.status = UploadSessionItemStatus.uploading;
+    item.progress = 0.2;
+    item.errorMessage = null;
+    if (mounted) setState(() {});
+    try {
+      final baseTitle = _title.text.trim();
+      final title = baseTitle.isEmpty
+          ? item.document.displayName
+          : (_sessionItems.length > 1
+              ? '$baseTitle · ${item.document.displayName}'
+              : baseTitle);
+      final body = await DocumentApi.upload(
+        pages: item.document.pages
+            .map((p) => (bytes: p.bytes, filename: p.filename, mimeType: p.mimeType))
+            .toList(),
+        indicatorId: _ind!.id,
+        kraId: _kra!.id,
+        criterionId: _crit?.id,
+        title: title,
+      );
+      item.progress = 0.85;
+      var publicId = DocumentApi.publicIdFromUploadResponse(body);
+      publicId ??= await DocumentApi.reconcileStoredUpload(
+        filename: item.document.displayName,
+        indicatorId: _ind!.id,
+        sizeBytes: item.document.sizeBytes,
+      );
+      if (publicId == null || publicId.isEmpty) {
+        throw Exception('Upload succeeded but no document ID was returned.');
+      }
+      item.publicId = publicId;
+      item.status = UploadSessionItemStatus.uploaded;
+      item.progress = 1;
+    } catch (e) {
+      item.status = UploadSessionItemStatus.failed;
+      item.errorMessage = e.toString().replaceFirst('Exception: ', '');
+      item.progress = 0;
+    }
+    if (mounted) setState(() {});
+  }
+
+  Future<void> _submit({bool retryFailedOnly = false}) async {
     if (_uploading) return;
     if (_ind == null || _kra == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -358,13 +480,7 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
     }
     if (!_hasReadableFile) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _fileName == null
-                ? 'Choose a file to continue.'
-                : 'The selected file could not be read. Please select it again.',
-          ),
-        ),
+        const SnackBar(content: Text('Add at least one file or scan to continue.')),
       );
       return;
     }
@@ -376,164 +492,154 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
         return;
       }
     }
-    setState(() => _uploading = true);
-    try {
-      final file = _selectedFile!;
-      final body = await DocumentApi.upload(
-        bytes: file.bytes,
-        filename: file.filename,
-        mimeType: file.mimeType,
-        indicatorId: _ind!.id,
-        kraId: _kra!.id,
-        title: _title.text.trim().isEmpty ? file.filename : _title.text.trim(),
-      );
-      final publicId = DocumentApi.publicIdFromUploadResponse(body);
-      if (publicId == null || publicId.isEmpty) {
-        throw Exception('Upload succeeded but no document ID was returned.');
+
+    final queue = retryFailedOnly
+        ? _sessionItems.where((i) => i.status == UploadSessionItemStatus.failed).toList()
+        : _itemsNeedingUpload;
+    if (queue.isEmpty) {
+      if (_allUploaded) {
+        await widget.repo.save();
+        await widget.onSave();
+        if (!mounted) return;
+        Navigator.pop(context);
       }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _uploading = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
-      );
       return;
     }
-    // Clear only after a successful upload.
-    _selectedFile = null;
+
+    setState(() => _uploading = true);
+    for (final item in queue) {
+      if (!mounted) return;
+      await _uploadOneItem(item);
+    }
+    if (!mounted) return;
+    setState(() => _uploading = false);
+
+    final failed = _sessionItems.where((i) => i.status == UploadSessionItemStatus.failed).length;
+    final ok = _sessionItems.where((i) => i.isUploaded).length;
     await widget.repo.save();
     await widget.onSave();
     if (!mounted) return;
+
+    if (failed > 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '$ok uploaded · $failed failed. Retry failed files without re-sending successful ones.',
+          ),
+        ),
+      );
+      return;
+    }
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
           _isSetSefOcrPdf
-              ? 'Your PDF was received. We will read the semesters and your reviewer will verify the results.'
-              : 'Your document was sent for review.',
+              ? (ok == 1
+                  ? 'Your evaluation was received. We will read the semesters; your reviewer verifies results before they count.'
+                  : '$ok evaluations received. Overlapping semesters are flagged for reviewer confirmation — not double-counted.')
+              : (ok == 1 ? 'Your document was sent for review.' : '$ok documents were sent for review.'),
         ),
       ),
     );
+    _sessionItems.clear();
     Navigator.pop(context);
   }
 
-  Future<void> _pickFile() async {
+  Future<void> _pickFiles() async {
     if (_pickingFile || _capturingPhoto || _uploading) return;
-    final previous = _selectedFile;
-    final pdfOnly = _isSetSefOcrPdf;
     setState(() => _pickingFile = true);
     try {
       final r = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: pdfOnly ? ['pdf'] : ['pdf', 'png', 'jpg', 'jpeg', 'webp'],
+        allowMultiple: true,
+        allowedExtensions: const ['pdf', 'png', 'jpg', 'jpeg', 'webp'],
         withData: true,
       );
       if (!mounted) return;
-      // Cancel / dismiss: keep prior selection.
+      // Cancel / dismiss: keep prior selection list.
       if (r == null || r.files.isEmpty) {
         setState(() => _pickingFile = false);
         return;
       }
-      final picked = r.files.single;
-      final loaded = await readPlatformFileForUpload(picked);
-      if (!mounted) return;
-      if (loaded == null || !loaded.isReadable) {
-        setState(() {
-          _pickingFile = false;
-          _selectedFile = previous;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('The selected file could not be read. Please select it again.'),
+      var added = 0;
+      for (final picked in r.files) {
+        final loaded = await readPlatformFileForUpload(picked);
+        if (loaded == null || !loaded.isReadable) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Could not read ${picked.name}. Skipped.')),
+            );
+          }
+          continue;
+        }
+        final err = validatePickedFile(
+          filename: loaded.filename,
+          size: loaded.sizeBytes,
+          extension: picked.extension,
+        );
+        if (err != null) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$err (${loaded.filename})')));
+          }
+          continue;
+        }
+        final doc = PendingDocumentUpload.single(loaded);
+        final dup = _sessionItems.any((i) => i.document.sameContentAs(doc));
+        if (dup) continue;
+        _sessionItems.add(
+          UploadSessionItem(
+            localKey: newUploadSessionLocalKey(loaded.filename),
+            document: doc,
           ),
         );
-        return;
+        added++;
       }
-      if (pdfOnly && loaded.mimeType != 'application/pdf') {
-        setState(() {
-          _pickingFile = false;
-          _selectedFile = previous;
-        });
+      if (!mounted) return;
+      setState(() => _pickingFile = false);
+      if (added == 0 && r.files.isNotEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text(UiStrings.setSefCameraNotSupported)),
+          const SnackBar(content: Text('No new files were added.')),
         );
-        return;
       }
-      setState(() {
-        _selectedFile = loaded;
-        _pickingFile = false;
-      });
     } catch (_) {
       if (!mounted) return;
-      setState(() {
-        _pickingFile = false;
-        _selectedFile = previous;
-      });
+      setState(() => _pickingFile = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('The selected file could not be read. Please select it again.'),
-        ),
+        const SnackBar(content: Text('Could not read one or more files. Please try again.')),
       );
     }
   }
 
-  Future<void> _takePhoto() async {
+  Future<void> _scanWithCamera() async {
     if (_pickingFile || _capturingPhoto || _uploading) return;
-    if (_isSetSefOcrPdf) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text(UiStrings.setSefCameraNotSupported)),
-      );
-      return;
-    }
-    final previous = _selectedFile;
     setState(() => _capturingPhoto = true);
     try {
-      while (mounted) {
-        final captured = await _cameraCapture.captureDocumentPhoto();
-        if (!mounted) return;
-        // Cancel: keep prior selection through submit/retry.
-        if (captured == null) {
-          setState(() {
-            _capturingPhoto = false;
-            _selectedFile = previous;
-          });
-          return;
-        }
-        final keep = await showCapturedPhotoPreview(
-          context,
-          bytes: Uint8List.fromList(captured.bytes),
-          filename: captured.filename,
-        );
-        if (!mounted) return;
-        if (keep == true) {
-          setState(() {
-            _selectedFile = captured;
-            _capturingPhoto = false;
-          });
-          return;
-        }
-        // Retake or dialog dismiss without Use photo: loop camera again
-        // but still preserve [previous] until a photo is accepted.
-        if (keep == null) {
-          setState(() {
-            _capturingPhoto = false;
-            _selectedFile = previous;
-          });
-          return;
-        }
+      final session = DocumentScanSession();
+      await session.captureAndAdd(context);
+      if (!mounted) return;
+      if (session.isEmpty) {
+        setState(() => _capturingPhoto = false);
+        return;
       }
+      final confirmed = await showScanSessionEditor(context, session: session);
+      if (!mounted) return;
+      if (confirmed != true || session.isEmpty) {
+        setState(() => _capturingPhoto = false);
+        return;
+      }
+      final doc = PendingDocumentUpload.scanPages(List.of(session.pages));
+      setState(() {
+        _appendDocument(doc);
+        _capturingPhoto = false;
+      });
     } on CameraCaptureException catch (e) {
       if (!mounted) return;
-      setState(() {
-        _capturingPhoto = false;
-        _selectedFile = previous;
-      });
+      setState(() => _capturingPhoto = false);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (!mounted) return;
-      setState(() {
-        _capturingPhoto = false;
-        _selectedFile = previous;
-      });
+      setState(() => _capturingPhoto = false);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Could not capture a photo. Please try again.')),
       );
@@ -811,7 +917,7 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
         if (critA != null)
           _bigChoiceCard(
             title: 'A. Teaching Effectiveness',
-            body: 'SET/SEF evaluation PDFs or special-status supporting documents.',
+            body: 'SET/SEF evaluations (file or camera scan) or special-status supporting documents.',
             icon: Icons.school_outlined,
             selected: _crit?.id == 'kra-I-A',
             onTap: () => pick(critA),
@@ -853,7 +959,7 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
         _bigChoiceCard(
           title: UiStrings.setSefEvalCardTitle,
           body: UiStrings.setSefEvalCardBody,
-          icon: Icons.picture_as_pdf_outlined,
+          icon: Icons.fact_check_outlined,
           selected: _criterionAChoice == _CriterionADocChoice.setSef,
           onTap: () => _selectCriterionAChoice(_CriterionADocChoice.setSef),
           textScale: textScale,
@@ -872,6 +978,12 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
   }
 
   String get _compactStepLabel {
+    if (_lockedIndicatorContext && _isAchievementCriterion) {
+      return 'Open achievement';
+    }
+    if (_lockedIndicatorContext && !_isAchievementCriterion) {
+      return _step == 0 ? 'Add file' : 'Check and send';
+    }
     if (_isTeachingCriterionA && _skipKraCriterionSteps) {
       switch (_step) {
         case 0:
@@ -906,7 +1018,37 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
     }
   }
 
+  Widget _lockedContextSummary(TextScaler textScale) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Selected from My Assessment',
+          style: TextStyle(fontSize: textScale.scale(16), fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 10),
+        Text(_kra?.shortDropdownLabel ?? widget.initialKraId ?? '', style: TextStyle(fontSize: textScale.scale(15))),
+        Text(_crit?.name ?? widget.initialCriterionId ?? '', style: TextStyle(fontSize: textScale.scale(15))),
+        Text(_ind?.name ?? widget.initialIndicatorId ?? '', style: TextStyle(fontSize: textScale.scale(15), fontWeight: FontWeight.w600)),
+        const SizedBox(height: 12),
+        Text(
+          _isAchievementCriterion
+              ? 'Opening the achievement form for this indicator. You will not need to choose the KRA again.'
+              : 'Upload evidence for this indicator. The KRA and criterion stay fixed.',
+          style: TextStyle(fontSize: textScale.scale(15), color: AppColors.textMuted, height: 1.45),
+        ),
+      ],
+    );
+  }
+
   Widget _activeStepBody(TextScaler textScale) {
+    if (_lockedIndicatorContext && _isAchievementCriterion) {
+      return _lockedContextSummary(textScale);
+    }
+    if (_lockedIndicatorContext && !_isAchievementCriterion) {
+      if (_step == 0) return _fileStepContent(textScale);
+      return _reviewStepContent(textScale);
+    }
     if (_isTeachingCriterionA && _skipKraCriterionSteps) {
       if (_step == 0) return _buildCriterionAChoices(textScale);
       if (_step == _fileStepIndex) return _fileStepContent(textScale);
@@ -1080,6 +1222,115 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
     );
   }
 
+  Widget _sessionItemTile(UploadSessionItem item, TextScaler textScale, {bool showStatus = false}) {
+    final doc = item.document;
+    final canRemove = !_uploading && item.status != UploadSessionItemStatus.uploading;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: AppColors.cardWhite,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(10, 10, 4, 10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (doc.isImage || doc.isMultiPage)
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.memory(
+                    Uint8List.fromList(doc.primary.bytes),
+                    width: 56,
+                    height: 56,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) => const SizedBox(
+                      width: 56,
+                      height: 56,
+                      child: Icon(Icons.insert_drive_file_outlined),
+                    ),
+                  ),
+                )
+              else
+                Container(
+                  width: 56,
+                  height: 56,
+                  alignment: Alignment.center,
+                  decoration: BoxDecoration(
+                    color: AppColors.primarySoft,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    doc.primary.mimeType == 'application/pdf'
+                        ? Icons.picture_as_pdf_outlined
+                        : Icons.insert_drive_file_outlined,
+                    color: AppColors.primaryBlue,
+                  ),
+                ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      doc.displayName,
+                      style: TextStyle(fontSize: textScale.scale(14), fontWeight: FontWeight.w600, height: 1.3),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      [
+                        doc.sizeLabel,
+                        if (doc.fromCamera) (doc.isMultiPage ? 'camera scan' : 'camera photo'),
+                        if (doc.isMultiPage) '${doc.pages.length} pages',
+                      ].where((s) => s.isNotEmpty).join(' · '),
+                      style: TextStyle(fontSize: textScale.scale(12), color: AppColors.textMuted),
+                    ),
+                    if (showStatus) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        switch (item.status) {
+                          UploadSessionItemStatus.pending => 'Ready to upload',
+                          UploadSessionItemStatus.uploading => 'Uploading…',
+                          UploadSessionItemStatus.uploaded => 'Uploaded',
+                          UploadSessionItemStatus.failed => item.errorMessage ?? 'Upload failed',
+                        },
+                        style: TextStyle(
+                          fontSize: textScale.scale(12),
+                          color: switch (item.status) {
+                            UploadSessionItemStatus.uploaded => AppColors.success,
+                            UploadSessionItemStatus.failed => AppColors.redText,
+                            UploadSessionItemStatus.uploading => AppColors.primaryBlue,
+                            UploadSessionItemStatus.pending => AppColors.textMuted,
+                          },
+                          height: 1.3,
+                        ),
+                      ),
+                      if (item.status == UploadSessionItemStatus.uploading)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 6),
+                          child: LinearProgressIndicator(value: item.progress > 0 ? item.progress : null, minHeight: 3),
+                        ),
+                    ],
+                  ],
+                ),
+              ),
+              if (canRemove)
+                IconButton(
+                  tooltip: 'Remove',
+                  onPressed: () => _removeSessionItem(item.localKey),
+                  icon: const Icon(Icons.close),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _fileStepContent(TextScaler textScale) {
     if (_isAchievementCriterion) {
       return Text(
@@ -1087,7 +1338,6 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
         style: TextStyle(fontSize: textScale.scale(16), color: AppColors.textMuted, height: 1.45),
       );
     }
-    final pdfOnly = _isSetSefOcrPdf;
     final busy = _pickingFile || _capturingPhoto || _uploading;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1104,11 +1354,11 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
           children: [
             Semantics(
               button: true,
-              label: 'Choose file from device',
+              label: 'Add files from device',
               child: SizedBox(
                 height: 52,
                 child: FilledButton.icon(
-                  onPressed: busy ? null : _pickFile,
+                  onPressed: busy ? null : _pickFiles,
                   icon: _pickingFile
                       ? const SizedBox(
                           width: 22,
@@ -1117,77 +1367,56 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
                         )
                       : const Icon(Icons.attach_file, size: 26),
                   label: Text(
-                    _pickingFile
-                        ? 'Reading file…'
-                        : (_fileName != null && !_selectedFile!.fromCamera
-                            ? _fileName!
-                            : (pdfOnly ? 'Choose PDF' : UiStrings.chooseFileLabel)),
+                    _pickingFile ? 'Reading files…' : UiStrings.addFilesLabel,
                     overflow: TextOverflow.ellipsis,
                     maxLines: 2,
                   ),
                 ),
               ),
             ),
-            if (!pdfOnly)
-              Semantics(
-                button: true,
-                label: 'Take photo with camera',
-                child: SizedBox(
-                  height: 52,
-                  child: OutlinedButton.icon(
-                    onPressed: busy ? null : _takePhoto,
-                    icon: _capturingPhoto
-                        ? const SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
-                        : const Icon(Icons.photo_camera_outlined, size: 26),
-                    label: Text(
-                      _capturingPhoto
-                          ? 'Opening camera…'
-                          : (_selectedFile?.fromCamera == true ? (_fileName ?? UiStrings.takePhotoLabel) : UiStrings.takePhotoLabel),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 2,
-                    ),
+            Semantics(
+              button: true,
+              label: 'Scan document with camera',
+              child: SizedBox(
+                height: 52,
+                child: OutlinedButton.icon(
+                  onPressed: busy ? null : _scanWithCamera,
+                  icon: _capturingPhoto
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.document_scanner_outlined, size: 26),
+                  label: Text(
+                    _capturingPhoto ? 'Opening camera…' : UiStrings.scanWithCameraLabel,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 2,
                   ),
                 ),
               ),
+            ),
           ],
         ),
-        if (pdfOnly) ...[
-          const SizedBox(height: 8),
-          Text(
-            UiStrings.setSefCameraNotSupported,
-            style: TextStyle(fontSize: textScale.scale(14), color: AppColors.textMuted, height: 1.4),
-          ),
-        ],
-        if (_hasReadableFile) ...[
-          const SizedBox(height: 8),
-          if (_selectedFile!.isImage)
-            ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: Image.memory(
-                Uint8List.fromList(_selectedFile!.bytes),
-                height: 140,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) => const SizedBox.shrink(),
-              ),
-            ),
-          const SizedBox(height: 8),
-          Text(
-            '${_selectedFile!.fromCamera ? 'Photo ready' : 'Ready'} · '
-            '${(_selectedFile!.sizeBytes / 1024).toStringAsFixed(1)} KB'
-            '${_fileName != null ? ' · $_fileName' : ''}',
-            style: TextStyle(fontSize: textScale.scale(14), color: AppColors.success, fontWeight: FontWeight.w600),
-          ),
-        ],
         const SizedBox(height: 12),
         Text(
-          pdfOnly ? UiStrings.setSefUploadHint : UiStrings.uploadPdfServerNote,
+          UiStrings.uploadDocumentHint,
           style: TextStyle(fontSize: textScale.scale(15), color: AppColors.textMuted, height: 1.45),
         ),
-        const SizedBox(height: 16),
+        if (_sessionItems.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(
+            '$_selectedCount document${_selectedCount == 1 ? '' : 's'} selected',
+            style: TextStyle(
+              fontSize: textScale.scale(14),
+              fontWeight: FontWeight.w700,
+              color: AppColors.primaryBlue,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ..._sessionItems.map((item) => _sessionItemTile(item, textScale)),
+        ],
+        const SizedBox(height: 8),
         TextField(
           controller: _title,
           decoration: const InputDecoration(
@@ -1223,20 +1452,11 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
         Text('Document type: $_documentCategoryLabel', style: TextStyle(fontSize: textScale.scale(16))),
         const SizedBox(height: 6),
         Text(
-          'File: ${_hasReadableFile ? _fileName! : (_fileName ?? "—")}'
-          '${_selectedFile?.fromCamera == true ? ' (camera photo)' : ''}',
-          style: TextStyle(fontSize: textScale.scale(16)),
+          '$_selectedCount document${_selectedCount == 1 ? '' : 's'}',
+          style: TextStyle(fontSize: textScale.scale(16), fontWeight: FontWeight.w600),
         ),
-        if (_hasReadableFile)
-          Text(
-            'Size: ${(_selectedFile!.sizeBytes / 1024).toStringAsFixed(1)} KB',
-            style: TextStyle(fontSize: textScale.scale(15), color: AppColors.textMuted),
-          )
-        else if (_fileName != null)
-          Text(
-            'The selected file could not be read. Please select it again.',
-            style: TextStyle(fontSize: textScale.scale(15), color: AppColors.amberText, height: 1.4),
-          ),
+        const SizedBox(height: 8),
+        ..._sessionItems.map((item) => _sessionItemTile(item, textScale, showStatus: true)),
         Text(
           'Description: ${_title.text.isEmpty ? "—" : _title.text}',
           style: TextStyle(fontSize: textScale.scale(16)),
@@ -1244,8 +1464,8 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
         const SizedBox(height: 12),
         Text(
           _isSetSefOcrPdf
-              ? 'We will read semesters from your PDF. Your reviewer checks names and scores before they count toward your assessment.'
-              : 'Your reviewer will check this document against the published rules.',
+              ? 'Each evaluation is processed separately. Overlapping semester ratings are flagged for reviewer confirmation — not silently overwritten or double-counted.'
+              : 'Your reviewer will check each document against the published rules.',
           style: TextStyle(fontSize: textScale.scale(15), height: 1.45, color: AppColors.textMuted),
         ),
       ],
@@ -1290,28 +1510,40 @@ class _UploadEvidenceScreenState extends State<UploadEvidenceScreen> {
   }
 
   Widget _stepControls() {
+    final openAchievement = _isAchievementCriterion &&
+        (_step == 1 || (_lockedIndicatorContext && _step == 0));
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
-        if (_step > 0)
-          TextButton(onPressed: _uploading ? null : _back, child: const Text('Back')),
-        if (_step < _reviewStepIndex)
+        if (_step > 0 && !_lockedIndicatorContext)
+          TextButton(onPressed: (_uploading || _openingAchievement) ? null : _back, child: const Text('Back')),
+        if (_step < _reviewStepIndex || openAchievement)
           FilledButton(
-            onPressed: _uploading ? null : _continue,
-            child: Text(_isAchievementCriterion && _step == 1 ? 'Open achievement' : 'Continue'),
+            onPressed: (_uploading || _openingAchievement) ? null : _continue,
+            child: Text(openAchievement ? 'Open achievement' : 'Continue'),
           ),
-        if (_step == _reviewStepIndex && !_isAchievementCriterion)
+        if (_step == _reviewStepIndex && !_isAchievementCriterion) ...[
+          if (_hasFailedUploads)
+            OutlinedButton(
+              onPressed: _uploading ? null : () => _submit(retryFailedOnly: true),
+              child: const Text('Retry failed'),
+            ),
           FilledButton(
-            onPressed: (_uploading || !_hasReadableFile) ? null : _submit,
+            onPressed: (_uploading || !_hasReadableFile) ? null : () => _submit(),
             child: _uploading
                 ? const SizedBox(
                     width: 22,
                     height: 22,
                     child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                   )
-                : const Text('Send for review'),
+                : Text(
+                    _allUploaded
+                        ? 'Done'
+                        : (_hasFailedUploads ? 'Upload remaining' : 'Send for review'),
+                  ),
           ),
+        ],
       ],
     );
   }

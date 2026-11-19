@@ -1,9 +1,19 @@
+import logging
+import time
 import uuid
 from functools import lru_cache
 from typing import BinaryIO
 
 from flask import current_app
 from supabase import Client, create_client
+
+from app.services.infrastructure_errors import is_transient_infrastructure_error
+
+_log = logging.getLogger(__name__)
+
+STORAGE_DOWNLOAD_MAX_ATTEMPTS = 4
+STORAGE_DOWNLOAD_TIMEOUT_SEC = 120
+STORAGE_DOWNLOAD_BACKOFF_SEC = (0.4, 1.0, 2.0)
 
 
 class StorageNotConfiguredError(RuntimeError):
@@ -17,7 +27,24 @@ def storage_configured() -> bool:
 
 @lru_cache(maxsize=1)
 def _cached_client(url: str, key: str) -> Client:
-    return create_client(url, key)
+    try:
+        from supabase import ClientOptions
+
+        return create_client(
+            url,
+            key,
+            options=ClientOptions(
+                postgrest_client_timeout=STORAGE_DOWNLOAD_TIMEOUT_SEC,
+                storage_client_timeout=STORAGE_DOWNLOAD_TIMEOUT_SEC,
+            ),
+        )
+    except Exception:
+        return create_client(url, key)
+
+
+def reset_storage_client() -> None:
+    """Drop cached Supabase client so the next call opens a fresh HTTP connection."""
+    _cached_client.cache_clear()
 
 
 def _client() -> Client:
@@ -57,8 +84,29 @@ def delete_private_file(key: str) -> None:
 
 
 def download_private_file(key: str) -> bytes:
-    client = _client()
-    return client.storage.from_(_bucket()).download(key)
+    """Download object bytes with bounded retries on transient socket/network errors."""
+    last_exc: Exception | None = None
+    for attempt in range(STORAGE_DOWNLOAD_MAX_ATTEMPTS):
+        try:
+            client = _client()
+            return client.storage.from_(_bucket()).download(key)
+        except Exception as exc:
+            last_exc = exc
+            if not is_transient_infrastructure_error(exc) or attempt >= STORAGE_DOWNLOAD_MAX_ATTEMPTS - 1:
+                raise
+            reset_storage_client()
+            delay = STORAGE_DOWNLOAD_BACKOFF_SEC[min(attempt, len(STORAGE_DOWNLOAD_BACKOFF_SEC) - 1)]
+            _log.warning(
+                "Storage download retry %s/%s for %s after %s: %s",
+                attempt + 1,
+                STORAGE_DOWNLOAD_MAX_ATTEMPTS,
+                key,
+                type(exc).__name__,
+                exc,
+            )
+            time.sleep(delay)
+    assert last_exc is not None
+    raise last_exc
 
 
 def presigned_get_url(key: str, *, expires_in: int = 300) -> str:

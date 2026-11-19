@@ -16,10 +16,12 @@ from app.services.auth_context import (
 )
 from app.services.password_policy import validate_new_password
 from app.services.password_recovery import (
+    RECOVERY_CHANNELS,
     complete_password_reset,
     request_recovery_code,
     verify_recovery_code,
 )
+from app.services.phone_numbers import normalize_ph_mobile_e164
 from app.services.passwords import hash_password, verify_password
 
 bp = Blueprint("auth", __name__)
@@ -113,21 +115,54 @@ def change_password():
 @bp.post("/api/auth/password-recovery/request")
 def recovery_request():
     data = request.get_json(silent=True) or {}
+    raw_channel = (data.get("channel") or "").strip().lower()
+    channel = raw_channel or None
+    if channel and channel not in RECOVERY_CHANNELS:
+        return jsonify({"error": "Invalid delivery channel."}), 400
+
+    if channel == "sms":
+        phone = (data.get("phone") or "").strip()
+        if not normalize_ph_mobile_e164(phone):
+            return jsonify({"error": "Enter a valid Philippine mobile number (09XXXXXXXXX or +639XXXXXXXXX)."}), 400
+        result = request_recovery_code(channel="sms", phone=phone)
+        return jsonify(result)
+
+    if channel == "email":
+        email = (data.get("email") or "").strip()
+        if not email or "@" not in email:
+            return jsonify({"error": "Enter a valid email address."}), 400
+        result = request_recovery_code(channel="email", email=email)
+        return jsonify(result)
+
     email = (data.get("email") or "").strip()
     if not email or "@" not in email:
         return jsonify({"error": "Enter a valid email address."}), 400
-    result = request_recovery_code(email)
+    result = request_recovery_code(email=email, channel=None)
     return jsonify(result)
 
 
 @bp.post("/api/auth/password-recovery/verify")
 def recovery_verify():
     data = request.get_json(silent=True) or {}
-    email = (data.get("email") or "").strip()
     code = data.get("code") or ""
-    if not email:
+    raw_channel = (data.get("channel") or "").strip().lower()
+    channel = raw_channel or None
+    if channel and channel not in RECOVERY_CHANNELS:
+        return jsonify({"error": "Invalid delivery channel."}), 400
+
+    email = (data.get("email") or "").strip() or None
+    phone = (data.get("phone") or "").strip() or None
+
+    if channel == "sms":
+        if not normalize_ph_mobile_e164(phone):
+            return jsonify({"error": "Enter a valid Philippine mobile number."}), 400
+    elif channel == "email":
+        if not email:
+            return jsonify({"error": "Email is required."}), 400
+    elif not email:
         return jsonify({"error": "Email is required."}), 400
-    result = verify_recovery_code(email, code)
+
+    result = verify_recovery_code(code, channel=channel, email=email, phone=phone)
     if not result.get("ok"):
         return jsonify({"error": result.get("error") or "Verification failed."}), 400
     return jsonify({"ok": True, "resetToken": result["resetToken"]})

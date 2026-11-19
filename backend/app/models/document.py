@@ -2,6 +2,7 @@ from datetime import datetime, timezone
 import uuid
 
 from app.extensions import db
+from app.services.infrastructure_errors import faculty_safe_processing_error
 
 
 class Document(db.Model):
@@ -23,6 +24,7 @@ class Document(db.Model):
     upload_status = db.Column(db.String(32), nullable=False, default="stored")
     indicator_id = db.Column(db.String(64), nullable=True)
     kra_id = db.Column(db.String(32), nullable=True)
+    criterion_id = db.Column(db.String(64), nullable=True)
     review_status = db.Column(db.String(32), nullable=False, default="pending")
     review_remarks = db.Column(db.Text, nullable=True)
     verified_points = db.Column(db.Numeric(10, 2), nullable=True)
@@ -57,6 +59,7 @@ class Document(db.Model):
             "createdAt": self.created_at.isoformat() if self.created_at else None,
             "indicatorId": self.indicator_id or "",
             "kraId": self.kra_id or "",
+            "criterionId": self.criterion_id or "",
             "reviewStatus": self.review_status,
             "remarks": self.review_remarks or "",
             "verifiedPoints": float(self.verified_points) if self.verified_points is not None else None,
@@ -64,9 +67,14 @@ class Document(db.Model):
             "uploadStatus": self.upload_status,
             "ocrStatus": self.ocr_status,
             "processingStatus": self.processing_status,
-            "processingError": self.processing_error or "",
+            "processingError": faculty_safe_processing_error(self.processing_error),
             "documentKind": self.document_kind or "",
             "configVersion": self.config_version or "",
+            "supersededByPublicId": self.superseded_by_public_id or "",
+            "replaced": self.review_status == "replaced",
+            "canResubmit": self.review_status == "correction_prepared"
+            and not self.superseded_by_public_id
+            and self.upload_status == "stored",
         }
 
     def to_portal_dict(self, owner_public_id: str, reviewer_email: str | None = None) -> dict:
@@ -78,12 +86,13 @@ class Document(db.Model):
             "sizeBytes": int(self.size_bytes) if self.size_bytes is not None else None,
             "indicatorId": self.indicator_id or "",
             "kraId": self.kra_id or "",
+            "criterionId": self.criterion_id or "",
             "reviewStatus": self.review_status,
             "remarks": self.review_remarks or "",
             "verifiedPoints": float(self.verified_points) if self.verified_points is not None else None,
             "ocrStatus": self.ocr_status,
             "processingStatus": self.processing_status,
-            "processingError": self.processing_error or "",
+            "processingError": faculty_safe_processing_error(self.processing_error),
             "documentKind": self.document_kind or "",
             "uploadedAt": self.created_at.isoformat() if self.created_at else None,
             "history": [],

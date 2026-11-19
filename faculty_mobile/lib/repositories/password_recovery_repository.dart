@@ -2,6 +2,8 @@ import 'dart:convert';
 
 import '../services/api_client.dart';
 
+enum RecoveryChannel { email, sms }
+
 class PasswordRecoveryRepository {
   static Future<bool> isAvailable() async => true;
 
@@ -12,8 +14,31 @@ class PasswordRecoveryRepository {
     return null;
   }
 
-  static Future<String> requestCode(String email) async {
-    final res = await ApiClient.postJson('/api/auth/password-recovery/request', {'email': email.trim()});
+  static String? validatePhone(String phone) {
+    final compact = phone.replaceAll(RegExp(r'[\s\-()]'), '');
+    if (compact.isEmpty) return 'Mobile number is required.';
+    final local = RegExp(r'^09\d{9}$');
+    final intl = RegExp(r'^\+639\d{9}$');
+    if (!local.hasMatch(compact) && !intl.hasMatch(compact)) {
+      return 'Enter a valid Philippine mobile number (09XXXXXXXXX or +639XXXXXXXXX).';
+    }
+    return null;
+  }
+
+  static Future<String> requestCode({
+    required RecoveryChannel channel,
+    String? email,
+    String? phone,
+  }) async {
+    final body = <String, dynamic>{
+      'channel': channel == RecoveryChannel.sms ? 'sms' : 'email',
+    };
+    if (channel == RecoveryChannel.email) {
+      body['email'] = (email ?? '').trim();
+    } else {
+      body['phone'] = (phone ?? '').trim();
+    }
+    final res = await ApiClient.postJson('/api/auth/password-recovery/request', body);
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode != 200) {
       throw Exception(data['error'] as String? ?? 'Could not send verification code.');
@@ -21,11 +46,22 @@ class PasswordRecoveryRepository {
     return data['message'] as String? ?? 'If an eligible account exists, a verification code will be sent.';
   }
 
-  static Future<String> verifyCode(String email, String code) async {
-    final res = await ApiClient.postJson('/api/auth/password-recovery/verify', {
-      'email': email.trim(),
+  static Future<String> verifyCode({
+    required RecoveryChannel channel,
+    required String code,
+    String? email,
+    String? phone,
+  }) async {
+    final body = <String, dynamic>{
+      'channel': channel == RecoveryChannel.sms ? 'sms' : 'email',
       'code': code.trim(),
-    });
+    };
+    if (channel == RecoveryChannel.email) {
+      body['email'] = (email ?? '').trim();
+    } else {
+      body['phone'] = (phone ?? '').trim();
+    }
+    final res = await ApiClient.postJson('/api/auth/password-recovery/verify', body);
     final data = jsonDecode(res.body) as Map<String, dynamic>;
     if (res.statusCode != 200) {
       throw Exception(data['error'] as String? ?? 'Invalid or expired verification code.');

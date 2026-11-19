@@ -34,23 +34,34 @@ bool isAchievementCriterion(String kraId, String criterionId) {
 
 /// Parent KRA id for uploads and API (`kra-I`, not criterion `kra-I-B`).
 /// More specific prefixes first — `kra-III-*` must not match `kra-I`.
-String kraIdFromCriterion(String criterionId) {
+/// Returns null when the id does not belong to a known KRA (callers must not invent kra-I).
+String? tryKraIdFromCriterion(String criterionId) {
   if (criterionId.startsWith('kra-III')) return 'kra-III';
   if (criterionId.startsWith('kra-II')) return 'kra-II';
   if (criterionId.startsWith('kra-IV')) return 'kra-IV';
   if (criterionId.startsWith('kra-I')) return 'kra-I';
-  return 'kra-I';
+  return null;
 }
 
-String kraIdFromIndicator(String indicatorId, {String? criterionId}) {
+String kraIdFromCriterion(String criterionId) {
+  return tryKraIdFromCriterion(criterionId) ??
+      (throw ArgumentError.value(criterionId, 'criterionId', 'Unknown criterion KRA prefix'));
+}
+
+String? tryKraIdFromIndicator(String indicatorId, {String? criterionId}) {
   if (criterionId != null && criterionId.isNotEmpty) {
-    return kraIdFromCriterion(criterionId);
+    return tryKraIdFromCriterion(criterionId);
   }
   if (indicatorId.startsWith('kra-III')) return 'kra-III';
   if (indicatorId.startsWith('kra-II')) return 'kra-II';
   if (indicatorId.startsWith('kra-IV')) return 'kra-IV';
   if (indicatorId.startsWith('kra-I')) return 'kra-I';
-  return 'kra-I';
+  return null;
+}
+
+String kraIdFromIndicator(String indicatorId, {String? criterionId}) {
+  return tryKraIdFromIndicator(indicatorId, criterionId: criterionId) ??
+      (throw ArgumentError.value(indicatorId, 'indicatorId', 'Unknown indicator KRA prefix'));
 }
 
 /// Resolve parent KRA from published catalog when [kras] is available.

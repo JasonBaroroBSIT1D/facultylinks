@@ -105,8 +105,10 @@ test('achievement review breadcrumb ends on achievement title', () => {
     criterionId: 'kra-I-B',
     catalog: ASSESSMENT_CATALOG,
     achievementTitle: 'My textbook',
+    indicatorName: '5.1.1 Authored book',
   });
   assert.match(html, /My textbook/);
+  assert.match(html, /5\.1\.1 Authored book/);
   assert.match(html, /aria-current="page"/);
   assert.match(html, /Instructional Materials/);
   assert.match(html, /ws-breadcrumb__icon/);

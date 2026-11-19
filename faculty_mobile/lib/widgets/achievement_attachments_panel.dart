@@ -12,6 +12,7 @@ class AchievementAttachmentsPanel extends StatefulWidget {
   final void Function(List<AchievementAttachment>) onChanged;
   final String indicatorId;
   final String kraId;
+  final String? criterionId;
   final String? titleHint;
 
   const AchievementAttachmentsPanel({
@@ -20,6 +21,7 @@ class AchievementAttachmentsPanel extends StatefulWidget {
     required this.onChanged,
     required this.indicatorId,
     required this.kraId,
+    this.criterionId,
     this.titleHint,
   });
 
@@ -129,6 +131,7 @@ class _AchievementAttachmentsPanelState extends State<AchievementAttachmentsPane
         item: item,
         indicatorId: widget.indicatorId,
         kraId: widget.kraId,
+        criterionId: widget.criterionId,
         title: widget.titleHint,
       );
     } catch (_) {

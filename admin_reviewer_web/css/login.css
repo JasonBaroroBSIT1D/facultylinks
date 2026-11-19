@@ -199,6 +199,92 @@ body {
 .recovery-step { display: none; }
 .recovery-step.active { display: block; }
 .recovery-link { display: inline-block; margin-top: 1rem; }
+.recovery-channel-group {
+  border: 1px solid var(--fl-border, #d8e2ed);
+  border-radius: 12px;
+  margin: 0 0 1.15rem;
+  padding: 0.85rem 1rem 0.75rem;
+  background: #f9fbfd;
+}
+.recovery-channel-legend {
+  margin: 0 0 0.65rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--fl-text-navy, #0b2545);
+  line-height: 1.35;
+}
+.recovery-channel-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.recovery-card .recovery-channel-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.55rem 0.5rem;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 400;
+  color: var(--fl-text-navy, #0b2545);
+}
+.recovery-card .recovery-channel-option:hover {
+  background: rgba(29, 112, 213, 0.06);
+}
+.recovery-card .recovery-channel-option:has(input:checked) {
+  background: rgba(29, 112, 213, 0.1);
+}
+.recovery-card .recovery-channel-option input[type='radio'] {
+  margin: 0.15rem 0 0;
+  flex-shrink: 0;
+  width: 1rem;
+  height: 1rem;
+  accent-color: #1d70d5;
+}
+.recovery-channel-option__body {
+  display: block;
+  flex: 1;
+  min-width: 0;
+}
+.recovery-channel-option__title {
+  display: block;
+  font-weight: 600;
+  font-size: 0.92rem;
+  line-height: 1.3;
+}
+.recovery-channel-option__hint {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 0.82rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+.recovery-card .recovery-step[data-step='1'] .field {
+  margin-top: 0.15rem;
+}
+.recovery-field--hidden {
+  display: none !important;
+}
+/* Channel field swap without JS (matches syncChannelFields). */
+.recovery-step[data-step='1']:has(#chEmail:checked) #fieldPhone {
+  display: none !important;
+}
+.recovery-step[data-step='1']:has(#chSms:checked) #fieldEmail {
+  display: none !important;
+}
+.recovery-step[data-step='1']:has(#chSms:checked) #fieldPhone.recovery-field--hidden {
+  display: block !important;
+}
+.recovery-step[data-step='1'] .form-error--step1 {
+  margin: 0.35rem 0 0.15rem;
+  min-height: 1.25rem;
+}
+.input-icon--phone {
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' fill='none' stroke='%235a7089' stroke-width='1.5' viewBox='0 0 24 24'%3E%3Cpath d='M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z'/%3E%3C/svg%3E")
+    center/contain no-repeat;
+}
 .step-pill {
   display: inline-block;
   font-size: 0.8rem;

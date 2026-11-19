@@ -38,6 +38,21 @@ def test_reject_criterion_id_as_kra_id():
     assert "parent KRA" in str(exc.value) or "kra-III" in str(exc.value)
 
 
+def test_validate_criterion_matches_indicator():
+    found = validate_indicator_kra(
+        MINIMAL_KRA_III, "kra-III-B-2-1", "kra-III", criterion_id="kra-III-B"
+    )
+    assert found["criterion"]["id"] == "kra-III-B"
+
+
+def test_reject_wrong_criterion_for_indicator():
+    with pytest.raises(CatalogValidationError) as exc:
+        validate_indicator_kra(
+            MINIMAL_KRA_III, "kra-III-B-2-1", "kra-III", criterion_id="kra-III-A"
+        )
+    assert "kra-III-B" in str(exc.value)
+
+
 def test_reject_wrong_parent_kra_prefix_bug():
     with pytest.raises(CatalogValidationError):
         validate_indicator_kra(MINIMAL_KRA_III, "kra-III-B-2-1", "kra-I")

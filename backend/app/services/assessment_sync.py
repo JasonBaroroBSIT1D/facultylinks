@@ -102,7 +102,7 @@ def sync_review_to_assessment(doc: Document) -> None:
     elif status in ("rejected", "replaced"):
         target["verifiedPoints"] = 0
         target["reviewerVerifiedPoints"] = 0
-    elif status == "correction_requested":
+    elif status in ("correction_requested", "correction_prepared"):
         target["verifiedPoints"] = None
         target["reviewerVerifiedPoints"] = None
 

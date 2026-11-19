@@ -109,10 +109,14 @@ export function criterionBackLabel(criterionId) {
   return 'Back to workspace';
 }
 
-export function criterionReviewPageTitle(criterionId) {
-  const letter = (criterionId || '').match(/^kra-(?:I|II|III)-([A-D])$/i)?.[1];
-  if (letter) return `Criterion ${letter.toUpperCase()} review`;
+/** Top navigation title for any KRA / criterion achievement review. */
+export function achievementReviewPageTitle() {
   return 'Achievement review';
+}
+
+/** @deprecated Use achievementReviewPageTitle for reviewer achievement pages. */
+export function criterionReviewPageTitle() {
+  return achievementReviewPageTitle();
 }
 
 export function rulePermittedPoints(achievement) {

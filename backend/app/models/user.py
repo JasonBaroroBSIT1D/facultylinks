@@ -23,6 +23,7 @@ class User(db.Model):
     department = db.Column(db.String(200), nullable=True)
     rank = db.Column(db.String(120), nullable=True)
     phone = db.Column(db.String(40), nullable=True)
+    phone_verified_at = db.Column(db.DateTime(timezone=True), nullable=True)
     must_change_password = db.Column(db.Boolean, nullable=False, default=False)
     credential_email_status = db.Column(db.String(32), nullable=True)
     credential_email_error = db.Column(db.String(500), nullable=True)

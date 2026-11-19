@@ -6,7 +6,6 @@ import { mountDocumentPdfViewer } from './document-pdf-viewer.js?v=3';
 import { statusBadgeHtml } from '../core/copy.js';
 import { MockStore, revalidatePortalInBackground } from '../repositories/mock-store.js';
 import { showAppToast } from './account-modals.js';
-import { pageIntro, SCREEN_INTRO } from '../core/copy.js';
 import {
   formatFileSize,
   fileTypeLabel,
@@ -16,7 +15,7 @@ import {
   achievementReviewStatusLabel,
   formatAchievementContextLine,
   criterionBackLabel,
-  criterionReviewPageTitle,
+  achievementReviewPageTitle,
   rulePermittedPoints,
 } from './achievement-review-format.js';
 import {
@@ -232,6 +231,19 @@ function attachmentMetaLine(d) {
   return `${fileTypeLabel(d)} · ${formatFileSize(d.sizeBytes)} · ${formatCompactUploadDate(d.uploadedAt || d.submittedAt)}`;
 }
 
+function buildAssessmentLimitsHtml(achievement, permittedPts) {
+  const bits = [];
+  if (permittedPts != null) {
+    bits.push(
+      `Workbook designation allowance for this achievement: <strong>${permittedPts}</strong> points (not the full criterion or KRA cap).`
+    );
+  }
+  if (achievement?.ruleSummary) bits.push(esc(achievement.ruleSummary));
+  if (achievement?.ruleUnresolved) bits.push(esc(achievement.ruleUnresolved));
+  if (!bits.length) return '';
+  return `<p class="muted ach-review-limits">${bits.join(' ')}</p>`;
+}
+
 function supportingDocumentsBlockHtml(docs, activeDocId, achievement, { missingIds = [] } = {}) {
   const linked = achievement?.documentIds || [];
   if (!docs.length && !linked.length) return '<p class="muted">No documents linked.</p>';
@@ -239,11 +251,6 @@ function supportingDocumentsBlockHtml(docs, activeDocId, achievement, { missingI
     return `<p class="fl-error" role="alert">Could not load ${linked.length} linked file(s). Refresh the portal or reopen from the workspace folder — links are stored on the achievement.</p>
       <p class="muted">Linked ids: ${missingIds.map((id) => esc(id)).join(', ')}</p>`;
   }
-  const parentLabel = achievementReviewStatusLabel(achievement?.reviewStatus || 'pending');
-  const parentBlock = `<div class="ach-att-parent-status" role="status">
-      <p class="ach-att-parent-status__line"><strong>Achievement:</strong> ${esc(parentLabel)}</p>
-      <p class="muted ach-att-parent-status__hint">These files support this achievement.</p>
-    </div>`;
   const rows = docs
     .map((d) => {
       const active = d.id === activeDocId ? ' ach-att-row--active' : '';
@@ -269,8 +276,7 @@ function supportingDocumentsBlockHtml(docs, activeDocId, achievement, { missingI
       </li>`;
     })
     .join('');
-  return `${parentBlock}
-    <div class="ach-att-table-wrap ach-att-table-wrap--review">
+  return `<div class="ach-att-table-wrap ach-att-table-wrap--review">
       <table class="ach-att-table ach-att-table--compact" aria-label="Supporting documents">
         <tbody id="achAttTableBody">${rows}</tbody>
       </table>
@@ -335,7 +341,7 @@ export async function renderAchievementReviewPage(root, title, ctx) {
     return;
   }
 
-  title.textContent = criterionReviewPageTitle(criterionId);
+  title.textContent = achievementReviewPageTitle();
   ctx.params.criterionId = criterionId;
 
   const docIds = achievement.documentIds || [];
@@ -367,6 +373,9 @@ export async function renderAchievementReviewPage(root, title, ctx) {
   const remDefault = achievement.reviewRemarks || '';
   const claimed = achievement.originalClaimedPoints ?? achievement.claimedPoints;
   const facultyLabel = faculty ? `${faculty.firstName} ${faculty.lastName}` : '—';
+  const statusLabel = achievementReviewStatusLabel(achievement.reviewStatus || 'pending');
+  const previewFileName = activeDoc?.fileName || (docIds.length ? 'Select a supporting document' : 'No file linked');
+  const limitsHtml = buildAssessmentLimitsHtml(achievement, permittedPts);
 
   const achBreadcrumb =
     faculty &&
@@ -375,18 +384,21 @@ export async function renderAchievementReviewPage(root, title, ctx) {
       criterionId,
       catalog,
       achievementTitle: achievement.title,
+      indicatorName: indName,
     });
 
   root.innerHTML = `
     <div class="doc-review-page ach-review-page" data-achievement-id="${esc(achievement.id)}">
-      ${pageIntro(SCREEN_INTRO.workspace)}
       ${achBreadcrumb || ''}
-      <header class="doc-review-header">
+      <header class="doc-review-header ach-review-header">
         <button type="button" class="btn-ghost btn-sm" id="achBackWs">← ${esc(criterionBackLabel(criterionId))}</button>
-        <h2 class="doc-review-header__title">${esc(achievement.title || 'Achievement')}</h2>
-        <p class="muted" style="font-size:0.9rem;margin:0">${esc(facultyLabel)} · ${esc(indName)}</p>
-        ${contextLine ? `<p class="muted" style="font-size:0.88rem;margin:0.15rem 0 0">${esc(contextLine)}</p>` : ''}
-        <p class="muted" style="font-size:0.85rem;margin:0.2rem 0 0">${esc(achievement.ruleSummary || '')}${permittedPts != null ? ` · Workbook allowance: <strong>${permittedPts}</strong> pts` : ''}${achievement.ruleUnresolved ? ` — ${esc(achievement.ruleUnresolved)}` : ''}</p>
+        <motion class="ach-review-header__main">
+          <h2 class="doc-review-header__title">${esc(achievement.title || 'Achievement')}</h2>
+          <p class="ach-review-header__faculty">${esc(facultyLabel)}</p>
+          <p class="ach-review-header__indicator muted">${esc(indName)}</p>
+          ${contextLine ? `<p class="ach-review-header__context muted">${esc(contextLine)}</p>` : ''}
+          <p class="ach-review-header__status">${statusBadgeHtml(achievement.reviewStatus || 'pending')} <span class="visually-hidden">Review status: ${esc(statusLabel)}</span></p>
+        </motion>
       </header>
       <motion class="doc-review-workspace ach-review-workspace" id="achReviewWorkspace" data-panel="pdf">
         <div class="doc-review-mobile-tabs" role="tablist" aria-label="Review panels">
@@ -395,16 +407,23 @@ export async function renderAchievementReviewPage(root, title, ctx) {
         </div>
         <section class="doc-review-pdf-panel ach-review-pdf-panel" aria-label="Document preview">
           <motion class="doc-review-panel doc-review-panel--pdf ach-review-preview-panel">
+            <div class="ach-review-preview-head">
+              <h3 class="doc-review-section__title ach-review-preview-head__title">Document preview</h3>
+              <p class="ach-review-preview-filename muted" id="achReviewPreviewFileName">${esc(previewFileName)}</p>
+            </div>
             <div id="achReviewMediaMount" class="doc-review-pdf-mount" data-doc-id="${esc(docId || '')}"></div>
           </motion>
         </section>
         <section class="doc-review-detail-panel ach-review-detail-panel" aria-label="Achievement review">
-          <div class="doc-review-detail-scroll ach-review-detail-scroll">
+          <div class="ach-review-detail-body">
             <section class="doc-review-section ach-review-attachments" aria-label="Supporting documents">
               <h3 class="doc-review-section__title">Supporting documents</h3>
+              <p class="muted ach-review-section-lead">All evidence linked to this achievement. Select a file to preview it on the left.</p>
               ${supportingDocumentsBlockHtml(docs, docId, achievement, { missingIds: missing })}
             </section>
-            <section class="doc-review-section doc-review-form ach-review-form">
+            <section class="doc-review-section ach-review-assessment" aria-label="Review assessment">
+              <h3 class="doc-review-section__title">Review assessment</h3>
+              ${limitsHtml}
               <motion class="ach-review-points-row">
                 <div class="doc-review-field">
                   <span class="doc-review-field__label">Faculty-claimed points</span>
@@ -413,29 +432,35 @@ export async function renderAchievementReviewPage(root, title, ctx) {
                 <div class="doc-review-field">
                   <label class="doc-review-field__label" for="achVerPts">Reviewer-verified points</label>
                   <input type="number" step="0.01" class="doc-review-input" id="achVerPts" value="${esc(formDraft.vp ?? vpDefault)}" ${permittedPts != null ? `max="${permittedPts}"` : ''} />
-                  ${permittedPts != null ? `<p class="muted doc-review-field__hint" style="margin:0.25rem 0 0">Matrix allowance for this designation: <strong>${permittedPts}</strong> points (not the criterion cap).</p>` : ''}
                 </div>
               </motion>
-              <div class="doc-review-field">
-                <label class="doc-review-field__label" for="achRem">Remarks</label>
-                <textarea class="doc-review-textarea" id="achRem" rows="4">${esc(formDraft.remarks ?? remDefault)}</textarea>
-              </div>
               <div class="doc-review-field">
                 <label class="doc-review-field__label" for="achReason">Score change reason (if different from claim)</label>
                 <input type="text" class="doc-review-input" id="achReason" value="${esc(formDraft.reason ?? '')}" />
               </div>
-              <div class="doc-review-actions">
+            </section>
+            <section class="doc-review-section ach-review-remarks" aria-label="Reviewer remarks">
+              <h3 class="doc-review-section__title">Reviewer remarks</h3>
+              <div class="doc-review-field">
+                <label class="doc-review-field__label" for="achRem">Notes for the faculty member</label>
+                <textarea class="doc-review-textarea ach-review-textarea" id="achRem" rows="5" placeholder="Explain what you verified or what needs to change.">${esc(formDraft.remarks ?? remDefault)}</textarea>
+              </div>
+            </section>
+            <section class="doc-review-section ach-review-actions-card" aria-label="Review actions">
+              <h3 class="doc-review-section__title">Review actions</h3>
+              <p class="muted ach-review-section-lead">Approve when evidence and points match policy. Request changes or reject when the claim cannot be supported.</p>
+              <div class="doc-review-actions ach-review-actions">
                 <button type="button" class="btn-primary-sm btn-sm" data-ach-decision="approved">Approve</button>
                 <button type="button" class="btn-ghost btn-sm" data-ach-decision="correction_requested">Request changes</button>
                 <button type="button" class="btn-ghost btn-sm doc-review-actions__reject" data-ach-decision="rejected">Reject</button>
               </div>
               <p id="achRevOk" class="success-banner doc-review-feedback" hidden role="status"></p>
               <p id="achRevErr" class="doc-review-feedback doc-review-feedback--error" role="alert"></p>
-              <details class="doc-review-history ach-review-history"${achievement.reviewStatus === 'approved' ? ' open' : ''}>
-                <summary>Review history (${(achievement.reviewHistory || []).length})</summary>
-                <div id="achReviewHistory">${reviewHistoryHtml(achievement)}</div>
-              </details>
             </section>
+            <details class="doc-review-section doc-review-history ach-review-history"${achievement.reviewStatus === 'approved' ? ' open' : ''}>
+              <summary class="doc-review-section__title" style="margin:0;cursor:pointer">Review history (${(achievement.reviewHistory || []).length})</summary>
+              <div id="achReviewHistory">${reviewHistoryHtml(achievement)}</div>
+            </details>
           </div>
         </section>
       </motion>
@@ -465,10 +490,13 @@ export async function renderAchievementReviewPage(root, title, ctx) {
       root._achMediaDestroy();
       root._achMediaDestroy = null;
     }
+    const fileLabel = root.querySelector('#achReviewPreviewFileName');
     if (doc) {
+      if (fileLabel) fileLabel.textContent = doc.fileName || 'Untitled';
       mountMediaPreview(mountEl, doc, { onDestroyRef: destroyRef });
       root._achMediaDestroy = destroyRef.current;
     } else {
+      if (fileLabel) fileLabel.textContent = 'Select a supporting document';
       mountEl.innerHTML = '<p class="muted">Use View on a supporting document to preview.</p>';
     }
   };

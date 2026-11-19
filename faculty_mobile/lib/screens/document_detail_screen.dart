@@ -4,12 +4,13 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/document_status.dart';
-import '../core/ui_strings.dart';
 import '../repositories/mock_repository.dart';
-import '../theme/app_spacing.dart';
 import '../services/document_api.dart';
 import '../services/set_sef_api.dart';
+import '../theme/app_theme.dart';
+import '../widgets/document_detail_ui.dart';
 import '../widgets/set_sef_semester_list.dart';
+import 'set_sef_screen.dart';
 
 class DocumentDetailScreen extends StatefulWidget {
   final FacultyDocument doc;
@@ -23,9 +24,10 @@ class DocumentDetailScreen extends StatefulWidget {
 
 class _DocumentDetailScreenState extends State<DocumentDetailScreen> with WidgetsBindingObserver {
   Map<String, dynamic>? _extraction;
+  Map<String, dynamic>? _validation;
   String? _error;
   bool _loading = false;
-  bool _openingPdf = false;
+  bool _openingFile = false;
   Timer? _poll;
   Timer? _reviewPoll;
   bool _foreground = true;
@@ -44,8 +46,14 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> with Widget
     WidgetsBinding.instance.addObserver(this);
     if (widget.doc.isSetSefOcr) {
       unawaited(_refreshSetSef());
+    } else if (_needsValidationPayload(widget.doc)) {
+      unawaited(_refreshValidation());
     }
     _reviewPoll = Timer.periodic(const Duration(seconds: 30), (_) => _backgroundStatusRefresh());
+  }
+
+  bool _needsValidationPayload(FacultyDocument doc) {
+    return doc.ocrStatus.isNotEmpty && doc.ocrStatus != 'none';
   }
 
   @override
@@ -72,6 +80,8 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> with Widget
     await widget.onRefresh?.call();
     if (widget.doc.isSetSefOcr) {
       await _refreshSetSef(silent: true);
+    } else if (_needsValidationPayload(widget.doc)) {
+      await _refreshValidation(silent: true);
     } else if (mounted) {
       setState(() {});
     }
@@ -84,10 +94,39 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> with Widget
   void _schedulePolling(String processingStatus) {
     if (!_foreground) return;
     if (_shouldPoll(processingStatus)) {
-      _poll ??= Timer.periodic(const Duration(seconds: 4), (_) => _refreshSetSef(silent: true));
+      _poll ??= Timer.periodic(const Duration(seconds: 4), (_) {
+        if (widget.doc.isSetSefOcr) {
+          _refreshSetSef(silent: true);
+        } else {
+          _refreshValidation(silent: true);
+        }
+      });
     } else {
       _poll?.cancel();
       _poll = null;
+    }
+  }
+
+  Future<void> _refreshValidation({bool silent = false}) async {
+    if (!mounted) return;
+    if (!silent) setState(() => _loading = true);
+    try {
+      final data = await DocumentApi.fetchValidation(widget.doc.id);
+      if (!mounted) return;
+      final docMap = data['document'] as Map<String, dynamic>?;
+      final proc = docMap?['processingStatus'] as String? ?? _liveDoc.processingStatus;
+      setState(() {
+        _validation = data;
+        _error = null;
+        _loading = false;
+      });
+      _schedulePolling(proc);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        if (!silent) _error = e.toString().replaceFirst('Exception: ', '');
+      });
     }
   }
 
@@ -115,15 +154,15 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> with Widget
     }
   }
 
-  Future<void> _openPdf() async {
-    setState(() => _openingPdf = true);
+  Future<void> _openOriginalFile() async {
+    setState(() => _openingFile = true);
     try {
       final url = await DocumentApi.viewUrl(widget.doc.id);
       final uri = Uri.parse(url);
       final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
       if (!ok && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not open the PDF on this device.')),
+          const SnackBar(content: Text('Could not open this file on your device.')),
         );
       }
     } catch (e) {
@@ -133,7 +172,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> with Widget
         );
       }
     } finally {
-      if (mounted) setState(() => _openingPdf = false);
+      if (mounted) setState(() => _openingFile = false);
     }
   }
 
@@ -161,6 +200,7 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> with Widget
     try {
       await DocumentApi.retryValidationOcr(widget.doc.id);
       await widget.onRefresh?.call();
+      await _refreshValidation(silent: true);
       if (mounted) setState(() => _loading = false);
     } catch (e) {
       if (mounted) {
@@ -172,46 +212,34 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> with Widget
     }
   }
 
-  static String _formatScoring(Map<String, dynamic>? scoring) {
-    if (scoring == null) return 'No processed data yet.';
-    if (scoring['calculationUnavailable'] == true) {
-      return 'Unavailable — ${scoring['incompleteReason'] ?? 'No eligible ratings.'}';
+  void _openOverallAssessment() {
+    final repo = widget.repo;
+    if (repo == null) return;
+    Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => SetSefScreen(repo: repo, onSave: widget.onRefresh ?? () async {}),
+      ),
+    );
+  }
+
+  List<Map<String, dynamic>> _findingsForDoc() {
+    if (widget.doc.isSetSefOcr) {
+      return (_extraction?['validationFindings'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
     }
-    final max = (scoring['maxima']?['criterionA'] as num?)?.toDouble() ?? 60.0;
-    final setN = scoring['setCount'] ?? 0;
-    final sefN = scoring['sefCount'] ?? 0;
-    final slots = (scoring['availabilitySummary'] as String?) ??
-        'SET: $setN ratings available · SEF: $sefN ratings available';
-    var total = scoring['criterionAPoints'] as num?;
-    if (total == null) total = scoring['partialSubtotal'] as num?;
-    if (total == null) {
-      final setPts = scoring['setPoints'];
-      final sefPts = scoring['sefPoints'];
-      if (setPts != null || sefPts != null) {
-        final partial = (setPts as num? ?? 0) + (sefPts as num? ?? 0);
-        return 'Partial ${partial.toStringAsFixed(2)} / $max ($slots)';
-      }
-      return 'No score calculated yet.';
-    }
-    final note = scoring['incomplete'] == true
-        ? ' · ${scoring['coverageNote'] ?? 'Based on available semesters; may change as ratings are added.'}'
-        : '';
-    final setPts = scoring['setPoints'];
-    final sefPts = scoring['sefPoints'];
-    return '${total.toStringAsFixed(2)} / $max ($slots)$note'
-        ' — SET ${setPts != null ? (setPts as num).toStringAsFixed(2) : '—'}, '
-        'SEF ${sefPts != null ? (sefPts as num).toStringAsFixed(2) : '—'}';
+    return (_validation?['validationFindings'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
   }
 
   @override
   Widget build(BuildContext context) {
     final doc = _liveDoc;
-    final status = doc.displayStatusLabel ?? UiStrings.docStatusLabel(doc.reviewStatus);
     final records = (_extraction?['semesterRecords'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
-    final findings = (_extraction?['validationFindings'] as List<dynamic>?)?.cast<Map<String, dynamic>>() ?? [];
+    final verifyCounts = _extraction?['verifyCounts'] as Map<String, dynamic>?;
     final scoring = _extraction?['scoring'] as Map<String, dynamic>?;
     final est = scoring?['estimated'] as Map<String, dynamic>?;
     final ver = scoring?['verified'] as Map<String, dynamic>?;
+    final findings = _findingsForDoc();
+    final fileLabel = originalFileActionLabel(doc);
+    final isImage = fileLabel.contains('image');
 
     return Scaffold(
       appBar: AppBar(
@@ -219,19 +247,21 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> with Widget
         leading: BackButton(onPressed: () => Navigator.maybePop(context)),
       ),
       body: ListView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
         children: [
-          Text(doc.fileName, style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          FlStatusBadge.fromFacultyDocument(doc),
-          const SizedBox(height: 6),
-          Text('Display status: $status', style: const TextStyle(fontSize: 15, color: Colors.black54)),
+          Text(doc.fileName, style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 10),
+          DocumentStatusStrip(
+            doc: doc,
+            semesterRecords: records,
+            verifyCounts: verifyCounts,
+          ),
           if (doc.isAchievementEvidence)
             Padding(
-              padding: const EdgeInsets.only(top: 4),
+              padding: const EdgeInsets.only(top: 8),
               child: Text(
-                'File record: ${UiStrings.docStatusLabel(doc.reviewStatus)} (supporting evidence; scored on the achievement)',
-                style: const TextStyle(fontSize: 14, color: Colors.black54),
+                'Supporting evidence for an achievement (scored on the achievement, not as a standalone document).',
+                style: const TextStyle(fontSize: 13, color: AppColors.textMuted, height: 1.35),
               ),
             ),
           if (doc.achievementLinks.isNotEmpty) ...[
@@ -242,21 +272,16 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> with Widget
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    const Text('Achievement', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                    const Text('Achievement', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
                     const SizedBox(height: 6),
                     for (final link in doc.achievementLinks) ...[
                       Text(
                         link.parentAchievementTitle ?? link.linkedAchievementId,
-                        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
                       ),
                       if (link.criterionId != null)
-                        Text('Criterion: ${link.criterionId}', style: const TextStyle(fontSize: 14, color: Colors.black54)),
-                      if (link.achievementRemarks != null && link.achievementRemarks!.trim().isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Text('Reviewer remarks: ${link.achievementRemarks}', style: const TextStyle(fontSize: 14)),
-                        ),
-                      const SizedBox(height: 8),
+                        Text('Criterion: ${link.criterionId}', style: const TextStyle(fontSize: 13, color: AppColors.textMuted)),
+                      const SizedBox(height: 6),
                     ],
                   ],
                 ),
@@ -265,203 +290,76 @@ class _DocumentDetailScreenState extends State<DocumentDetailScreen> with Widget
           ],
           if (doc.createdAt != null)
             Padding(
-              padding: const EdgeInsets.only(top: 6),
-              child: Text('Uploaded: ${doc.createdAt!.length >= 10 ? doc.createdAt!.substring(0, 10) : doc.createdAt}', style: const TextStyle(fontSize: 15)),
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'Uploaded: ${doc.createdAt!.length >= 10 ? doc.createdAt!.substring(0, 10) : doc.createdAt}',
+                style: const TextStyle(fontSize: 14, color: AppColors.textMuted),
+              ),
             ),
           if (doc.indicatorId.isNotEmpty)
             Padding(
               padding: const EdgeInsets.only(top: 4),
-              child: Text('Category: ${doc.indicatorId}', style: const TextStyle(fontSize: 15)),
+              child: Text('Category: ${doc.indicatorId}', style: const TextStyle(fontSize: 14, color: AppColors.textMuted)),
             ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           FilledButton.icon(
-            onPressed: _openingPdf ? null : _openPdf,
-            icon: _openingPdf ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.picture_as_pdf_outlined),
-            label: const Text('View original PDF'),
+            onPressed: _openingFile ? null : _openOriginalFile,
+            icon: _openingFile
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : Icon(isImage ? Icons.image_outlined : Icons.picture_as_pdf_outlined),
+            label: Text(fileLabel),
           ),
           if (doc.filterBucket == 'correction_requested' && !doc.isAchievementEvidence)
             const Padding(
-              padding: EdgeInsets.only(top: 12),
+              padding: EdgeInsets.only(top: 10),
               child: Text(
-                'Your reviewer requested changes. Read their comments below and upload an updated file if needed.',
-                style: TextStyle(fontSize: 15),
+                'Your reviewer requested changes. See Needs attention below.',
+                style: TextStyle(fontSize: 14),
               ),
             ),
-          if (!doc.isSetSefOcr &&
-              doc.ocrStatus.isNotEmpty &&
-              doc.ocrStatus != 'none') ...[
-            const SizedBox(height: 20),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text('Document text check', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    const SizedBox(height: 8),
-                    Text(documentProcessingFacultyMessage(doc), style: const TextStyle(fontSize: 15)),
-                    const SizedBox(height: 6),
-                    Text(documentProcessingSummary(doc), style: const TextStyle(fontSize: 13, color: Colors.black54)),
-                    if (_shouldPoll(doc.processingStatus))
-                      const Padding(
-                        padding: EdgeInsets.only(top: 8),
-                        child: Row(
-                          children: [
-                            SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
-                            SizedBox(width: 10),
-                            Expanded(child: Text('Processing your file. This screen updates when you refresh.')),
-                          ],
-                        ),
-                      ),
-                    if (doc.processingStatus == 'failed' || doc.ocrStatus == 'failed') ...[
-                      const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        onPressed: _loading ? null : _retryGeneralOcr,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Retry text check'),
-                      ),
-                    ],
-                    if (_error != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(_error!, style: const TextStyle(color: Colors.red)),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-          ],
+          const SizedBox(height: 12),
+          DocumentProcessingActionsCard(
+            doc: doc,
+            loading: _loading,
+            error: _error,
+            isSetSef: doc.isSetSefOcr,
+            onRetry: doc.isSetSefOcr ? _retryOcr : _retryGeneralOcr,
+            showPollHint: _shouldPoll(doc.processingStatus),
+          ),
           if (doc.isSetSefOcr) ...[
-            const SizedBox(height: 20),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text('OCR processing', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    const SizedBox(height: 8),
-                    Text(documentProcessingFacultyMessage(doc), style: const TextStyle(fontSize: 15)),
-                    const SizedBox(height: 4),
-                    Text(documentProcessingSummary(doc), style: const TextStyle(fontSize: 13, color: Colors.black54)),
-                    if (_shouldPoll(doc.processingStatus))
-                      const Padding(
-                        padding: EdgeInsets.only(top: 8),
-                        child: Row(
-                          children: [
-                            SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
-                            SizedBox(width: 10),
-                            Expanded(child: Text('Processing your PDF. This screen updates automatically.')),
-                          ],
-                        ),
-                      ),
-                    if (doc.processingStatus == 'failed' || doc.ocrStatus == 'failed') ...[
-                      const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        onPressed: _loading ? null : _retryOcr,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Retry OCR'),
-                      ),
-                    ],
-                    if (_loading) const Padding(padding: EdgeInsets.only(top: 12), child: LinearProgressIndicator()),
-                    if (_error != null)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 8),
-                        child: Text(_error!, style: const TextStyle(color: Colors.red)),
-                      ),
-                  ],
-                ),
-              ),
-            ),
-            if (widget.repo != null &&
-                (widget.repo!.criterionAEstimatedLine().isNotEmpty || widget.repo!.criterionAVerifiedLine().isNotEmpty)) ...[
-              const SizedBox(height: 12),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Criterion A scoring (faculty total)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      const SizedBox(height: 8),
-                      if (widget.repo!.criterionAEstimatedLine().isNotEmpty)
-                        Text(widget.repo!.criterionAEstimatedLine()),
-                      if (widget.repo!.criterionAVerifiedLine().isNotEmpty)
-                        Text(widget.repo!.criterionAVerifiedLine()),
-                      const SizedBox(height: 6),
-                      const Text(
-                        'Totals use deduplicated SET/SEF data across your uploads. Per-document extraction appears below.',
-                        style: TextStyle(fontSize: 13, color: Colors.black54),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
             if (est != null || ver != null) ...[
               const SizedBox(height: 12),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Criterion A scoring (this PDF)', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                      const SizedBox(height: 8),
-                      Text('Estimated: ${_formatScoring(est)}'),
-                      if (ver != null) Text('Reviewer-verified: ${_formatScoring(ver)}'),
-                    ],
-                  ),
+              DocumentScoresFromPdfCard(
+                estimated: est,
+                verified: ver,
+                semesterCount: records.length,
+              ),
+            ],
+            if (widget.repo != null) ...[
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: _openOverallAssessment,
+                  child: const Text('View overall assessment'),
                 ),
               ),
             ],
             const SizedBox(height: 12),
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Extracted semesters', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    const SizedBox(height: 8),
-                    if (records.isEmpty)
-                      Text(
-                        doc.processingStatus == 'completed'
-                            ? 'Processing finished but no semester rows were extracted.'
-                            : 'No semester records yet.',
-                        style: const TextStyle(fontSize: 15),
-                      )
-                    else
-                      SetSefSemesterList(
-                        records: records,
-                        facultyDisplayName:
-                            SetSefSemesterList.facultyNameFromRecords(records) ?? widget.repo?.profile.name,
-                      ),
-                  ],
-                ),
-              ),
+            DocumentSemestersSection(
+              records: records,
+              facultyDisplayName:
+                  SetSefSemesterList.facultyNameFromRecords(records) ?? widget.repo?.profile.name,
+              processingStatus: doc.processingStatus,
             ),
-            if (findings.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              const Text('Validation findings', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              ...findings.map(
-                (f) => Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Text(
-                    '${f['ruleId']}: ${f['explanation'] ?? ''} (${f['outcome'] ?? ''})',
-                    style: const TextStyle(fontSize: 14, height: 1.4),
-                  ),
-                ),
-              ),
-            ],
           ],
-          const SizedBox(height: 16),
-          const Text('Reviewer comments', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-          const SizedBox(height: 6),
-          Text(
-            (doc.remarks != null && doc.remarks!.trim().isNotEmpty) ? doc.remarks! : 'No reviewer comments yet.',
-            style: const TextStyle(fontSize: 16, height: 1.5),
-          ),
+          if (findings.isNotEmpty || (doc.remarks != null && doc.remarks!.trim().isNotEmpty)) ...[
+            const SizedBox(height: 12),
+            DocumentNeedsAttentionSection(
+              findings: findings,
+              reviewerRemarks: doc.remarks,
+            ),
+          ],
         ],
       ),
     );

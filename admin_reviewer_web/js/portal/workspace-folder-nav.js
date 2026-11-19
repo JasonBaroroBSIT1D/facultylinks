@@ -304,9 +304,15 @@ export function renderWorkspaceBreadcrumbNav(crumbs) {
   return `<nav class="ws-breadcrumb" aria-label="Breadcrumb"><ol class="ws-breadcrumb__list">${html}</ol></nav>`;
 }
 
-export function buildAchievementReviewBreadcrumb({ fac, criterionId, catalog, achievementTitle }) {
+export function buildAchievementReviewBreadcrumb({
+  fac,
+  criterionId,
+  catalog,
+  achievementTitle,
+  indicatorName,
+}) {
   const kra = kraFolderCrumbForCriterion(criterionId);
-  return renderWorkspaceBreadcrumbNav([
+  const crumbs = [
     { id: 'assigned', label: 'Assigned Faculty' },
     { id: WS_FOLDER_FACULTY, label: facultyDisplayName(fac) },
     kra,
@@ -315,8 +321,12 @@ export function buildAchievementReviewBreadcrumb({ fac, criterionId, catalog, ac
       label: workspaceCriterionHeading(catalog, criterionId),
       criterionId,
     },
-    { id: 'achievement', label: achievementTitle || 'Achievement' },
-  ]);
+  ];
+  if (indicatorName) {
+    crumbs.push({ id: 'indicator', label: indicatorName });
+  }
+  crumbs.push({ id: 'achievement', label: achievementTitle || 'Achievement' });
+  return renderWorkspaceBreadcrumbNav(crumbs);
 }
 
 export function buildWorkspaceBreadcrumb({ fac, folder, criterionId, catalog }) {

@@ -81,9 +81,12 @@ def faculty_submit_achievement(achievement_id: str):
         return jsonify({"error": "Assessment configuration is not published."}), 400
     body = request.get_json(silent=True) or {}
     try:
-        ach = submit_achievement(user.id, achievement_id, catalog=catalog, patch=body)
+        ach = submit_achievement(user.id, achievement_id, catalog=catalog, patch=body, actor=user)
     except CatalogValidationError as e:
         return jsonify({"error": str(e)}), 400
+    from app.services.document_correction import notify_reviewers_achievement_resubmitted
+
+    notify_reviewers_achievement_resubmitted(user, ach)
     db.session.commit()
     return jsonify({"achievement": ach})
 

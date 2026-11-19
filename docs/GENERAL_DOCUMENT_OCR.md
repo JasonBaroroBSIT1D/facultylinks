@@ -43,9 +43,11 @@ Refuses unscoped full-database runs.
 
 ## Rule coverage
 
-OCR content checks are **catalog-driven** (`fl-doc-content-1.1`):
+OCR content checks are **catalog-driven** (`fl-doc-content-1.2`) and follow the
+faculty-selected hierarchy **KRA → criterion → indicator** (plus the assessment’s
+pinned catalog/rule version):
 
-1. Prefer `fields` on the published catalog indicator.
+1. Prefer `fields` on the assessment/published catalog indicator.
 2. If omitted in the published JSON, fall back to the workbook field map
    `app/services/catalog_indicator_fields.json` (generated from
    `admin_reviewer_web/js/core/*-catalog.js` + assessment definitions).
@@ -56,6 +58,18 @@ OCR content checks are **catalog-driven** (`fl-doc-content-1.1`):
    noted as form-only — not inventing title/author/date for every document.
 5. SET/SEF indicators → dedicated SET/SEF pipeline (`coverage_set_sef_pipeline`).
 6. `kra-I-A-special` → readable supporting-text check.
+7. A coverage entry documents configured assistive checks; it does **not** mean
+   the indicator is fully validated or auto-approved. Manual-review gaps are
+   listed explicitly in the API (`coverage.manualReviewGaps`) and audit report.
+8. Certificate-style KRA III/IV (and similar) documents may run **advisory**
+   honoree/recipient name extraction (`faculty_identity_advisory`); a match is
+   not ownership proof.
+9. Each OCR run persists `validation_configuration_snapshot` (catalog/content
+   rule versions used). Unresolved `documents.config_version` values surface a
+   warning in `GET .../validation` (`configuration.warning`).
+
+Uploads should send `indicatorId`, parent `kraId`, and `criterionId`. The server
+validates that the indicator belongs to that criterion and KRA.
 
 Regenerate the field map after workbook catalog edits:
 
@@ -64,7 +78,7 @@ cd admin_reviewer_web
 node scripts/dump-indicator-fields.mjs
 ```
 
-Audit coverage:
+Audit coverage (writes `backend/reports/ocr_validation_coverage.{json,md}`):
 
 ```bash
 cd backend

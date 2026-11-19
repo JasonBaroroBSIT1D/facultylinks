@@ -1,3 +1,4 @@
+import 'package:faculty_mobile/data/assessment_catalog.dart';
 import 'package:faculty_mobile/repositories/mock_repository.dart';
 import 'package:faculty_mobile/screens/set_sef_screen.dart';
 import 'package:faculty_mobile/screens/tabs/assessment_tab.dart';
@@ -15,6 +16,8 @@ void main() {
     final repo = MockRepository();
     repo.profile.name = 'Faculty User';
     repo.scoresConfigured = true;
+    repo.catalogKras = assessmentKras;
+    repo.catalogLoadedFromApi = true;
     repo.facultyScoresEstimated = {
       'byKra': {
         'kra-I': {
@@ -47,14 +50,28 @@ void main() {
 
   testWidgets('tapping SET & SEF card opens detail without RangeError', (tester) async {
     final repo = _repoWithScores();
+    await tester.binding.setSurfaceSize(const Size(400, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
 
     await tester.pumpWidget(
       MaterialApp(
-        home: AssessmentTab(repo: repo, onSave: () async {}),
+        home: AssessmentTab(
+          repo: repo,
+          onSave: () async {},
+          selectedKraId: 'kra-I',
+        ),
       ),
     );
     await tester.pump();
 
+    expect(find.text('Criterion A – Teaching Effectiveness'), findsOneWidget);
+    expect(find.text('SET & SEF'), findsNothing);
+
+    await tester.tap(find.text('Criterion A – Teaching Effectiveness'));
+    await tester.pumpAndSettle();
+    expect(find.text('SET & SEF'), findsOneWidget);
+
+    await tester.ensureVisible(find.text('SET & SEF'));
     await tester.tap(find.text('SET & SEF'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 100));

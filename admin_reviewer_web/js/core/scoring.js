@@ -74,7 +74,16 @@ export function estimateEntryPoints(indicatorId, entry, catalog = ASSESSMENT_CAT
  * @param {object} catalog
  * @param {object} kraWeights
  */
-export function computeKraSummaries(state, catalog = ASSESSMENT_CATALOG, kraWeights = KRA_WEIGHTS) {
+/**
+ * KRA summaries: raw totals from catalog rules; weights from rank policy when facultyRank is provided.
+ * @param {object} [rankWeightResolution] optional output from resolveRankKraWeights (metadata)
+ */
+export function computeKraSummaries(
+  state,
+  catalog = ASSESSMENT_CATALOG,
+  kraWeights = KRA_WEIGHTS,
+  rankWeightResolution = null,
+) {
   const summaries = {};
   for (const kra of catalog.kras) {
     let rawSum = 0;
@@ -127,12 +136,25 @@ export function computeKraSummaries(state, catalog = ASSESSMENT_CATALOG, kraWeig
       rawTotal: rawSum,
       weightedContribution: weighted,
       weight,
+      weightPercent: Math.round(weight * 10000) / 100,
+      rankCategoryId: rankWeightResolution?.categoryId,
+      rankCategoryLabel: rankWeightResolution?.categoryLabel,
       criteria: criterionTotals,
     };
   }
 
   const overallWeighted = Object.values(summaries).reduce((a, s) => a + s.weightedContribution, 0);
-  return { byKra: summaries, overallWeighted };
+  const out = { byKra: summaries, overallWeighted };
+  if (rankWeightResolution) {
+    out.rankWeightResolution = rankWeightResolution;
+    if (rankWeightResolution.ok && rankWeightResolution.categoryLabel) {
+      out.weightBasis = `JC3 Table 2.2 weights for ${rankWeightResolution.categoryLabel} (current rank: ${rankWeightResolution.currentRank || '—'})`;
+    }
+    if (!rankWeightResolution.ok && rankWeightResolution.error) {
+      out.configurationError = rankWeightResolution.error;
+    }
+  }
+  return out;
 }
 
 function parseCap(note) {
@@ -141,15 +163,16 @@ function parseCap(note) {
   return m ? Number(m[1]) : null;
 }
 
-export function computeVerifiedTotals(facultyState, catalog, kraWeights) {
-  const est = computeKraSummaries(facultyState, catalog, kraWeights);
+export function computeVerifiedTotals(facultyState, catalog, kraWeights, rankWeightResolution = null) {
+  const est = computeKraSummaries(facultyState, catalog, kraWeights, rankWeightResolution);
   const verified = computeKraSummaries(
     {
       ...facultyState,
       entries: mapVerifiedEntries(facultyState.entries),
     },
     catalog,
-    kraWeights
+    kraWeights,
+    rankWeightResolution,
   );
   return { estimated: est, verified };
 }

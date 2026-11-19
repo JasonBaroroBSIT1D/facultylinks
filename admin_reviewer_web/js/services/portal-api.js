@@ -127,4 +127,9 @@ export const PortalApi = {
       method: 'PATCH',
       body: JSON.stringify(body),
     }),
+  resolveSetSefIdentity: (documentId, body) =>
+    apiJson(`/api/documents/${encodeURIComponent(documentId)}/set-sef/resolve-identity`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
 };

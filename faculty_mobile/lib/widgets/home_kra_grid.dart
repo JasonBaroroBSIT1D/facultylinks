@@ -8,9 +8,12 @@ import '../theme/app_theme.dart';
 
 class HomeKraGrid extends StatelessWidget {
   final MockRepository repo;
-  final VoidCallback onOpenAssessment;
 
-  const HomeKraGrid({super.key, required this.repo, required this.onOpenAssessment});
+  /// Opens the selected assessment area. Passes the stable catalog id
+  /// (`kra-I` … `kra-IV`) — never display labels.
+  final ValueChanged<String> onOpenKra;
+
+  const HomeKraGrid({super.key, required this.repo, required this.onOpenKra});
 
   static IconData _iconFor(String id) {
     switch (id) {
@@ -104,7 +107,7 @@ class HomeKraGrid extends StatelessWidget {
                 return SizedBox(
                   width: cardWidth,
                   child: FlSurfaceCard(
-                    onTap: onOpenAssessment,
+                    onTap: () => onOpenKra(kra.id),
                     padding: const EdgeInsets.fromLTRB(14, 12, 12, 14),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,

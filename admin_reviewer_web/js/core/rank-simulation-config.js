@@ -244,3 +244,99 @@ export function validateRankSimulation(rs) {
 function structuredClone(v) {
   return JSON.parse(JSON.stringify(v));
 }
+
+const _CATEGORY_PATTERNS = [
+  ['college_university_professor', /^college\s*\/\s*university\s+professor/i],
+  ['college_university_professor', /^college\s+university\s+professor/i],
+  ['assistant_professor', /^assistant\s+professor/i],
+  ['associate_professor', /^associate\s+professor/i],
+  ['instructor', /^instructor/i],
+  ['professor', /^professor/i],
+];
+
+/** Map saved faculty current rank label → rank category id (Table 2.2). */
+export function resolveRankCategory(rankLabel) {
+  const text = String(rankLabel || '').trim();
+  if (!text) return null;
+  for (const [catId, pattern] of _CATEGORY_PATTERNS) {
+    if (pattern.test(text)) return catId;
+  }
+  return null;
+}
+
+export function mergeRankSimulationConfig(institutionConfig) {
+  const base = DEFAULT_RANK_SIMULATION();
+  const rs = institutionConfig?.rankSimulation;
+  if (!rs || typeof rs !== 'object') return base;
+  const out = { ...base, ...rs };
+  if (rs.weightMatrixByCategory && typeof rs.weightMatrixByCategory === 'object') {
+    const merged = {};
+    for (const cat of RANK_CATEGORY_IDS) {
+      merged[cat] = { ...DEFAULT_WEIGHT_MATRIX[cat], ...(rs.weightMatrixByCategory[cat] || {}) };
+    }
+    out.weightMatrixByCategory = merged;
+  }
+  return out;
+}
+
+/**
+ * Resolve KRA weights for faculty current rank from institution rankSimulation config.
+ * Never falls back to Instructor when rank is unknown.
+ */
+export function resolveRankKraWeights(facultyRank, institutionConfig) {
+  const currentRank = String(facultyRank || '').trim();
+  const categoryId = resolveRankCategory(currentRank);
+  if (!categoryId) {
+    return {
+      ok: false,
+      currentRank,
+      error:
+        'Current rank is missing or not recognized. Update the faculty profile with a supported rank label before KRA weights can be applied.',
+    };
+  }
+  const rs = mergeRankSimulationConfig(institutionConfig);
+  const row = rs.weightMatrixByCategory?.[categoryId];
+  if (!row) {
+    return {
+      ok: false,
+      categoryId,
+      categoryLabel: RANK_CATEGORY_LABELS[categoryId],
+      currentRank,
+      error: `No KRA weight matrix row is configured for rank category ${RANK_CATEGORY_LABELS[categoryId]}.`,
+    };
+  }
+  const weights = {};
+  let sum = 0;
+  for (const kid of KRA_WEIGHT_COLUMN_IDS) {
+    const v = Number(row[kid]);
+    if (!Number.isFinite(v)) {
+      return {
+        ok: false,
+        categoryId,
+        categoryLabel: RANK_CATEGORY_LABELS[categoryId],
+        currentRank,
+        error: `Invalid KRA weight for ${RANK_CATEGORY_LABELS[categoryId]} / ${KRA_WEIGHT_COLUMN_LABELS[kid]}.`,
+      };
+    }
+    weights[kid] = v;
+    sum += v;
+  }
+  if (Math.abs(sum - 1) > WEIGHT_TOLERANCE) {
+    return {
+      ok: false,
+      categoryId,
+      categoryLabel: RANK_CATEGORY_LABELS[categoryId],
+      currentRank,
+      error: `KRA weights for ${RANK_CATEGORY_LABELS[categoryId]} sum to ${Math.round(sum * 10000) / 100}% (must equal 100%).`,
+    };
+  }
+  return {
+    ok: true,
+    categoryId,
+    categoryLabel: RANK_CATEGORY_LABELS[categoryId],
+    weights,
+    currentRank,
+    weightMatrixVersion: rs.version,
+    sourceRef: rs.sourceRef,
+  };
+}

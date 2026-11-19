@@ -2,14 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../../models/institution_config.dart';
 import '../../repositories/mock_repository.dart';
-import '../../services/simulation_engine.dart';
 import '../../theme/app_spacing.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/home_kra_grid.dart';
 import '../../widgets/home_progress_overview.dart';
 import '../../widgets/home_quick_actions.dart';
-import '../../widgets/simulation_result_sheet.dart';
-import '../preparation_period_screen.dart';
+import '../evaluation_details_screen.dart';
 import '../upload_evidence_screen.dart';
 import 'assessment_tab.dart';
 
@@ -21,8 +19,10 @@ String _firstName(String fullName) {
 class HomeTab extends StatelessWidget {
   final MockRepository repo;
   final InstitutionConfig institutionConfig;
-  final WhatIfScenario whatIf;
   final Future<void> Function() onRefresh;
+  /// Opens the unified My Assessment shell tab (formerly Simulation).
+  final VoidCallback onOpenAssessment;
+  /// Kept for older call sites; same as [onOpenAssessment].
   final VoidCallback onOpenSimulation;
   final VoidCallback onOpenNotifications;
 
@@ -30,21 +30,11 @@ class HomeTab extends StatelessWidget {
     super.key,
     required this.repo,
     required this.institutionConfig,
-    required this.whatIf,
     required this.onRefresh,
-    required this.onOpenSimulation,
+    required this.onOpenAssessment,
+    VoidCallback? onOpenSimulation,
     required this.onOpenNotifications,
-  });
-
-  void _openSimulationModal(BuildContext context) {
-    SimulationResultSheet.show(
-      context,
-      repo: repo,
-      institutionConfig: institutionConfig,
-      whatIf: whatIf,
-      onOpenFullSimulation: onOpenSimulation,
-    );
-  }
+  }) : onOpenSimulation = onOpenSimulation ?? onOpenAssessment;
 
   @override
   Widget build(BuildContext context) {
@@ -57,6 +47,7 @@ class HomeTab extends StatelessWidget {
       color: AppColors.primaryBlue,
       onRefresh: () async => onRefresh(),
       child: ListView(
+        key: const PageStorageKey<String>('home_tab_scroll'),
         padding: FlLayout.pagePadding,
         children: [
           Row(
@@ -113,14 +104,25 @@ class HomeTab extends StatelessWidget {
           HomeProgressOverview(
             repo: repo,
             institutionConfig: institutionConfig,
-            whatIf: whatIf,
-            onOpenSimulationModal: () => _openSimulationModal(context),
-            onOpenPreparationDetails: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => PreparationPeriodScreen(period: institutionConfig.preparationPeriod),
-              ),
-            ),
+            onOpenSimulationModal: onOpenAssessment,
+            onOpenEvaluationDetails: () {
+              final nav = Navigator.of(context);
+              Route<dynamic>? top;
+              nav.popUntil((route) {
+                top ??= route;
+                return true;
+              });
+              if (top?.settings.name == EvaluationDetailsScreen.routeName) return;
+              nav.push(
+                MaterialPageRoute(
+                  settings: const RouteSettings(name: EvaluationDetailsScreen.routeName),
+                  builder: (_) => EvaluationDetailsScreen(
+                    period: institutionConfig.preparationPeriod,
+                    profile: repo.profile,
+                  ),
+                ),
+              );
+            },
           ),
           const SizedBox(height: FlLayout.homeSectionGap),
           HomeQuickActions(
@@ -128,18 +130,23 @@ class HomeTab extends StatelessWidget {
               context,
               MaterialPageRoute(builder: (_) => UploadEvidenceScreen(repo: repo, onSave: onRefresh)),
             ),
-            onOpenAssessment: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => AssessmentTab(repo: repo, onSave: onRefresh)),
-            ),
+            onOpenAssessment: onOpenAssessment,
             onViewFeedback: onOpenNotifications,
           ),
           const SizedBox(height: FlLayout.sectionGap),
           HomeKraGrid(
             repo: repo,
-            onOpenAssessment: () => Navigator.push(
+            onOpenKra: (kraId) => Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => AssessmentTab(repo: repo, onSave: onRefresh)),
+              MaterialPageRoute(
+                builder: (_) => AssessmentTab(
+                  key: ValueKey('assessment-$kraId'),
+                  repo: repo,
+                  onSave: onRefresh,
+                  institutionConfig: institutionConfig,
+                  selectedKraId: kraId,
+                ),
+              ),
             ),
           ),
           const SizedBox(height: 20),

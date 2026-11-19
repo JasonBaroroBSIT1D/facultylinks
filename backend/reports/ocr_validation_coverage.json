@@ -1,0 +1,2403 @@
+{
+  "generatedAt": "2026-11-18T17:35:58.572926+00:00",
+  "catalogVersion": "integration-draft-postgres",
+  "contentRulesVersion": "fl-doc-content-1.2",
+  "indicatorCount": 62,
+  "byCoverageStatus": {
+    "set_sef_pipeline": 6,
+    "special_status_support": 1,
+    "catalog_fields": 55
+  },
+  "disclaimer": "A coverage entry documents which automatic checks are configured. It does not mean the indicator is fully validated, authenticity-proven, or auto-approved. Form-only claims remain reviewer-confirmed.",
+  "indicators": [
+    {
+      "kraId": "kra-I",
+      "kraName": "KRA I \u2013 Instruction",
+      "criterionId": "kra-I-A",
+      "criterionName": "Criterion A \u2013 Teaching Effectiveness",
+      "indicatorId": "kra-I-A-setsef-eval",
+      "indicatorName": "SET / SEF Evaluation (PDF)",
+      "indicatorType": "set_sef_unified_pdf",
+      "coverageStatus": "set_sef_pipeline",
+      "documentType": "set_sef_evaluation",
+      "ocrFields": [],
+      "formOnlyFields": [
+        "pdf"
+      ],
+      "fieldRequirements": {
+        "pdf": "form_only"
+      },
+      "automaticChecks": [
+        "set_sef_ocr_extract",
+        "faculty_identity",
+        "semester_ay",
+        "original_set_sef_ratings",
+        "scale_and_missing_rating",
+        "duplicate_hash_conflict"
+      ],
+      "manualReviewGaps": [
+        "General OCR rules do not apply. SET/SEF ratings, identity, and semester checks use the dedicated pipeline; reviewer confirmation is still required before Criterion A awards."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "catalog SET/SEF indicator types + backend set_sef pipeline",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "SET/SEF evaluation evidence uses the dedicated SET/SEF OCR and validation pipeline."
+    },
+    {
+      "kraId": "kra-I",
+      "kraName": "KRA I \u2013 Instruction",
+      "criterionId": "kra-I-A",
+      "criterionName": "Criterion A \u2013 Teaching Effectiveness",
+      "indicatorId": "kra-I-A-set",
+      "indicatorName": "Student Evaluation of Teachers (SET)",
+      "indicatorType": "set_sef",
+      "coverageStatus": "set_sef_pipeline",
+      "documentType": "set_sef_evaluation",
+      "ocrFields": [],
+      "formOnlyFields": [
+        "academicYear",
+        "semester",
+        "rating"
+      ],
+      "fieldRequirements": {
+        "academicYear": "form_only",
+        "semester": "form_only",
+        "rating": "form_only"
+      },
+      "automaticChecks": [
+        "set_sef_ocr_extract",
+        "faculty_identity",
+        "semester_ay",
+        "original_set_sef_ratings",
+        "scale_and_missing_rating",
+        "duplicate_hash_conflict"
+      ],
+      "manualReviewGaps": [
+        "General OCR rules do not apply. SET/SEF ratings, identity, and semester checks use the dedicated pipeline; reviewer confirmation is still required before Criterion A awards."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "catalog SET/SEF indicator types + backend set_sef pipeline",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "SET/SEF evaluation evidence uses the dedicated SET/SEF OCR and validation pipeline."
+    },
+    {
+      "kraId": "kra-I",
+      "kraName": "KRA I \u2013 Instruction",
+      "criterionId": "kra-I-A",
+      "criterionName": "Criterion A \u2013 Teaching Effectiveness",
+      "indicatorId": "kra-I-A-sef",
+      "indicatorName": "Supervisor's Evaluation of Faculty (SEF)",
+      "indicatorType": "set_sef",
+      "coverageStatus": "set_sef_pipeline",
+      "documentType": "set_sef_evaluation",
+      "ocrFields": [],
+      "formOnlyFields": [
+        "academicYear",
+        "semester",
+        "rating"
+      ],
+      "fieldRequirements": {
+        "academicYear": "form_only",
+        "semester": "form_only",
+        "rating": "form_only"
+      },
+      "automaticChecks": [
+        "set_sef_ocr_extract",
+        "faculty_identity",
+        "semester_ay",
+        "original_set_sef_ratings",
+        "scale_and_missing_rating",
+        "duplicate_hash_conflict"
+      ],
+      "manualReviewGaps": [
+        "General OCR rules do not apply. SET/SEF ratings, identity, and semester checks use the dedicated pipeline; reviewer confirmation is still required before Criterion A awards."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "catalog SET/SEF indicator types + backend set_sef pipeline",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "SET/SEF evaluation evidence uses the dedicated SET/SEF OCR and validation pipeline."
+    },
+    {
+      "kraId": "kra-I",
+      "kraName": "KRA I \u2013 Instruction",
+      "criterionId": "kra-I-A",
+      "criterionName": "Criterion A \u2013 Teaching Effectiveness",
+      "indicatorId": "kra-I-A-special",
+      "indicatorName": "For Faculty with Special Status",
+      "indicatorType": null,
+      "coverageStatus": "special_status_support",
+      "documentType": "special_status_support",
+      "ocrFields": [
+        "supporting_text"
+      ],
+      "formOnlyFields": [
+        "specialStatus",
+        "notes"
+      ],
+      "fieldRequirements": {
+        "supporting_text": "required_review",
+        "specialStatus": "form_only",
+        "notes": "form_only"
+      },
+      "automaticChecks": [
+        "supporting_text_readable"
+      ],
+      "manualReviewGaps": [
+        "Only readable-text presence is checked; special-status eligibility remains reviewer judgment."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "assessment-definitions.js kra-I-A-special documentaryRequirements",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "Special-status supporting evidence: catalog documentaryRequirements require supporting documentation; OCR checks that readable text was extracted."
+    },
+    {
+      "kraId": "kra-I",
+      "kraName": "KRA I \u2013 Instruction",
+      "criterionId": "kra-I-A",
+      "criterionName": "Criterion A \u2013 Teaching Effectiveness",
+      "indicatorId": "kra-I-A-setsef-combined",
+      "indicatorName": "Combined SET\u2013SEF PDF",
+      "indicatorType": "set_sef_combined_pdf",
+      "coverageStatus": "set_sef_pipeline",
+      "documentType": "set_sef_evaluation",
+      "ocrFields": [],
+      "formOnlyFields": [
+        "pdf"
+      ],
+      "fieldRequirements": {
+        "pdf": "form_only"
+      },
+      "automaticChecks": [
+        "set_sef_ocr_extract",
+        "faculty_identity",
+        "semester_ay",
+        "original_set_sef_ratings",
+        "scale_and_missing_rating",
+        "duplicate_hash_conflict"
+      ],
+      "manualReviewGaps": [
+        "General OCR rules do not apply. SET/SEF ratings, identity, and semester checks use the dedicated pipeline; reviewer confirmation is still required before Criterion A awards."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "catalog SET/SEF indicator types + backend set_sef pipeline",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "SET/SEF evaluation evidence uses the dedicated SET/SEF OCR and validation pipeline."
+    },
+    {
+      "kraId": "kra-I",
+      "kraName": "KRA I \u2013 Instruction",
+      "criterionId": "kra-I-A",
+      "criterionName": "Criterion A \u2013 Teaching Effectiveness",
+      "indicatorId": "kra-I-A-set-pdf",
+      "indicatorName": "SET PDF (OCR)",
+      "indicatorType": "set_sef_set_pdf",
+      "coverageStatus": "set_sef_pipeline",
+      "documentType": "set_sef_evaluation",
+      "ocrFields": [],
+      "formOnlyFields": [
+        "pdf"
+      ],
+      "fieldRequirements": {
+        "pdf": "form_only"
+      },
+      "automaticChecks": [
+        "set_sef_ocr_extract",
+        "faculty_identity",
+        "semester_ay",
+        "original_set_sef_ratings",
+        "scale_and_missing_rating",
+        "duplicate_hash_conflict"
+      ],
+      "manualReviewGaps": [
+        "General OCR rules do not apply. SET/SEF ratings, identity, and semester checks use the dedicated pipeline; reviewer confirmation is still required before Criterion A awards."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "catalog SET/SEF indicator types + backend set_sef pipeline",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "SET/SEF evaluation evidence uses the dedicated SET/SEF OCR and validation pipeline."
+    },
+    {
+      "kraId": "kra-I",
+      "kraName": "KRA I \u2013 Instruction",
+      "criterionId": "kra-I-A",
+      "criterionName": "Criterion A \u2013 Teaching Effectiveness",
+      "indicatorId": "kra-I-A-sef-pdf",
+      "indicatorName": "SEF PDF (OCR)",
+      "indicatorType": "set_sef_sef_pdf",
+      "coverageStatus": "set_sef_pipeline",
+      "documentType": "set_sef_evaluation",
+      "ocrFields": [],
+      "formOnlyFields": [
+        "pdf"
+      ],
+      "fieldRequirements": {
+        "pdf": "form_only"
+      },
+      "automaticChecks": [
+        "set_sef_ocr_extract",
+        "faculty_identity",
+        "semester_ay",
+        "original_set_sef_ratings",
+        "scale_and_missing_rating",
+        "duplicate_hash_conflict"
+      ],
+      "manualReviewGaps": [
+        "General OCR rules do not apply. SET/SEF ratings, identity, and semester checks use the dedicated pipeline; reviewer confirmation is still required before Criterion A awards."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "catalog SET/SEF indicator types + backend set_sef pipeline",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "SET/SEF evaluation evidence uses the dedicated SET/SEF OCR and validation pipeline."
+    },
+    {
+      "kraId": "kra-I",
+      "kraName": "KRA I \u2013 Instruction",
+      "criterionId": "kra-I-B",
+      "criterionName": "Criterion B \u2013 Instructional Materials Development",
+      "indicatorId": "kra-I-B-1-1",
+      "indicatorName": "Sole Author of a Textbook",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "instructional_material",
+      "ocrFields": [
+        "title",
+        "date"
+      ],
+      "formOnlyFields": [
+        "role",
+        "authorship"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "date": "required_review",
+        "role": "form_only",
+        "authorship": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:date",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "published_catalog_indicator.fields for kra-I-B-1-1",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-I",
+      "kraName": "KRA I \u2013 Instruction",
+      "criterionId": "kra-I-B",
+      "criterionName": "Criterion B \u2013 Instructional Materials Development",
+      "indicatorId": "kra-I-B-1-2",
+      "indicatorName": "Sole Author of a Module",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "instructional_material",
+      "ocrFields": [
+        "title",
+        "date"
+      ],
+      "formOnlyFields": [],
+      "fieldRequirements": {
+        "title": "required_review",
+        "date": "required_review"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:date",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "published_catalog_indicator.fields for kra-I-B-1-2",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-I",
+      "kraName": "KRA I \u2013 Instruction",
+      "criterionId": "kra-I-B",
+      "criterionName": "Criterion B \u2013 Instructional Materials Development",
+      "indicatorId": "kra-I-B-1-3",
+      "indicatorName": "Sole Author of Instructional Manual",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "instructional_material",
+      "ocrFields": [
+        "title",
+        "date"
+      ],
+      "formOnlyFields": [],
+      "fieldRequirements": {
+        "title": "required_review",
+        "date": "required_review"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:date",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "published_catalog_indicator.fields for kra-I-B-1-3",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-I",
+      "kraName": "KRA I \u2013 Instruction",
+      "criterionId": "kra-I-B",
+      "criterionName": "Criterion B \u2013 Instructional Materials Development",
+      "indicatorId": "kra-I-B-1-4",
+      "indicatorName": "Sole Author of Multimedia Teaching Materials",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "instructional_material",
+      "ocrFields": [
+        "title",
+        "date"
+      ],
+      "formOnlyFields": [],
+      "fieldRequirements": {
+        "title": "required_review",
+        "date": "required_review"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:date",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "published_catalog_indicator.fields for kra-I-B-1-4",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-I",
+      "kraName": "KRA I \u2013 Instruction",
+      "criterionId": "kra-I-B",
+      "criterionName": "Criterion B \u2013 Instructional Materials Development",
+      "indicatorId": "kra-I-B-2",
+      "indicatorName": "Academic Programs Developed/Revised (Lead / Contributor)",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "instructional_material",
+      "ocrFields": [
+        "title",
+        "date"
+      ],
+      "formOnlyFields": [
+        "role"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "date": "required_review",
+        "role": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:date",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "published_catalog_indicator.fields for kra-I-B-2",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-I",
+      "kraName": "KRA I \u2013 Instruction",
+      "criterionId": "kra-I-C",
+      "criterionName": "Criterion C \u2013 Research Advising and Mentorship Services",
+      "indicatorId": "kra-I-C-1",
+      "indicatorName": "Research-Related Services (Adviser / Panel)",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "advising_mentorship",
+      "ocrFields": [
+        "title",
+        "date"
+      ],
+      "formOnlyFields": [
+        "thesisType",
+        "role",
+        "quantity"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "date": "required_review",
+        "thesisType": "form_only",
+        "role": "form_only",
+        "quantity": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:date",
+        "faculty_identity_advisory",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership.",
+        "Scoring quantities/tiers/scopes are form-claimed and are not OCR-validated against the file.",
+        "Advisory identity checks may compare extracted honoree/recipient names to the faculty profile when certificate-style labels are present. A match is not proof of ownership or authorship."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "published_catalog_indicator.fields for kra-I-C-1",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-I",
+      "kraName": "KRA I \u2013 Instruction",
+      "criterionId": "kra-I-C",
+      "criterionName": "Criterion C \u2013 Research Advising and Mentorship Services",
+      "indicatorId": "kra-I-C-2",
+      "indicatorName": "Mentorship Services",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "advising_mentorship",
+      "ocrFields": [
+        "title",
+        "date"
+      ],
+      "formOnlyFields": [
+        "duration"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "date": "required_review",
+        "duration": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:date",
+        "faculty_identity_advisory",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Scoring quantities/tiers/scopes are form-claimed and are not OCR-validated against the file.",
+        "Advisory identity checks may compare extracted honoree/recipient names to the faculty profile when certificate-style labels are present. A match is not proof of ownership or authorship."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "published_catalog_indicator.fields for kra-I-C-2",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-A",
+      "criterionName": "Criterion A \u2013 Research Outputs Published",
+      "indicatorId": "kra-II-A-1",
+      "indicatorName": "Sole Author of an Academic Book",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "publicationIdentifier"
+      ],
+      "formOnlyFields": [
+        "description",
+        "authorRole"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "publicationIdentifier": "required_review",
+        "description": "form_only",
+        "authorRole": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:publicationIdentifier",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-A-1",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-A",
+      "criterionName": "Criterion A \u2013 Research Outputs Published",
+      "indicatorId": "kra-II-A-2",
+      "indicatorName": "Sole Author of Edited Academic Book Chapter",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "publicationIdentifier"
+      ],
+      "formOnlyFields": [
+        "description",
+        "authorRole"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "publicationIdentifier": "required_review",
+        "description": "form_only",
+        "authorRole": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:publicationIdentifier",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-A-2",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-A",
+      "criterionName": "Criterion A \u2013 Research Outputs Published",
+      "indicatorId": "kra-II-A-3",
+      "indicatorName": "Sole Author of a Journal Article",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "publicationIdentifier"
+      ],
+      "formOnlyFields": [
+        "description",
+        "authorRole"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "publicationIdentifier": "required_review",
+        "description": "form_only",
+        "authorRole": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:publicationIdentifier",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-A-3",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-A",
+      "criterionName": "Criterion A \u2013 Research Outputs Published",
+      "indicatorId": "kra-II-A-4",
+      "indicatorName": "Sole Author of Academic Monograph",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "publicationIdentifier"
+      ],
+      "formOnlyFields": [
+        "description",
+        "authorRole"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "publicationIdentifier": "required_review",
+        "description": "form_only",
+        "authorRole": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:publicationIdentifier",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-A-4",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-A",
+      "criterionName": "Criterion A \u2013 Research Outputs Published",
+      "indicatorId": "kra-II-A-5",
+      "indicatorName": "Research Translated Into Project, Policy, or Product",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "description",
+        "translationOutcome"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "description": "form_only",
+        "translationOutcome": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-A-5",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-A",
+      "criterionName": "Criterion A \u2013 Research Outputs Published",
+      "indicatorId": "kra-II-A-6",
+      "indicatorName": "Research Publication Cited",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "citingWork",
+        "citationContext"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "citingWork": "form_only",
+        "citationContext": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-A-6",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-B",
+      "criterionName": "Criterion B \u2013 Inventions",
+      "indicatorId": "kra-II-B-1-1",
+      "indicatorName": "Invention Patent (A/P/G stages)",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "patentNumber",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "patentStage"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "patentNumber": "required_review",
+        "achievementDate": "required_review",
+        "patentStage": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:patentNumber",
+        "ocr_field:achievementDate",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Scoring quantities/tiers/scopes are form-claimed and are not OCR-validated against the file."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-B-1-1",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-B",
+      "criterionName": "Criterion B \u2013 Inventions",
+      "indicatorId": "kra-II-B-1-2",
+      "indicatorName": "Commercialized Patented Product",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "productName"
+      ],
+      "formOnlyFields": [
+        "commercializationScope"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "productName": "required_review",
+        "commercializationScope": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:productName",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Scoring quantities/tiers/scopes are form-claimed and are not OCR-validated against the file."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-B-1-2",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-B",
+      "criterionName": "Criterion B \u2013 Inventions",
+      "indicatorId": "kra-II-B-2-1",
+      "indicatorName": "Copyrighted Software",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "softwareTitle"
+      ],
+      "formOnlyFields": [
+        "softwareVersionType"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "softwareTitle": "required_review",
+        "softwareVersionType": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:softwareTitle",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-B-2-1",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-B",
+      "criterionName": "Criterion B \u2013 Inventions",
+      "indicatorId": "kra-II-B-2-2",
+      "indicatorName": "New plant variety / animal breeds / microbial strains",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "publicationIdentifier"
+      ],
+      "formOnlyFields": [
+        "description",
+        "authorRole"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "publicationIdentifier": "required_review",
+        "description": "form_only",
+        "authorRole": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:publicationIdentifier",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-B-2-2",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-C",
+      "criterionName": "Criterion C \u2013 Creative Works",
+      "indicatorId": "kra-II-C-1-1-1",
+      "indicatorName": "Musical Composition",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "publicationIdentifier"
+      ],
+      "formOnlyFields": [
+        "description",
+        "authorRole"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "publicationIdentifier": "required_review",
+        "description": "form_only",
+        "authorRole": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:publicationIdentifier",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-C-1-1-1",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-C",
+      "criterionName": "Criterion C \u2013 Creative Works",
+      "indicatorId": "kra-II-C-1-1-2",
+      "indicatorName": "Musical Arrangement",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "publicationIdentifier"
+      ],
+      "formOnlyFields": [
+        "description",
+        "authorRole"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "publicationIdentifier": "required_review",
+        "description": "form_only",
+        "authorRole": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:publicationIdentifier",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-C-1-1-2",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-C",
+      "criterionName": "Criterion C \u2013 Creative Works",
+      "indicatorId": "kra-II-C-1-1-3",
+      "indicatorName": "Musical Performance",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "publicationIdentifier"
+      ],
+      "formOnlyFields": [
+        "description",
+        "authorRole"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "publicationIdentifier": "required_review",
+        "description": "form_only",
+        "authorRole": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:publicationIdentifier",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-C-1-1-3",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-C",
+      "criterionName": "Criterion C \u2013 Creative Works",
+      "indicatorId": "kra-II-C-1-1-4",
+      "indicatorName": "Conducting",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "publicationIdentifier"
+      ],
+      "formOnlyFields": [
+        "description",
+        "authorRole"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "publicationIdentifier": "required_review",
+        "description": "form_only",
+        "authorRole": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:publicationIdentifier",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-C-1-1-4",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-C",
+      "criterionName": "Criterion C \u2013 Creative Works",
+      "indicatorId": "kra-II-C-1-1-5",
+      "indicatorName": "Music Production",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "publicationIdentifier"
+      ],
+      "formOnlyFields": [
+        "description",
+        "authorRole"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "publicationIdentifier": "required_review",
+        "description": "form_only",
+        "authorRole": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:publicationIdentifier",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-C-1-1-5",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-C",
+      "criterionName": "Criterion C \u2013 Creative Works",
+      "indicatorId": "kra-II-C-1-2-1",
+      "indicatorName": "Original Choreography",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "publicationIdentifier"
+      ],
+      "formOnlyFields": [
+        "description",
+        "authorRole"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "publicationIdentifier": "required_review",
+        "description": "form_only",
+        "authorRole": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:publicationIdentifier",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-C-1-2-1",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-C",
+      "criterionName": "Criterion C \u2013 Creative Works",
+      "indicatorId": "kra-II-C-1-2-2",
+      "indicatorName": "Dance Performance",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "publicationIdentifier"
+      ],
+      "formOnlyFields": [
+        "description",
+        "authorRole"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "publicationIdentifier": "required_review",
+        "description": "form_only",
+        "authorRole": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:publicationIdentifier",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-C-1-2-2",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-C",
+      "criterionName": "Criterion C \u2013 Creative Works",
+      "indicatorId": "kra-II-C-1-3-1",
+      "indicatorName": "Playwright",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "publicationIdentifier"
+      ],
+      "formOnlyFields": [
+        "description",
+        "authorRole"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "publicationIdentifier": "required_review",
+        "description": "form_only",
+        "authorRole": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:publicationIdentifier",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-C-1-3-1",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-C",
+      "criterionName": "Criterion C \u2013 Creative Works",
+      "indicatorId": "kra-II-C-1-3-2",
+      "indicatorName": "Directing (Theatre)",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "publicationIdentifier"
+      ],
+      "formOnlyFields": [
+        "description",
+        "authorRole"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "publicationIdentifier": "required_review",
+        "description": "form_only",
+        "authorRole": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:publicationIdentifier",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-C-1-3-2",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-C",
+      "criterionName": "Criterion C \u2013 Creative Works",
+      "indicatorId": "kra-II-C-1-3-3",
+      "indicatorName": "Acting",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "publicationIdentifier"
+      ],
+      "formOnlyFields": [
+        "description",
+        "authorRole"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "publicationIdentifier": "required_review",
+        "description": "form_only",
+        "authorRole": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:publicationIdentifier",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-C-1-3-3",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-C",
+      "criterionName": "Criterion C \u2013 Creative Works",
+      "indicatorId": "kra-II-C-1-3-4",
+      "indicatorName": "Production Design",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "publicationIdentifier"
+      ],
+      "formOnlyFields": [
+        "description",
+        "authorRole"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "publicationIdentifier": "required_review",
+        "description": "form_only",
+        "authorRole": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:publicationIdentifier",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-C-1-3-4",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-C",
+      "criterionName": "Criterion C \u2013 Creative Works",
+      "indicatorId": "kra-II-C-1-2-visual",
+      "indicatorName": "Visual Arts (Painting, Drawing, etc.)",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "publicationIdentifier"
+      ],
+      "formOnlyFields": [
+        "description",
+        "authorRole"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "publicationIdentifier": "required_review",
+        "description": "form_only",
+        "authorRole": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:publicationIdentifier",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-C-1-2-visual",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-C",
+      "criterionName": "Criterion C \u2013 Creative Works",
+      "indicatorId": "kra-II-C-1-3-film",
+      "indicatorName": "Film (short/feature/documentary/etc.)",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "publicationIdentifier"
+      ],
+      "formOnlyFields": [
+        "description",
+        "authorRole"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "publicationIdentifier": "required_review",
+        "description": "form_only",
+        "authorRole": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:publicationIdentifier",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-C-1-3-film",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-C",
+      "criterionName": "Criterion C \u2013 Creative Works",
+      "indicatorId": "kra-II-C-1-4-1",
+      "indicatorName": "Novel",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "publicationIdentifier"
+      ],
+      "formOnlyFields": [
+        "description",
+        "authorRole"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "publicationIdentifier": "required_review",
+        "description": "form_only",
+        "authorRole": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:publicationIdentifier",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-C-1-4-1",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-C",
+      "criterionName": "Criterion C \u2013 Creative Works",
+      "indicatorId": "kra-II-C-1-4-2",
+      "indicatorName": "Short story",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "publicationIdentifier"
+      ],
+      "formOnlyFields": [
+        "description",
+        "authorRole"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "publicationIdentifier": "required_review",
+        "description": "form_only",
+        "authorRole": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:publicationIdentifier",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-C-1-4-2",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-C",
+      "criterionName": "Criterion C \u2013 Creative Works",
+      "indicatorId": "kra-II-C-1-4-3",
+      "indicatorName": "Poetry",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "publicationIdentifier"
+      ],
+      "formOnlyFields": [
+        "description",
+        "authorRole"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "publicationIdentifier": "required_review",
+        "description": "form_only",
+        "authorRole": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:publicationIdentifier",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-C-1-4-3",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-II",
+      "kraName": "KRA II \u2013 Research, Innovation and/or Creative Work",
+      "criterionId": "kra-II-C",
+      "criterionName": "Criterion C \u2013 Creative Works",
+      "indicatorId": "kra-II-C-1-4-4",
+      "indicatorName": "Literary Essay",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate",
+        "publicationIdentifier"
+      ],
+      "formOnlyFields": [
+        "description",
+        "authorRole"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "publicationIdentifier": "required_review",
+        "description": "form_only",
+        "authorRole": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "ocr_field:publicationIdentifier",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-II-C-1-4-4",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-III",
+      "kraName": "KRA III \u2013 Extension Services",
+      "criterionId": "kra-III-A",
+      "criterionName": "Criterion A \u2013 Service to the Institution",
+      "indicatorId": "kra-III-A-1",
+      "indicatorName": "Linkages / networking / partnership",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "description"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "description": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-III-A-1",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-III",
+      "kraName": "KRA III \u2013 Extension Services",
+      "criterionId": "kra-III-A",
+      "criterionName": "Criterion A \u2013 Service to the Institution",
+      "indicatorId": "kra-III-A-2",
+      "indicatorName": "Income generation (Lead/Contributor tiers)",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "role",
+        "amount",
+        "tier"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "role": "form_only",
+        "amount": "form_only",
+        "tier": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_ocr_fields+published_form_fields for kra-III-A-2",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-III",
+      "kraName": "KRA III \u2013 Extension Services",
+      "criterionId": "kra-III-B",
+      "criterionName": "Criterion B \u2013 Service to the Community",
+      "indicatorId": "kra-III-B-1-1",
+      "indicatorName": "QA accreditation/evaluation services",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "description",
+        "serviceScope"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "description": "form_only",
+        "serviceScope": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Scoring quantities/tiers/scopes are form-claimed and are not OCR-validated against the file."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-III-B-1-1",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-III",
+      "kraName": "KRA III \u2013 Extension Services",
+      "criterionId": "kra-III-B",
+      "criterionName": "Criterion B \u2013 Service to the Community",
+      "indicatorId": "kra-III-B-1-2",
+      "indicatorName": "Judge/Examiner awards & competitions",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "judgeServiceType",
+        "description"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "judgeServiceType": "form_only",
+        "description": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-III-B-1-2",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-III",
+      "kraName": "KRA III \u2013 Extension Services",
+      "criterionId": "kra-III-B",
+      "criterionName": "Criterion B \u2013 Service to the Community",
+      "indicatorId": "kra-III-B-1-3",
+      "indicatorName": "Short-term consultant/expert",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "description",
+        "serviceScope"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "description": "form_only",
+        "serviceScope": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Scoring quantities/tiers/scopes are form-claimed and are not OCR-validated against the file."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-III-B-1-3",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-III",
+      "kraName": "KRA III \u2013 Extension Services",
+      "criterionId": "kra-III-B",
+      "criterionName": "Criterion B \u2013 Service to the Community",
+      "indicatorId": "kra-III-B-1-4-1",
+      "indicatorName": "Occasional newspaper column",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "description"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "description": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-III-B-1-4-1",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-III",
+      "kraName": "KRA III \u2013 Extension Services",
+      "criterionId": "kra-III-B",
+      "criterionName": "Criterion B \u2013 Service to the Community",
+      "indicatorId": "kra-III-B-1-4-2",
+      "indicatorName": "Regular newspaper column",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "description"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "description": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-III-B-1-4-2",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-III",
+      "kraName": "KRA III \u2013 Extension Services",
+      "criterionId": "kra-III-B",
+      "criterionName": "Criterion B \u2013 Service to the Community",
+      "indicatorId": "kra-III-B-1-4-3",
+      "indicatorName": "Host TV/Radio Program",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "description"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "description": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-III-B-1-4-3",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-III",
+      "kraName": "KRA III \u2013 Extension Services",
+      "criterionId": "kra-III-B",
+      "criterionName": "Criterion B \u2013 Service to the Community",
+      "indicatorId": "kra-III-B-1-4-4",
+      "indicatorName": "Guest technical expert",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "description"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "description": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-III-B-1-4-4",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-III",
+      "kraName": "KRA III \u2013 Extension Services",
+      "criterionId": "kra-III-B",
+      "criterionName": "Criterion B \u2013 Service to the Community",
+      "indicatorId": "kra-III-B-1-5",
+      "indicatorName": "Training/seminar as resource person",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "serviceScope",
+        "hours",
+        "description"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "serviceScope": "form_only",
+        "hours": "form_only",
+        "description": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Scoring quantities/tiers/scopes are form-claimed and are not OCR-validated against the file."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-III-B-1-5",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-III",
+      "kraName": "KRA III \u2013 Extension Services",
+      "criterionId": "kra-III-B",
+      "criterionName": "Criterion B \u2013 Service to the Community",
+      "indicatorId": "kra-III-B-2-1",
+      "indicatorName": "Extension Project (Lead/Participant)",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "extensionRole",
+        "description",
+        "projectPeriod"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "extensionRole": "form_only",
+        "description": "form_only",
+        "projectPeriod": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Identity/role fields are achievement-form only; no automatic OCR identity match is configured. Reviewer must confirm ownership manually. A name match (where extracted) is not proof of ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-III-B-2-1",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-III",
+      "kraName": "KRA III \u2013 Extension Services",
+      "criterionId": "kra-III-C",
+      "criterionName": "Criterion C \u2013 Relevance and Quality of Extension Services",
+      "indicatorId": "kra-III-C-1",
+      "indicatorName": "Client Satisfaction Rating for Extension Projects",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "linkedIsrProjectId",
+        "clientSatisfactionRating",
+        "description"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "linkedIsrProjectId": "form_only",
+        "clientSatisfactionRating": "form_only",
+        "description": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Scoring quantities/tiers/scopes are form-claimed and are not OCR-validated against the file."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-III-C-1",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-III",
+      "kraName": "KRA III \u2013 Extension Services",
+      "criterionId": "kra-III-D",
+      "criterionName": "Criterion D \u2013 Bonus Criterion for Administrative Designations",
+      "indicatorId": "kra-III-D-1",
+      "indicatorName": "Administrative Designation",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "research_output",
+      "ocrFields": [
+        "title",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "designationLevel",
+        "designationRole",
+        "description"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "designationLevel": "form_only",
+        "designationRole": "form_only",
+        "description": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-III-D-1",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-IV",
+      "kraName": "KRA IV \u2013 Professional Development",
+      "criterionId": "kra-IV-A",
+      "criterionName": "Criterion A \u2013 Involvement in Professional Organizations",
+      "indicatorId": "kra-IV-A-1",
+      "indicatorName": "Membership in Registered Professional Organizations",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "professional_development",
+      "ocrFields": [
+        "title",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "description"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "description": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "faculty_identity_advisory",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Advisory identity checks may compare extracted honoree/recipient names to the faculty profile when certificate-style labels are present. A match is not proof of ownership or authorship."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-IV-A-1",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-IV",
+      "kraName": "KRA IV \u2013 Professional Development",
+      "criterionId": "kra-IV-B",
+      "criterionName": "Criterion B \u2013 Continuing Development",
+      "indicatorId": "kra-IV-B-1",
+      "indicatorName": "Educational Qualifications",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "professional_development",
+      "ocrFields": [
+        "title",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "description",
+        "qualificationType"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "description": "form_only",
+        "qualificationType": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "faculty_identity_advisory",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Advisory identity checks may compare extracted honoree/recipient names to the faculty profile when certificate-style labels are present. A match is not proof of ownership or authorship."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-IV-B-1",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-IV",
+      "kraName": "KRA IV \u2013 Professional Development",
+      "criterionId": "kra-IV-B",
+      "criterionName": "Criterion B \u2013 Continuing Development",
+      "indicatorId": "kra-IV-B-2",
+      "indicatorName": "Conference/seminar attendance",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "professional_development",
+      "ocrFields": [
+        "title",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "description",
+        "attendanceScope"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "description": "form_only",
+        "attendanceScope": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "faculty_identity_advisory",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Advisory identity checks may compare extracted honoree/recipient names to the faculty profile when certificate-style labels are present. A match is not proof of ownership or authorship."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-IV-B-2",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-IV",
+      "kraName": "KRA IV \u2013 Professional Development",
+      "criterionId": "kra-IV-B",
+      "criterionName": "Criterion B \u2013 Continuing Development",
+      "indicatorId": "kra-IV-B-3-1",
+      "indicatorName": "Paper presentation \u2014 Local",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "professional_development",
+      "ocrFields": [
+        "title",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "presentationScope",
+        "description"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "presentationScope": "form_only",
+        "description": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "faculty_identity_advisory",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Scoring quantities/tiers/scopes are form-claimed and are not OCR-validated against the file.",
+        "Advisory identity checks may compare extracted honoree/recipient names to the faculty profile when certificate-style labels are present. A match is not proof of ownership or authorship."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-IV-B-3-1",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-IV",
+      "kraName": "KRA IV \u2013 Professional Development",
+      "criterionId": "kra-IV-B",
+      "criterionName": "Criterion B \u2013 Continuing Development",
+      "indicatorId": "kra-IV-B-3-2",
+      "indicatorName": "Paper presentation \u2014 International",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "professional_development",
+      "ocrFields": [
+        "title",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "presentationScope",
+        "description"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "presentationScope": "form_only",
+        "description": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "faculty_identity_advisory",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Scoring quantities/tiers/scopes are form-claimed and are not OCR-validated against the file.",
+        "Advisory identity checks may compare extracted honoree/recipient names to the faculty profile when certificate-style labels are present. A match is not proof of ownership or authorship."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-IV-B-3-2",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-IV",
+      "kraName": "KRA IV \u2013 Professional Development",
+      "criterionId": "kra-IV-C",
+      "criterionName": "Criterion C \u2013 Awards and Recognition",
+      "indicatorId": "kra-IV-C-1",
+      "indicatorName": "Award of distinction",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "professional_development",
+      "ocrFields": [
+        "title",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "description",
+        "awardLevel"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "description": "form_only",
+        "awardLevel": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "faculty_identity_advisory",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Advisory identity checks may compare extracted honoree/recipient names to the faculty profile when certificate-style labels are present. A match is not proof of ownership or authorship."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-IV-C-1",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-IV",
+      "kraName": "KRA IV \u2013 Professional Development",
+      "criterionId": "kra-IV-D",
+      "criterionName": "Criterion D \u2013 Additional Points for Newly Appointed Faculty",
+      "indicatorId": "kra-IV-D-1",
+      "indicatorName": "Prior academic service",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "professional_development",
+      "ocrFields": [
+        "title",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "newlyAppointedEligible",
+        "academicServiceRole",
+        "serviceYears",
+        "description"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "newlyAppointedEligible": "form_only",
+        "academicServiceRole": "form_only",
+        "serviceYears": "form_only",
+        "description": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "faculty_identity_advisory",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Advisory identity checks may compare extracted honoree/recipient names to the faculty profile when certificate-style labels are present. A match is not proof of ownership or authorship."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-IV-D-1",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    },
+    {
+      "kraId": "kra-IV",
+      "kraName": "KRA IV \u2013 Professional Development",
+      "criterionId": "kra-IV-D",
+      "criterionName": "Criterion D \u2013 Additional Points for Newly Appointed Faculty",
+      "indicatorId": "kra-IV-D-2",
+      "indicatorName": "Industry experience",
+      "indicatorType": null,
+      "coverageStatus": "catalog_fields",
+      "documentType": "professional_development",
+      "ocrFields": [
+        "title",
+        "achievementDate"
+      ],
+      "formOnlyFields": [
+        "newlyAppointedEligible",
+        "industryCategory",
+        "serviceYears",
+        "description"
+      ],
+      "fieldRequirements": {
+        "title": "required_review",
+        "achievementDate": "required_review",
+        "newlyAppointedEligible": "form_only",
+        "industryCategory": "form_only",
+        "serviceYears": "form_only",
+        "description": "form_only"
+      },
+      "automaticChecks": [
+        "ocr_field:title",
+        "ocr_field:achievementDate",
+        "faculty_identity_advisory",
+        "kra_keyword_suggestion_advisory"
+      ],
+      "manualReviewGaps": [
+        "Configured OCR checks are assistive only \u2014 passing them does not approve the document or prove authenticity/ownership.",
+        "Advisory identity checks may compare extracted honoree/recipient names to the faculty profile when certificate-style labels are present. A match is not proof of ownership or authorship."
+      ],
+      "fullyValidated": false,
+      "ruleSource": "workbook_catalog_js_fields_map for kra-IV-D-2",
+      "rulesVersion": "fl-doc-content-1.2",
+      "reason": "OCR content checks derived from documented catalog indicator fields."
+    }
+  ]
+}

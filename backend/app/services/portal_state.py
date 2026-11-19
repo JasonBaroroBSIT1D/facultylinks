@@ -86,10 +86,17 @@ def _users_by_id(user_ids: set[int]) -> dict[int, User]:
     return {u.id: u for u in rows}
 
 
-def build_assessments_map(faculty_users: list[User], faculty_ids: list[int], *, include_score_summary: bool = True) -> dict:
+def build_assessments_map(
+    faculty_users: list[User],
+    faculty_ids: list[int],
+    *,
+    include_score_summary: bool = True,
+    institution_config: dict | None = None,
+) -> dict:
     out = {}
     if not faculty_ids:
         return out
+    institution_config = institution_config if institution_config is not None else (get_json(INSTITUTION_KEY) or {})
     rows = FacultyAssessment.query.filter(FacultyAssessment.user_id.in_(faculty_ids)).all()
     by_uid = {r.user_id: r for r in rows}
     id_to_user = {u.id: u for u in faculty_users}
@@ -103,7 +110,14 @@ def build_assessments_map(faculty_users: list[User], faculty_ids: list[int], *, 
         if include_score_summary:
             catalog, weights = get_catalog_for_assessment(data)
             if catalog and weights:
-                payload["scoreSummary"] = compute_faculty_scores(data, catalog, weights, faculty_user_id=uid)
+                payload["scoreSummary"] = compute_faculty_scores(
+                    data,
+                    catalog,
+                    weights,
+                    faculty_user_id=uid,
+                    faculty_rank=u.rank,
+                    institution_config=institution_config,
+                )
         out[u.portal_id()] = payload
     return out
 

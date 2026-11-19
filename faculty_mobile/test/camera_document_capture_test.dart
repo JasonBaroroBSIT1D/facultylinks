@@ -107,9 +107,59 @@ void main() {
     expect(result, isFalse);
   });
 
-  test('SET/SEF messaging states PDF-only specialized pipeline', () {
-    expect(UiStrings.setSefCameraNotSupported.toLowerCase(), contains('pdf'));
-    expect(UiStrings.setSefCameraNotSupported.toLowerCase(), contains('not supported'));
-    expect(UiStrings.setSefUploadHint.toLowerCase(), contains('camera photos are not accepted'));
+  test('upload copy invites multiple files or camera scans', () {
+    expect(
+      UiStrings.uploadDocumentHint,
+      'Add your files or scan printed documents. You can attach more than one document.',
+    );
+    expect(UiStrings.setSefUploadHint, UiStrings.uploadDocumentHint);
+    expect(UiStrings.scanWithCameraLabel, 'Scan with Camera');
+    expect(UiStrings.addFilesLabel, 'Add files');
+  });
+
+  test('PendingDocumentUpload treats multi-page scan as one document', () {
+    final pages = [
+      SelectedUploadFile(
+        filename: 'p1.jpg',
+        bytes: [1, 2, 3],
+        mimeType: 'image/jpeg',
+        source: UploadFileSource.camera,
+      ),
+      SelectedUploadFile(
+        filename: 'p2.jpg',
+        bytes: [4, 5, 6],
+        mimeType: 'image/jpeg',
+        source: UploadFileSource.camera,
+      ),
+    ];
+    final pending = PendingDocumentUpload.scanPages(pages);
+    expect(pending.isMultiPage, isTrue);
+    expect(pending.uploadAsPagesField, isTrue);
+    expect(pending.displayName, '2-page scan');
+    expect(pending.fromCamera, isTrue);
+    expect(pending.sizeBytes, 6);
+  });
+
+  test('UploadSessionItem tracks per-document retry without clearing successes', () {
+    final a = UploadSessionItem(
+      localKey: 'a',
+      document: PendingDocumentUpload.single(
+        const SelectedUploadFile(filename: 'a.pdf', bytes: [1], mimeType: 'application/pdf'),
+      ),
+      status: UploadSessionItemStatus.uploaded,
+      publicId: 'doc-a',
+    );
+    final b = UploadSessionItem(
+      localKey: 'b',
+      document: PendingDocumentUpload.single(
+        const SelectedUploadFile(filename: 'b.pdf', bytes: [2], mimeType: 'application/pdf'),
+      ),
+      status: UploadSessionItemStatus.failed,
+      errorMessage: 'network',
+    );
+    expect(a.isUploaded, isTrue);
+    expect(a.needsUpload, isFalse);
+    expect(b.needsUpload, isTrue);
+    expect(b.isUploaded, isFalse);
   });
 }

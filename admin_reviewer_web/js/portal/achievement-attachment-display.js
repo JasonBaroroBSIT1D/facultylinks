@@ -97,7 +97,15 @@ export function attachmentReviewStatusHtml(doc, link) {
 export function processingStatusNote(doc) {
   const p = doc?.processingStatus;
   if (!p || p === 'none' || p === 'completed') return '';
-  return `<span class="muted" style="font-size:0.8rem;display:block">Processing: ${p}</span>`;
+  const label =
+    p === 'queued' || p === 'pending'
+      ? 'Waiting for document processing.'
+      : p === 'processing'
+        ? 'Reading and checking the document.'
+        : p === 'failed'
+          ? 'Processing failed.'
+          : String(p);
+  return `<span class="muted" style="font-size:0.8rem;display:block">${label}</span>`;
 }
 
 /**

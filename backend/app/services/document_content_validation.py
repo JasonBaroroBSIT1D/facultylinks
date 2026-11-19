@@ -7,6 +7,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from app.services.catalog import find_indicator, get_published_catalog_and_weights
+from app.services.document_content_identity import identity_findings_for_document
 from app.services.document_validation_config import (
     CONTENT_RULES_VERSION,
     build_content_rules_for_indicator,
@@ -158,8 +159,10 @@ def validate_document_content(
     pages: list[dict],
     indicator_id: str | None,
     kra_id: str | None,
+    criterion_id: str | None = None,
     extraction_failed: bool = False,
     catalog: dict | None = None,
+    profile_full_name: str | None = None,
 ) -> ContentValidationResult:
     if catalog is None:
         catalog, _ = get_published_catalog_and_weights()
@@ -174,6 +177,59 @@ def validate_document_content(
         coverage_status=coverage["status"],
         form_only_fields=list(coverage.get("form_only_fields") or []),
     )
+
+    # Hierarchy integrity (selected KRA / criterion / indicator).
+    if indicator_id and catalog and not found:
+        result.findings.append(
+            {
+                "rule_id": "hierarchy_indicator_not_in_catalog",
+                "outcome": "review",
+                "affected_field": "indicatorId",
+                "severity": "review",
+                "rule_version": CONTENT_RULES_VERSION,
+                "explanation": (
+                    f"Indicator {indicator_id!r} was not found in the assessment catalog version. "
+                    "Reviewer must confirm the selected hierarchy manually."
+                ),
+                "excerpt": None,
+                "source_pages": [],
+            }
+        )
+    elif found:
+        parent_kra = (found.get("kra") or {}).get("id")
+        parent_crit = (found.get("criterion") or {}).get("id")
+        if kra_id and parent_kra and kra_id != parent_kra:
+            result.findings.append(
+                {
+                    "rule_id": "hierarchy_kra_mismatch",
+                    "outcome": "review",
+                    "affected_field": "kraId",
+                    "severity": "review",
+                    "rule_version": CONTENT_RULES_VERSION,
+                    "explanation": (
+                        f"Selected KRA {kra_id!r} does not match catalog parent {parent_kra!r} "
+                        f"for indicator {indicator_id!r}."
+                    ),
+                    "excerpt": None,
+                    "source_pages": [],
+                }
+            )
+        if criterion_id and parent_crit and criterion_id != parent_crit:
+            result.findings.append(
+                {
+                    "rule_id": "hierarchy_criterion_mismatch",
+                    "outcome": "review",
+                    "affected_field": "criterionId",
+                    "severity": "review",
+                    "rule_version": CONTENT_RULES_VERSION,
+                    "explanation": (
+                        f"Selected criterion {criterion_id!r} does not match catalog criterion "
+                        f"{parent_crit!r} for indicator {indicator_id!r}."
+                    ),
+                    "excerpt": None,
+                    "source_pages": [],
+                }
+            )
 
     # Always record coverage finding so reviewers see why checks did/didn't run.
     if coverage["status"] == "set_sef_pipeline":
@@ -217,12 +273,27 @@ def validate_document_content(
                 "affected_field": None,
                 "severity": "info",
                 "rule_version": CONTENT_RULES_VERSION,
-                "explanation": coverage["reason"],
+                "explanation": coverage["reason"]
+                + " Manual reviewer validation is required; this is not a pass.",
                 "excerpt": None,
                 "source_pages": [],
             }
         )
         return result
+
+    for gap in coverage.get("manual_review_gaps") or []:
+        result.findings.append(
+            {
+                "rule_id": "coverage_manual_review_gap",
+                "outcome": "info",
+                "affected_field": None,
+                "severity": "info",
+                "rule_version": CONTENT_RULES_VERSION,
+                "explanation": gap,
+                "excerpt": None,
+                "source_pages": [],
+            }
+        )
 
     if coverage.get("form_only_fields"):
         result.findings.append(
@@ -294,5 +365,31 @@ def validate_document_content(
                 "source_pages": pages_hit,
             }
         )
+
+    identity_row, identity_findings = identity_findings_for_document(
+        document_type=result.document_type,
+        profile_full_name=profile_full_name,
+        text=text,
+        pages=pages,
+        indicator_id=indicator_id,
+    )
+    if identity_row is not None:
+        if identity_row.value or identity_row.status != "missing":
+            result.fields.append(
+                FieldExtraction(
+                    field_name=identity_row.field_name,
+                    value=identity_row.value,
+                    status=identity_row.status,
+                    excerpt=identity_row.excerpt,
+                    source_pages=identity_row.source_pages,
+                    rule_id="faculty_identity_advisory",
+                    rule_version="1",
+                    explanation="Advisory honoree/recipient name extraction for certificate-style documents.",
+                    severity="review",
+                    source="document_content_identity (advisory; not ownership proof)",
+                    catalog_field=None,
+                )
+            )
+        result.findings.extend(identity_findings)
 
     return result

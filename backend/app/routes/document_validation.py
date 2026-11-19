@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request
@@ -13,10 +14,16 @@ from app.models import (
     DocumentExtractedField,
     DocumentExtraction,
     DocumentValidationFinding,
+    FacultyAssessment,
     UserRole,
 )
 from app.services.auth_context import current_user, faculty_may_access_document, require_roles
-from app.services.catalog import find_indicator, get_published_catalog_and_weights
+from app.services.catalog import (
+    catalog_for_version_label_strict,
+    find_indicator,
+    get_catalog_for_assessment,
+    get_published_catalog_and_weights,
+)
 from app.services.document_ocr_processor import enqueue_general_ocr_job
 from app.services.document_validation_config import coverage_for_indicator
 from app.services.set_sef_document import is_set_sef_document
@@ -90,13 +97,65 @@ def get_document_validation(public_id: str):
         .all()
     )
 
-    catalog, _ = get_published_catalog_and_weights()
+    assess = db.session.get(FacultyAssessment, doc.owner_user_id)
+    assessment_data = assess.data if assess else {}
+    catalog, _weights = get_catalog_for_assessment(assessment_data)
+    if not catalog:
+        catalog, _ = get_published_catalog_and_weights()
+
+    config_resolution = {
+        "requestedVersion": doc.config_version or assessment_data.get("configVersionId") or "",
+        "usedVersion": (catalog or {}).get("version") or doc.config_version or "",
+        "resolved": True,
+        "source": "assessment_pin_or_published",
+        "warning": None,
+    }
+    if doc.config_version:
+        strict = catalog_for_version_label_strict(doc.config_version)
+        if strict:
+            catalog = strict
+            config_resolution["source"] = "document_config_version"
+            config_resolution["usedVersion"] = doc.config_version
+        else:
+            config_resolution["resolved"] = False
+            config_resolution["warning"] = (
+                f"Stored document config version {doc.config_version!r} could not be resolved. "
+                "Display uses assessment-pinned or published catalog; re-run OCR after configuration is restored."
+            )
+            config_resolution["source"] = "assessment_pin_or_published_fallback"
+
     found = find_indicator(catalog, doc.indicator_id) if catalog and doc.indicator_id else None
     ind = (found or {}).get("indicator") if found else None
+    kra_meta = (found or {}).get("kra") if found else None
+    crit_meta = (found or {}).get("criterion") if found else None
     coverage = coverage_for_indicator(ind, indicator_id=doc.indicator_id, kra_id=doc.kra_id)
+    snapshot = next((f for f in findings if f.rule_id == "validation_configuration_snapshot"), None)
+    if snapshot and snapshot.explanation:
+        try:
+            snap = json.loads(snapshot.explanation)
+            if snap.get("coverageStatus"):
+                coverage = {**coverage, "status": snap["coverageStatus"], "rules_version": snap.get("contentRulesVersion")}
+        except json.JSONDecodeError:
+            pass
+
+    processing_pending = doc.processing_status in ("queued", "processing", "pending") or doc.ocr_status in (
+        "pending",
+        "processing",
+    )
+    checks_completed = not processing_pending and extraction is not None and extraction.status == "completed"
+    validation_complete = checks_completed and doc.ocr_status in ("completed", "review_required", "failed")
 
     payload = {
         "document": doc.to_dict(),
+        "hierarchy": {
+            "kraId": doc.kra_id or (kra_meta or {}).get("id") or "",
+            "kraName": (kra_meta or {}).get("name") or "",
+            "criterionId": doc.criterion_id or (crit_meta or {}).get("id") or "",
+            "criterionName": (crit_meta or {}).get("name") or "",
+            "indicatorId": doc.indicator_id or "",
+            "indicatorName": (ind or {}).get("name") or "",
+            "configVersion": doc.config_version or (catalog or {}).get("version") or "",
+        },
         "extraction": extraction.to_dict() if extraction else None,
         "classification": classification.to_dict() if classification else None,
         "fields": [f.to_dict() for f in fields],
@@ -106,9 +165,28 @@ def get_document_validation(public_id: str):
             "documentType": coverage.get("document_type"),
             "ocrFields": coverage.get("ocr_fields") or [],
             "formOnlyFields": coverage.get("form_only_fields") or [],
+            "fieldRequirements": coverage.get("field_requirements") or {},
+            "automaticChecks": coverage.get("automatic_checks") or [],
+            "manualReviewGaps": coverage.get("manual_review_gaps") or [],
+            "fullyValidated": False,
             "reason": coverage.get("reason") or "",
             "source": coverage.get("source") or "",
-            "rulesVersion": extraction.rules_version if extraction else "",
+            "rulesVersion": extraction.rules_version if extraction else coverage.get("rules_version") or "",
+        },
+        "configuration": config_resolution,
+        "processing": {
+            "pending": processing_pending,
+            "checksCompleted": checks_completed,
+            "validationComplete": validation_complete,
+            "fullyValidated": False,
+            "validationPassed": False if processing_pending else None,
+            "message": (
+                "Waiting for document processing. Validation has not completed."
+                if processing_pending and doc.ocr_status == "pending"
+                else "Reading and checking the document. Validation has not completed."
+                if processing_pending
+                else None
+            ),
         },
         "awardsPoints": False,
         "autoApproves": False,
@@ -145,7 +223,7 @@ def retry_general_ocr(public_id: str):
         return jsonify({"error": "Forbidden."}), 403
     if is_set_sef_document(doc):
         return jsonify({"error": "Use SET/SEF retry-ocr for this document."}), 400
-    job = enqueue_general_ocr_job(doc)
+    job = enqueue_general_ocr_job(doc, force=True)
     if not job:
         return jsonify({"error": "This file type does not support OCR processing."}), 400
     return jsonify({"ok": True, "jobId": job.id, "status": job.status})

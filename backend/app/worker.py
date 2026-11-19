@@ -18,6 +18,7 @@ from app.extensions import db
 from app.models import DocumentProcessingJob
 from app.services.database_check import assert_expected_database
 from app.services.document_ocr_processor import process_general_ocr_document
+from app.services.ocr_job_dispatch import recover_stale_jobs
 from app.services.set_sef_processor import process_set_sef_document
 
 _log = logging.getLogger(__name__)
@@ -40,8 +41,12 @@ def run_once(app) -> int:
     processed = 0
     with app.app_context():
         assert_expected_database()
+        recover_stale_jobs()
         job = _claim_next_job()
         if not job:
+            return 0
+        # Skip if another dispatcher already claimed this job.
+        if job.status != "pending":
             return 0
         try:
             if job.job_type == "set_sef_ocr":

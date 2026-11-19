@@ -1,5 +1,8 @@
 import { getApiBase } from '../core/api-config.js';
 
+export const RECOVERY_CHANNEL_EMAIL = 'email';
+export const RECOVERY_CHANNEL_SMS = 'sms';
+
 async function post(path, body) {
   const res = await fetch(`${getApiBase()}${path}`, {
     method: 'POST',
@@ -16,26 +19,59 @@ async function post(path, body) {
   return data;
 }
 
+export function validateEmail(email) {
+  const em = email?.trim() ?? '';
+  if (!em) return 'Email address is required.';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return 'Enter a valid email address.';
+  return null;
+}
+
+export function validatePhone(phone) {
+  const compact = String(phone ?? '')
+    .trim()
+    .replace(/[\s\-()]/g, '');
+  if (!compact) return 'Mobile number is required.';
+  if (!/^09\d{9}$/.test(compact) && !/^\+639\d{9}$/.test(compact)) {
+    return 'Enter a valid Philippine mobile number (09XXXXXXXXX or +639XXXXXXXXX).';
+  }
+  return null;
+}
+
+/** @param {'email'|'sms'} channel */
+export function buildRecoveryRequestPayload(channel, { email = '', phone = '' } = {}) {
+  if (channel === RECOVERY_CHANNEL_SMS) {
+    return { channel: RECOVERY_CHANNEL_SMS, phone: String(phone).trim() };
+  }
+  return { channel: RECOVERY_CHANNEL_EMAIL, email: String(email).trim() };
+}
+
+/** @param {'email'|'sms'} channel */
+export function buildRecoveryVerifyPayload(channel, { email = '', phone = '', code = '' } = {}) {
+  const base = { channel, code: String(code).trim() };
+  if (channel === RECOVERY_CHANNEL_SMS) {
+    return { ...base, phone: String(phone).trim() };
+  }
+  return { ...base, email: String(email).trim() };
+}
+
 export const PasswordRecoveryService = {
   isAvailable() {
     return true;
   },
 
-  validateEmail(email) {
-    const em = email?.trim() ?? '';
-    if (!em) return 'Email address is required.';
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) return 'Enter a valid email address.';
-    return null;
+  validateEmail,
+  validatePhone,
+  buildRecoveryRequestPayload,
+  buildRecoveryVerifyPayload,
+
+  async requestCode(channel, { email = '', phone = '' } = {}) {
+    const body = buildRecoveryRequestPayload(channel, { email, phone });
+    return post('/api/auth/password-recovery/request', body);
   },
 
-  async requestCode(email) {
-    const data = await post('/api/auth/password-recovery/request', { email: email.trim() });
-    return data;
-  },
-
-  async verifyCode(email, code) {
-    const data = await post('/api/auth/password-recovery/verify', { email: email.trim(), code: String(code).trim() });
-    return data;
+  async verifyCode(channel, { email = '', phone = '', code = '' } = {}) {
+    const body = buildRecoveryVerifyPayload(channel, { email, phone, code });
+    return post('/api/auth/password-recovery/verify', body);
   },
 
   validateNewPassword(password, confirm) {

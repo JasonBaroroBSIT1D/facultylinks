@@ -10,14 +10,27 @@ def _tokens(name: str) -> list[str]:
     return [w for w in t.split() if len(w) > 1]
 
 
+def normalize_name_display_order(name: str) -> str:
+    """Treat ``Surname, Given`` and ``Given Surname`` as equivalent token sets."""
+    s = (name or "").strip()
+    if "," in s:
+        parts = [p.strip() for p in s.split(",", 1)]
+        if len(parts) == 2 and parts[0] and parts[1]:
+            return f"{parts[1]} {parts[0]}"
+    return s
+
+
 def _match_score(profile: str, extracted: str) -> float:
     pt = _tokens(profile)
     et = _tokens(extracted)
+    et_alt = _tokens(normalize_name_display_order(extracted))
     if not pt or not et:
         return 0.0
     if profile.lower().strip() == extracted.lower().strip():
         return 1.0
-    if set(pt) == set(et):
+    if profile.lower().strip() == normalize_name_display_order(extracted).lower().strip():
+        return 0.98
+    if set(pt) == set(et) or set(pt) == set(et_alt):
         return 0.95
     inter = len(set(pt) & set(et))
     if inter >= min(len(pt), len(et)) and inter >= 2:

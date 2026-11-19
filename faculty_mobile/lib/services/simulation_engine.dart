@@ -328,6 +328,11 @@ class SimulationEngine {
         .map((d) => d.fileName)
         .toList();
 
+    final estResolution = (repo.facultyScoresEstimated?['rankWeightResolution'] as Map<String, dynamic>?) ??
+        (repo.facultyScoresVerified?['rankWeightResolution'] as Map<String, dynamic>?);
+    final usesRankTable = estResolution?['ok'] == true;
+    final rankLabel = estResolution?['categoryLabel'] as String?;
+
     return SimulationSnapshot(
       weightedTotal: weighted,
       overallRaw: rawSum,
@@ -336,6 +341,8 @@ class SimulationEngine {
       pendingEvidence: pending,
       scoresFromBackend: true,
       scoringAuthoritative: authoritative,
+      usesRankTableWeights: usesRankTable,
+      rankCategoryLabel: rankLabel,
     );
   }
 

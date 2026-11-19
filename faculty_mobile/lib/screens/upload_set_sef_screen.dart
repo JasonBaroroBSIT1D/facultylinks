@@ -45,7 +45,8 @@ class _UploadSetSefScreenState extends State<UploadSetSefScreen> {
         filename: file.name,
         mimeType: 'application/pdf',
         indicatorId: 'kra-I-A-setsef-combined',
-        kraId: 'kra-I-A',
+        kraId: 'kra-I',
+        criterionId: 'kra-I-A',
         title: 'SET–SEF combined PDF',
       );
       final doc = res['document'] as Map<String, dynamic>?;

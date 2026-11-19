@@ -105,6 +105,6 @@ void main() {
     await tester.pump();
 
     expect(find.byType(DataTable), findsNothing);
-    expect(find.text('Extracted semesters'), findsOneWidget);
+    expect(find.text('Semesters in this document'), findsOneWidget);
   });
 }

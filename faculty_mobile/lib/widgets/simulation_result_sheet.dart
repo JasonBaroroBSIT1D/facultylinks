@@ -13,14 +13,12 @@ import '../theme/app_theme.dart';
 class SimulationResultSheet extends StatelessWidget {
   final MockRepository repo;
   final InstitutionConfig institutionConfig;
-  final WhatIfScenario whatIf;
   final VoidCallback onOpenFullSimulation;
 
   const SimulationResultSheet({
     super.key,
     required this.repo,
     required this.institutionConfig,
-    required this.whatIf,
     required this.onOpenFullSimulation,
   });
 
@@ -28,7 +26,6 @@ class SimulationResultSheet extends StatelessWidget {
     BuildContext context, {
     required MockRepository repo,
     required InstitutionConfig institutionConfig,
-    required WhatIfScenario whatIf,
     required VoidCallback onOpenFullSimulation,
   }) {
     return showModalBottomSheet<void>(
@@ -39,7 +36,6 @@ class SimulationResultSheet extends StatelessWidget {
       builder: (ctx) => SimulationResultSheet(
         repo: repo,
         institutionConfig: institutionConfig,
-        whatIf: whatIf,
         onOpenFullSimulation: onOpenFullSimulation,
       ),
     );
@@ -52,8 +48,8 @@ class SimulationResultSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final est = SimulationEngine.compute(repo, whatIf: whatIf);
-    final ver = SimulationEngine.compute(repo, verified: true, whatIf: whatIf);
+    final est = SimulationEngine.compute(repo);
+    final ver = SimulationEngine.compute(repo, verified: true);
     final target = SimulationEngine.nextRankOption(institutionConfig, repo.profile.rank);
     final eval = est.usesRankTableWeights
         ? SimulationEngine.evaluateFromSnapshot(est)

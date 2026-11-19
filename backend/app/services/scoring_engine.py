@@ -218,6 +218,7 @@ def compute_kra_summaries(
     *,
     verified: bool = False,
     faculty_user_id: int | None = None,
+    rank_weight_context: dict | None = None,
 ) -> dict[str, Any]:
     summaries = {}
     set_sef = assessment_data.get("setSef") or {}
@@ -370,7 +371,11 @@ def compute_kra_summaries(
             if kra_cap is not None:
                 raw_sum = _cap(raw_sum, float(kra_cap))
         kra_summary["rawTotal"] = round(raw_sum, 4)
+        kra_summary["weightPercent"] = round(weight * 100, 2)
         kra_summary["weightedContribution"] = round(raw_sum * weight, 4)
+        if rank_weight_context:
+            kra_summary["rankCategoryId"] = rank_weight_context.get("categoryId")
+            kra_summary["rankCategoryLabel"] = rank_weight_context.get("categoryLabel")
         if criterion_a_meta is not None:
             kra_summary["criterionA"] = criterion_a_meta
             kra_summary["criterionAIncomplete"] = bool(criterion_a_meta.get("incomplete"))
@@ -397,21 +402,54 @@ def compute_kra_summaries(
         if kra_summary.get("kraCapPolicyUnresolved"):
             note = kra_summary.get("kraCapPolicyNote") or f"{kra_id}: KRA envelope cap policy is unresolved."
             notes.append(f"Provisional scoring: {note} Weighted points are not authoritative for rank until resolved.")
-    return {"byKra": summaries, "overallWeighted": round(overall, 4), "notes": notes}
+    out: dict[str, Any] = {"byKra": summaries, "overallWeighted": round(overall, 4), "notes": notes}
+    if rank_weight_context:
+        out["rankWeightResolution"] = rank_weight_context
+        if rank_weight_context.get("categoryLabel"):
+            out["weightBasis"] = (
+                f"JC3 Table 2.2 weights for {rank_weight_context['categoryLabel']} "
+                f"(current rank: {rank_weight_context.get('currentRank') or '—'})"
+            )
+        if rank_weight_context.get("error") and not rank_weight_context.get("ok"):
+            out["configurationError"] = rank_weight_context["error"]
+    return out
 
 
 def compute_faculty_scores(
     assessment_data: dict,
     catalog: dict,
-    kra_weights: dict,
+    kra_weights: dict | None = None,
     *,
     faculty_user_id: int | None = None,
+    faculty_rank: str | None = None,
+    institution_config: dict | None = None,
 ) -> dict:
-    return {
-        "estimated": compute_kra_summaries(
-            assessment_data, catalog, kra_weights, verified=False, faculty_user_id=faculty_user_id
-        ),
-        "verified": compute_kra_summaries(
-            assessment_data, catalog, kra_weights, verified=True, faculty_user_id=faculty_user_id
-        ),
-    }
+    """Score KRAs: raw totals from catalog rules; KRA weights from rank policy when faculty_rank is set."""
+    effective_weights = dict(kra_weights or {})
+    rank_ctx: dict | None = None
+    if faculty_rank is not None:
+        from app.services.rank_simulation import resolve_rank_kra_weights
+
+        resolution = resolve_rank_kra_weights(faculty_rank, institution_config)
+        rank_ctx = resolution.to_dict()
+        if resolution.ok and resolution.weights:
+            effective_weights = resolution.weights
+        else:
+            effective_weights = {kid: 0.0 for kid in ("kra-I", "kra-II", "kra-III", "kra-IV")}
+
+    def _summaries(verified: bool) -> dict[str, Any]:
+        summary = compute_kra_summaries(
+            assessment_data,
+            catalog,
+            effective_weights,
+            verified=verified,
+            faculty_user_id=faculty_user_id,
+            rank_weight_context=rank_ctx,
+        )
+        if rank_ctx and not rank_ctx.get("ok"):
+            summary.setdefault("notes", [])
+            if rank_ctx.get("error") and rank_ctx["error"] not in summary["notes"]:
+                summary["notes"].insert(0, rank_ctx["error"])
+        return summary
+
+    return {"estimated": _summaries(False), "verified": _summaries(True)}

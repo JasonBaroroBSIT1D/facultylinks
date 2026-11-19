@@ -63,12 +63,17 @@ class DocumentApi {
     return (data['documents'] as List<dynamic>).cast<Map<String, dynamic>>();
   }
 
+  /// Upload one document. Pass either a single [bytes]/[filename]/[mimeType]
+  /// or [pages] (one or more camera/scan images). Multiple [pages] are sent as
+  /// repeated multipart fields named `pages` and stored as one document.
   static Future<Map<String, dynamic>> upload({
-    required List<int> bytes,
-    required String filename,
-    required String mimeType,
+    List<int>? bytes,
+    String? filename,
+    String? mimeType,
+    List<({List<int> bytes, String filename, String mimeType})>? pages,
     required String indicatorId,
     required String kraId,
+    String? criterionId,
     String? title,
     double? estimatedPoints,
   }) async {
@@ -77,16 +82,47 @@ class DocumentApi {
     req.headers.addAll(headers);
     req.fields['indicatorId'] = indicatorId;
     req.fields['kraId'] = kraId;
+    if (criterionId != null && criterionId.isNotEmpty) {
+      req.fields['criterionId'] = criterionId;
+    }
     if (title != null && title.isNotEmpty) req.fields['title'] = title;
     if (estimatedPoints != null) req.fields['estimatedPoints'] = estimatedPoints.toString();
-    req.files.add(
-      http.MultipartFile.fromBytes(
-        'file',
-        bytes,
-        filename: filename,
-        contentType: MediaType.parse(mimeType),
-      ),
-    );
+
+    final multi = pages;
+    if (multi != null && multi.length > 1) {
+      for (final page in multi) {
+        req.files.add(
+          http.MultipartFile.fromBytes(
+            'pages',
+            page.bytes,
+            filename: page.filename,
+            contentType: MediaType.parse(page.mimeType),
+          ),
+        );
+      }
+    } else if (multi != null && multi.length == 1) {
+      final page = multi.first;
+      req.files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          page.bytes,
+          filename: page.filename,
+          contentType: MediaType.parse(page.mimeType),
+        ),
+      );
+    } else if (bytes != null && filename != null && mimeType != null) {
+      req.files.add(
+        http.MultipartFile.fromBytes(
+          'file',
+          bytes,
+          filename: filename,
+          contentType: MediaType.parse(mimeType),
+        ),
+      );
+    } else {
+      throw Exception('No file provided for upload.');
+    }
+
     final streamed = await req.send();
     final res = await http.Response.fromStream(streamed);
     if (res.statusCode != 201) {

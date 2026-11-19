@@ -112,6 +112,9 @@ class Config:
 
     RECOVERY_HMAC_SECRET = os.environ.get("RECOVERY_HMAC_SECRET", "").strip() or None
 
+    # TextBee SMS gateway (password recovery OTP when user has verified mobile)
+    TEXTBEE_API_KEY = os.environ.get("TEXTBEE_API_KEY", "").strip() or None
+
     # Windows: C:\Program Files\Tesseract-OCR\tesseract.exe when not on PATH
     TESSERACT_CMD = os.environ.get("TESSERACT_CMD", "").strip() or None
 

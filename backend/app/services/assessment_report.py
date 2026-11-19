@@ -405,7 +405,12 @@ def build_assessment_report(
     criterion_a_ver = None
     if configured:
         scores = compute_faculty_scores(
-            assessment_data, catalog, kra_weights, faculty_user_id=faculty.id
+            assessment_data,
+            catalog,
+            kra_weights,
+            faculty_user_id=faculty.id,
+            faculty_rank=faculty.rank,
+            institution_config=institution,
         )
         rank_simulation = compute_faculty_rank_simulation(
             faculty_rank=faculty.rank,
@@ -637,10 +642,15 @@ def build_assessment_report(
         "kraScoreSummary": {
             "estimated": est_present,
             "verified": ver_present,
-            "weightBasis": "Catalog kraWeights for the pinned/active scoring version (applied once by the backend scoring engine).",
+            "weightBasis": (
+                (scores or {}).get("estimated", {}).get("weightBasis")
+                or (scores or {}).get("verified", {}).get("weightBasis")
+                or "KRA weights from institution rank simulation (JC3 Table 2.2) for the faculty member’s current rank."
+            ),
+            "rankWeightResolution": (scores or {}).get("estimated", {}).get("rankWeightResolution"),
             "rawVsWeighted": (
-                "Raw points are uncapped/capped criterion totals within each KRA before catalog weight. "
-                "Weighted contribution is raw total × that KRA’s catalog weight."
+                "Raw points are capped criterion totals within each KRA. "
+                "Weighted contribution is raw total × that KRA’s rank-category weight (applied once)."
             ),
             "kraOrder": ["kra-I", "kra-II", "kra-III", "kra-IV"],
         },

@@ -67,6 +67,69 @@ def _ocr_page_image(page, pytesseract, Image) -> tuple[str, float | None]:
     return ocr_text, mean_conf
 
 
+def extract_image_bytes_text(image_blobs: list[bytes]) -> PdfExtractionResult:
+    """OCR one or more camera/scanned image pages into the SET/SEF PdfExtractionResult shape.
+
+    Does not invent ratings — only returns page text for the specialized parser.
+    """
+    if not image_blobs:
+        return PdfExtractionResult(error="No image pages provided.", ocr_required=True)
+
+    if resolve_tesseract_cmd() is None:
+        return PdfExtractionResult(error=TESSERACT_RETRY_HINT, ocr_required=True)
+
+    try:
+        import pytesseract
+        from PIL import Image
+    except ImportError as exc:
+        return PdfExtractionResult(error=f"OCR Python dependencies missing: {exc}", ocr_required=True)
+
+    configure_pytesseract()
+    pages: list[PageText] = []
+    unreadable: list[int] = []
+
+    for idx, blob in enumerate(image_blobs, start=1):
+        try:
+            img = Image.open(io.BytesIO(blob))
+            if img.mode not in ("RGB", "L"):
+                img = img.convert("RGB")
+            ocr_data = pytesseract.image_to_data(img, output_type=pytesseract.Output.DICT)
+            text = (pytesseract.image_to_string(img, lang="eng") or "").strip()
+            confidences = [
+                int(c)
+                for c in ocr_data.get("conf", [])
+                if str(c).lstrip("-").isdigit() and int(c) >= 0
+            ]
+            mean_conf = (sum(confidences) / len(confidences)) if confidences else None
+        except Exception as exc:
+            _log.warning("Image OCR failed page %s: %s", idx, exc)
+            pages.append(PageText(page_number=idx, text="", source="tesseract", mean_confidence=None))
+            unreadable.append(idx)
+            continue
+
+        if not _embedded_text_usable(text):
+            unreadable.append(idx)
+        pages.append(
+            PageText(page_number=idx, text=text, source="tesseract", mean_confidence=mean_conf)
+        )
+
+    readable = [p for p in pages if p.text.strip() and _embedded_text_usable(p.text)]
+    if not readable:
+        return PdfExtractionResult(
+            pages=pages,
+            full_text="",
+            error="No readable text could be extracted from the scanned image(s).",
+            ocr_required=True,
+        )
+
+    full = "\n\n".join(f"--- Page {p.page_number} ---\n{p.text}" for p in pages if p.text.strip())
+    return PdfExtractionResult(
+        pages=pages,
+        full_text=full,
+        ocr_required=bool(unreadable),
+    )
+
+
 def extract_pdf_text(stream: BinaryIO) -> PdfExtractionResult:
     try:
         import fitz  # PyMuPDF

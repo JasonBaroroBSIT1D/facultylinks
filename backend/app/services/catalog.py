@@ -190,11 +190,10 @@ def get_version_record(version_id: str) -> dict | None:
     return None
 
 
-def get_catalog_by_version_label(version_label: str | None) -> dict | None:
-    """Resolve catalog by published version id or catalog.version string."""
+def catalog_for_version_label_strict(version_label: str | None) -> dict | None:
+    """Resolve catalog by version id or catalog.version string, or None if not found."""
     if not version_label:
-        catalog, _ = get_published_catalog_and_weights()
-        return catalog
+        return None
     for v in get_assessment_config().get("versions", []):
         if v.get("id") == version_label:
             return v.get("catalog")
@@ -204,6 +203,17 @@ def get_catalog_by_version_label(version_label: str | None) -> dict | None:
     pub = get_json(CATALOG_PUBLISHED_KEY)
     if isinstance(pub, dict) and pub.get("version") == version_label:
         return pub
+    return None
+
+
+def get_catalog_by_version_label(version_label: str | None) -> dict | None:
+    """Resolve catalog by published version id or catalog.version string."""
+    if not version_label:
+        catalog, _ = get_published_catalog_and_weights()
+        return catalog
+    strict = catalog_for_version_label_strict(version_label)
+    if strict:
+        return strict
     catalog, _ = get_published_catalog_and_weights()
     return catalog
 
@@ -321,16 +331,23 @@ def reassign_assessment_config_version(
     return {**data, "configVersionId": new_version_id, "configVersionHistory": history}
 
 
-def validate_indicator_kra(catalog: dict, indicator_id: str, kra_id: str) -> dict:
+def validate_indicator_kra(
+    catalog: dict,
+    indicator_id: str,
+    kra_id: str,
+    criterion_id: str | None = None,
+) -> dict:
+    """Validate faculty-selected KRA → criterion → indicator against the catalog."""
     if not indicator_id or not kra_id:
         raise CatalogValidationError("indicatorId and kraId are required.")
     found = find_indicator(catalog, indicator_id)
     if not found:
         raise CatalogValidationError("Indicator is not in the published configuration.")
     parent_kra = found["kra"].get("id")
+    crit = found.get("criterion") or {}
+    parent_criterion = crit.get("id")
     if parent_kra != kra_id:
-        crit = found.get("criterion") or {}
-        crit_id = crit.get("id")
+        crit_id = parent_criterion
         if kra_id and crit_id and kra_id == crit_id:
             raise CatalogValidationError(
                 f"Supplied kraId must be parent KRA {parent_kra!r}, not criterion {crit_id!r}."
@@ -340,4 +357,15 @@ def validate_indicator_kra(catalog: dict, indicator_id: str, kra_id: str) -> dic
                 f"Indicator {indicator_id!r} belongs to {parent_kra!r}, not {kra_id!r}."
             )
         raise CatalogValidationError("Indicator does not belong to the supplied KRA.")
+    if criterion_id:
+        if parent_criterion and criterion_id != parent_criterion:
+            raise CatalogValidationError(
+                f"Indicator {indicator_id!r} belongs to criterion {parent_criterion!r}, "
+                f"not {criterion_id!r}."
+            )
+        # Reject supplying a KRA id as criterionId
+        if criterion_id == parent_kra:
+            raise CatalogValidationError(
+                f"Supplied criterionId must be criterion {parent_criterion!r}, not KRA {parent_kra!r}."
+            )
     return found

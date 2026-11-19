@@ -94,12 +94,13 @@ export function workspaceCriterionHeading(catalog, criterionId) {
 
 export function ocrStatusLabel(s) {
   const map = {
-    pending: 'OCR pending',
-    queued: 'OCR queued',
-    processing: 'OCR processing',
-    completed: 'OCR complete',
-    failed: 'OCR failed',
-    review_required: 'OCR needs review',
+    pending: 'Waiting for document processing.',
+    queued: 'Waiting for document processing.',
+    processing: 'Reading and checking the document.',
+    completed: 'Processing complete',
+    failed: 'Processing failed',
+    review_required: 'Needs reviewer confirmation',
+    none: '—',
   };
   return map[s] || s || '—';
 }
