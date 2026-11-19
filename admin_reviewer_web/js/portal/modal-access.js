@@ -98,8 +98,11 @@ export function openCenteredModal({
   `;
   const overlay = host.querySelector(`#${dialogId}-overlay`);
   const dialog = host.querySelector(`#${dialogId}-dialog`);
-  const close = () => {
-    if (onBeforeClose && onBeforeClose() === false) return;
+  const close = async () => {
+    if (onBeforeClose) {
+      const allow = await Promise.resolve(onBeforeClose());
+      if (allow === false) return;
+    }
     teardownModal(host, opener);
   };
   bindModalShell({ host, overlay, dialog, onRequestClose: close, restoreFocusEl: opener });

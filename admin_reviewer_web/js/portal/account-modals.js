@@ -3,6 +3,7 @@ import { PortalApi } from '../services/portal-api.js';
 import { DEFAULT_INSTITUTION_CONFIG } from '../core/institution-config.js';
 import { navIcon } from '../core/icons.js';
 import { openCenteredModal } from './modal-access.js';
+import { confirmDiscardUnsavedChanges } from './confirm-dialog.js';
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_RE = /^(\+639\d{9}|09\d{9})$/;
@@ -84,21 +85,34 @@ function rankOptions(store) {
   return ic.rankOptions || [];
 }
 
-function attachDirtyTracking(dialog, onDirty) {
-  let dirty = false;
-  const mark = () => {
-    if (!dirty) {
-      dirty = true;
-      onDirty?.(true);
+function readFormSnapshot(form) {
+  const fd = new FormData(form);
+  const snap = {};
+  for (const [key, value] of fd.entries()) {
+    snap[key] = value?.toString() ?? '';
+  }
+  return snap;
+}
+
+function attachDirtyTracking(dialog, form, initialSnapshot) {
+  const baseline = { ...initialSnapshot };
+  const isDirty = () => {
+    const now = readFormSnapshot(form);
+    const keys = new Set([...Object.keys(baseline), ...Object.keys(now)]);
+    for (const k of keys) {
+      if ((baseline[k] ?? '') !== (now[k] ?? '')) return true;
     }
+    return false;
   };
-  dialog.querySelectorAll('input, select, textarea').forEach((el) => {
-    el.addEventListener('input', mark);
-    el.addEventListener('change', mark);
-  });
   return {
-    isDirty: () => dirty,
-    confirmClose: () => !dirty || window.confirm('Discard your changes?'),
+    isDirty,
+    confirmClose: async () => {
+      if (!isDirty()) return true;
+      const discard = await confirmDiscardUnsavedChanges({
+        opener: dialog.querySelector('[data-autofocus]') || dialog.querySelector('.fl-modal-close'),
+      });
+      return discard;
+    },
   };
 }
 
@@ -218,17 +232,15 @@ export function openFacultyForm(facultyId, { opener, onSaved }) {
       <button type="button" class="cfg-btn-secondary" data-fl-modal-cancel>Cancel</button>
       <button type="submit" form="facultyAccountForm" class="cfg-btn-primary" id="facultySubmitBtn">${isEdit ? 'Save Changes' : 'Add Faculty Member'}</button>`,
     opener,
-    onBeforeClose: () => {
+    onBeforeClose: async () => {
       const track = modal._dirty;
-      return track ? track.confirmClose() : true;
+      return track ? await track.confirmClose() : true;
     },
   });
   if (!modal) return;
 
-  const track = attachDirtyTracking(modal.dialog, () => {});
-  modal._dirty = track;
-
   const form = modal.dialog.querySelector('#facultyAccountForm');
+  modal._dirty = attachDirtyTracking(modal.dialog, form, readFormSnapshot(form));
   const submitBtn = modal.dialog.querySelector('#facultySubmitBtn');
 
   form.addEventListener('submit', async (e) => {
@@ -379,16 +391,15 @@ export function openReviewerForm(reviewerId, { opener, onSaved }) {
       <button type="button" class="cfg-btn-secondary" data-fl-modal-cancel>Cancel</button>
       <button type="submit" form="reviewerAccountForm" class="cfg-btn-primary" id="reviewerSubmitBtn">${isEdit ? 'Save Changes' : 'Add Reviewer'}</button>`,
     opener,
-    onBeforeClose: () => {
+    onBeforeClose: async () => {
       const track = modal._dirty;
-      return track ? track.confirmClose() : true;
+      return track ? await track.confirmClose() : true;
     },
   });
   if (!modal) return;
 
-  modal._dirty = attachDirtyTracking(modal.dialog, () => {});
-
   const form = modal.dialog.querySelector('#reviewerAccountForm');
+  modal._dirty = attachDirtyTracking(modal.dialog, form, readFormSnapshot(form));
   const submitBtn = modal.dialog.querySelector('#reviewerSubmitBtn');
 
   form.addEventListener('submit', async (e) => {

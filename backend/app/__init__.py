@@ -14,10 +14,20 @@ from app.routes.set_sef import bp as set_sef_bp
 
 
 def create_app() -> Flask:
-    load_backend_env()
+    if os.environ.get("FACULTYLINK_PYTEST") != "1":
+        load_backend_env()
     env = os.environ.get("FLASK_ENV", "development")
     app = Flask(__name__)
     app.config.from_object(config_by_name.get(env, config_by_name["development"]))
+    test_url = os.environ.get("TEST_DATABASE_URL", "").strip()
+    if os.environ.get("FACULTYLINK_PYTEST") == "1":
+        if not test_url:
+            raise RuntimeError("TEST_DATABASE_URL is required when FACULTYLINK_PYTEST=1.")
+        from app.test_db_guard import assert_test_database_isolated, normalize_sqlalchemy_url
+
+        assert_test_database_isolated(test_url)
+        app.config["SQLALCHEMY_DATABASE_URI"] = normalize_sqlalchemy_url(test_url)
+        app.config["TESTING"] = True
     apply_mail_config_from_env(app)
     apply_ocr_config_from_env(app)
     if not app.config.get("SQLALCHEMY_DATABASE_URI"):

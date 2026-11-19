@@ -30,7 +30,8 @@ def apply_mail_config_from_env(app) -> None:
     app.config["MAIL_FROM_NAME"] = (os.environ.get("MAIL_FROM_NAME", "FacultyLink") or "FacultyLink").strip()
 
 
-load_backend_env()
+if os.environ.get("FACULTYLINK_PYTEST") != "1":
+    load_backend_env()
 
 
 def _database_url() -> str | None:

@@ -1,0 +1,1017 @@
+{
+  "generatedAt": "2026-11-19T07:09:35.388024+00:00",
+  "applicationDbFingerprint": "3e5e3ec875297c13",
+  "applicationDbHost": "aws-0-ap-south-1.pooler.supabase.com",
+  "applicationDbName": "facultylinks",
+  "suspectedTestUserCount": 56,
+  "candidates": [
+    {
+      "userId": 8,
+      "emailRedacted": "own@test.local",
+      "role": "faculty",
+      "fullName": "Owner",
+      "createdAt": "2026-11-19T04:17:18.817587+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 2,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 9,
+      "emailRedacted": "rev@test.local",
+      "role": "reviewer",
+      "fullName": "Rev",
+      "createdAt": "2026-11-19T04:17:18.817616+00:00",
+      "employeeId": null,
+      "isActive": false,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 1,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 10,
+      "emailRedacted": "f1@test.local",
+      "role": "faculty",
+      "fullName": "Fac One",
+      "createdAt": "2026-11-19T05:51:14.280040+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 11,
+      "emailRedacted": "f2@test.local",
+      "role": "faculty",
+      "fullName": "Fac Two",
+      "createdAt": "2026-11-19T05:51:14.280055+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 12,
+      "emailRedacted": "r1@test.local",
+      "role": "reviewer",
+      "fullName": "Rev One",
+      "createdAt": "2026-11-19T05:51:14.280059+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 13,
+      "emailRedacted": "r2@test.local",
+      "role": "reviewer",
+      "fullName": "Rev Two",
+      "createdAt": "2026-11-19T05:51:14.280062+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 17,
+      "emailRedacted": "f1-689c7805@test.local",
+      "role": "faculty",
+      "fullName": "Fac One",
+      "createdAt": "2026-11-19T05:53:04.325844+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 18,
+      "emailRedacted": "f2-689c7805@test.local",
+      "role": "faculty",
+      "fullName": "Fac Two",
+      "createdAt": "2026-11-19T05:53:04.325852+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 19,
+      "emailRedacted": "r1-689c7805@test.local",
+      "role": "reviewer",
+      "fullName": "Rev One",
+      "createdAt": "2026-11-19T05:53:04.325854+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 20,
+      "emailRedacted": "r2-689c7805@test.local",
+      "role": "reviewer",
+      "fullName": "Rev Two",
+      "createdAt": "2026-11-19T05:53:04.325855+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 21,
+      "emailRedacted": "f1-698586e5@test.local",
+      "role": "faculty",
+      "fullName": "Fac One",
+      "createdAt": "2026-11-19T05:53:12.402927+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 22,
+      "emailRedacted": "f2-698586e5@test.local",
+      "role": "faculty",
+      "fullName": "Fac Two",
+      "createdAt": "2026-11-19T05:53:12.402933+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 23,
+      "emailRedacted": "r1-698586e5@test.local",
+      "role": "reviewer",
+      "fullName": "Rev One",
+      "createdAt": "2026-11-19T05:53:12.402935+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 24,
+      "emailRedacted": "r2-698586e5@test.local",
+      "role": "reviewer",
+      "fullName": "Rev Two",
+      "createdAt": "2026-11-19T05:53:12.402936+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 25,
+      "emailRedacted": "f1-cc46bbc1@test.local",
+      "role": "faculty",
+      "fullName": "Fac One",
+      "createdAt": "2026-11-19T05:53:19.273794+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 26,
+      "emailRedacted": "f2-cc46bbc1@test.local",
+      "role": "faculty",
+      "fullName": "Fac Two",
+      "createdAt": "2026-11-19T05:53:19.273801+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 27,
+      "emailRedacted": "r1-cc46bbc1@test.local",
+      "role": "reviewer",
+      "fullName": "Rev One",
+      "createdAt": "2026-11-19T05:53:19.273802+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 28,
+      "emailRedacted": "r2-cc46bbc1@test.local",
+      "role": "reviewer",
+      "fullName": "Rev Two",
+      "createdAt": "2026-11-19T05:53:19.273804+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 30,
+      "emailRedacted": "f1-8ba8474a@test.local",
+      "role": "faculty",
+      "fullName": "Fac One",
+      "createdAt": "2026-11-19T05:54:15.892323+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 1,
+      "notificationRows": 1,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 31,
+      "emailRedacted": "f2-8ba8474a@test.local",
+      "role": "faculty",
+      "fullName": "Fac Two",
+      "createdAt": "2026-11-19T05:54:15.892329+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 32,
+      "emailRedacted": "r1-8ba8474a@test.local",
+      "role": "reviewer",
+      "fullName": "Rev One",
+      "createdAt": "2026-11-19T05:54:15.892331+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 1,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 33,
+      "emailRedacted": "r2-8ba8474a@test.local",
+      "role": "reviewer",
+      "fullName": "Rev Two",
+      "createdAt": "2026-11-19T05:54:15.892332+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 34,
+      "emailRedacted": "f1-7351cd1e@test.local",
+      "role": "faculty",
+      "fullName": "Fac One",
+      "createdAt": "2026-11-19T05:54:29.510457+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 1,
+      "notificationRows": 2,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 35,
+      "emailRedacted": "f2-7351cd1e@test.local",
+      "role": "faculty",
+      "fullName": "Fac Two",
+      "createdAt": "2026-11-19T05:54:29.510462+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 36,
+      "emailRedacted": "r1-7351cd1e@test.local",
+      "role": "reviewer",
+      "fullName": "Rev One",
+      "createdAt": "2026-11-19T05:54:29.510463+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 2,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 37,
+      "emailRedacted": "r2-7351cd1e@test.local",
+      "role": "reviewer",
+      "fullName": "Rev Two",
+      "createdAt": "2026-11-19T05:54:29.510466+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 38,
+      "emailRedacted": "f1-2317d30f@test.local",
+      "role": "faculty",
+      "fullName": "Fac One",
+      "createdAt": "2026-11-19T05:54:42.107032+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 1,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 39,
+      "emailRedacted": "f2-2317d30f@test.local",
+      "role": "faculty",
+      "fullName": "Fac Two",
+      "createdAt": "2026-11-19T05:54:42.107039+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 40,
+      "emailRedacted": "r1-2317d30f@test.local",
+      "role": "reviewer",
+      "fullName": "Rev One",
+      "createdAt": "2026-11-19T05:54:42.107040+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 41,
+      "emailRedacted": "r2-2317d30f@test.local",
+      "role": "reviewer",
+      "fullName": "Rev Two",
+      "createdAt": "2026-11-19T05:54:42.107042+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 43,
+      "emailRedacted": "f1-730bdf72@test.local",
+      "role": "faculty",
+      "fullName": "Fac One",
+      "createdAt": "2026-11-19T05:56:20.319393+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 44,
+      "emailRedacted": "f2-730bdf72@test.local",
+      "role": "faculty",
+      "fullName": "Fac Two",
+      "createdAt": "2026-11-19T05:56:20.319400+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 45,
+      "emailRedacted": "r1-730bdf72@test.local",
+      "role": "reviewer",
+      "fullName": "Rev One",
+      "createdAt": "2026-11-19T05:56:20.319402+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 46,
+      "emailRedacted": "r2-730bdf72@test.local",
+      "role": "reviewer",
+      "fullName": "Rev Two",
+      "createdAt": "2026-11-19T05:56:20.319404+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 47,
+      "emailRedacted": "f1-ea15d848@test.local",
+      "role": "faculty",
+      "fullName": "Fac One",
+      "createdAt": "2026-11-19T05:56:27.848188+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 48,
+      "emailRedacted": "f2-ea15d848@test.local",
+      "role": "faculty",
+      "fullName": "Fac Two",
+      "createdAt": "2026-11-19T05:56:27.848193+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 49,
+      "emailRedacted": "r1-ea15d848@test.local",
+      "role": "reviewer",
+      "fullName": "Rev One",
+      "createdAt": "2026-11-19T05:56:27.848195+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 50,
+      "emailRedacted": "r2-ea15d848@test.local",
+      "role": "reviewer",
+      "fullName": "Rev Two",
+      "createdAt": "2026-11-19T05:56:27.848197+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 51,
+      "emailRedacted": "f1-a067d525@test.local",
+      "role": "faculty",
+      "fullName": "Fac One",
+      "createdAt": "2026-11-19T05:56:35.087634+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 1,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 52,
+      "emailRedacted": "f2-a067d525@test.local",
+      "role": "faculty",
+      "fullName": "Fac Two",
+      "createdAt": "2026-11-19T05:56:35.087640+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 53,
+      "emailRedacted": "r1-a067d525@test.local",
+      "role": "reviewer",
+      "fullName": "Rev One",
+      "createdAt": "2026-11-19T05:56:35.087642+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 54,
+      "emailRedacted": "r2-a067d525@test.local",
+      "role": "reviewer",
+      "fullName": "Rev Two",
+      "createdAt": "2026-11-19T05:56:35.087644+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 57,
+      "emailRedacted": "f1-252d701b@test.local",
+      "role": "faculty",
+      "fullName": "Fac One",
+      "createdAt": "2026-11-19T05:57:11.209454+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 1,
+      "notificationRows": 1,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 58,
+      "emailRedacted": "f2-252d701b@test.local",
+      "role": "faculty",
+      "fullName": "Fac Two",
+      "createdAt": "2026-11-19T05:57:11.209462+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 59,
+      "emailRedacted": "r1-252d701b@test.local",
+      "role": "reviewer",
+      "fullName": "Rev One",
+      "createdAt": "2026-11-19T05:57:11.209465+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 1,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 60,
+      "emailRedacted": "r2-252d701b@test.local",
+      "role": "reviewer",
+      "fullName": "Rev Two",
+      "createdAt": "2026-11-19T05:57:11.209467+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 61,
+      "emailRedacted": "f1-924e31c9@test.local",
+      "role": "faculty",
+      "fullName": "Fac One",
+      "createdAt": "2026-11-19T05:57:20.831185+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 1,
+      "notificationRows": 2,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 62,
+      "emailRedacted": "f2-924e31c9@test.local",
+      "role": "faculty",
+      "fullName": "Fac Two",
+      "createdAt": "2026-11-19T05:57:20.831191+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 63,
+      "emailRedacted": "r1-924e31c9@test.local",
+      "role": "reviewer",
+      "fullName": "Rev One",
+      "createdAt": "2026-11-19T05:57:20.831193+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 2,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 64,
+      "emailRedacted": "r2-924e31c9@test.local",
+      "role": "reviewer",
+      "fullName": "Rev Two",
+      "createdAt": "2026-11-19T05:57:20.831194+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 65,
+      "emailRedacted": "f1-98030204@test.local",
+      "role": "faculty",
+      "fullName": "Fac One",
+      "createdAt": "2026-11-19T05:57:38.390300+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 1,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 66,
+      "emailRedacted": "f2-98030204@test.local",
+      "role": "faculty",
+      "fullName": "Fac Two",
+      "createdAt": "2026-11-19T05:57:38.390306+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 67,
+      "emailRedacted": "r1-98030204@test.local",
+      "role": "reviewer",
+      "fullName": "Rev One",
+      "createdAt": "2026-11-19T05:57:38.390308+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 68,
+      "emailRedacted": "r2-98030204@test.local",
+      "role": "reviewer",
+      "fullName": "Rev Two",
+      "createdAt": "2026-11-19T05:57:38.390309+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 0,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 69,
+      "emailRedacted": "own-115f7ab3@test.local",
+      "role": "faculty",
+      "fullName": "Owner",
+      "createdAt": "2026-11-19T05:57:52.925842+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 2,
+      "notificationRows": 1,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    },
+    {
+      "userId": 70,
+      "emailRedacted": "rev-115f7ab3@test.local",
+      "role": "reviewer",
+      "fullName": "Rev",
+      "createdAt": "2026-11-19T05:57:52.925848+00:00",
+      "employeeId": null,
+      "isActive": true,
+      "assignmentRows": 1,
+      "documentRows": 0,
+      "notificationRows": 1,
+      "evidence": [
+        "email_domain_test_local",
+        "placeholder_password_hash",
+        "fixture_display_name",
+        "pytest_fixture_signature"
+      ]
+    }
+  ]
+}
